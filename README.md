@@ -80,7 +80,7 @@ fmt.Println("Annotated image saved to:", outputPath)
 
 Run all tests:
 
-```
+```bash
 go test ./...
 ```
 

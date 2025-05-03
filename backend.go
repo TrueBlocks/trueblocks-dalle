@@ -121,9 +121,10 @@ import (
 // 		return err.Error()
 // 	} else {
 // 		return dd.TersePrompt
-// 	}
+// 		}
 // }
 
+// GetPrompt returns the generated prompt for the given address.
 func (ctx *Context) GetPrompt(addr string) string {
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error()
@@ -132,6 +133,7 @@ func (ctx *Context) GetPrompt(addr string) string {
 	}
 }
 
+// GetEnhanced returns the enhanced prompt for the given address.
 func (ctx *Context) GetEnhanced(addr string) string {
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error()
@@ -145,9 +147,10 @@ func (ctx *Context) GetEnhanced(addr string) string {
 // 		return err.Error()
 // 	} else {
 // 		return dd.Filename
-// 	}
+// 		}
 // }
 
+// Save generates and saves prompt data for the given address.
 func (ctx *Context) Save(addr string) bool {
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return false
@@ -157,6 +160,7 @@ func (ctx *Context) Save(addr string) bool {
 	}
 }
 
+// GenerateEnhanced generates an enhanced prompt for the given address.
 func (ctx *Context) GenerateEnhanced(addr string) string {
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error()
@@ -171,6 +175,7 @@ func (ctx *Context) GenerateEnhanced(addr string) string {
 	}
 }
 
+// GenerateImage generates an image for the given address.
 func (ctx *Context) GenerateImage(addr string) (string, error) {
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error(), err

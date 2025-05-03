@@ -1,1 +1,8 @@
-bin/\n*.exe\n*.test\n*.out\n*.log\n*.tmp\n*.swp\n.DS_Store\n
+bin/
+*.exe
+*.test
+*.out
+*.log
+*.tmp
+*.swp
+.DS_Store

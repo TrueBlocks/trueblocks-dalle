@@ -8,6 +8,7 @@ import (
 	"os"
 )
 
+// EnhancePrompt calls the OpenAI API to enhance a prompt using the given author type.
 func EnhancePrompt(prompt, authorType string) (string, error) {
 	url := "https://api.openai.com/v1/chat/completions"
 	payload := dalleRequest{

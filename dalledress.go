@@ -13,6 +13,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
+// DalleDress represents a generated prompt and its associated attributes.
 type DalleDress struct {
 	Original       string               `json:"original"`
 	Filename       string               `json:"fileName"`
@@ -26,11 +27,13 @@ type DalleDress struct {
 	AttribMap      map[string]Attribute `json:"-"`
 }
 
+// String returns the JSON representation of the DalleDress.
 func (d *DalleDress) String() string {
 	jsonData, _ := json.MarshalIndent(d, "", "  ")
 	return string(jsonData)
 }
 
+// ExecuteTemplate executes a template with DalleDress data and an optional post-processing function.
 func (dd *DalleDress) ExecuteTemplate(t *template.Template, f func(s string) string) (string, error) {
 	var buffer bytes.Buffer
 	if err := t.Execute(&buffer, dd); err != nil {
@@ -42,7 +45,7 @@ func (dd *DalleDress) ExecuteTemplate(t *template.Template, f func(s string) str
 	return f(buffer.String()), nil
 }
 
-// validFilename returns a valid filename from the input string
+// validFilename returns a valid filename from the input string.
 func validFilename(in string) string {
 	invalidChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|"}
 	for _, char := range invalidChars {
@@ -53,7 +56,7 @@ func validFilename(in string) string {
 	return in
 }
 
-// reverse returns the reverse of the input string
+// reverse returns the reverse of the input string.
 func reverse(s string) string {
 	runes := []rune(s)
 	n := len(runes)
@@ -63,6 +66,7 @@ func reverse(s string) string {
 	return string(runes)
 }
 
+// Context holds templates, series, databases, and cache for prompt generation.
 type Context struct {
 	PromptTemplate *template.Template
 	DataTemplate   *template.Template
@@ -111,6 +115,7 @@ var attributeNames = []string{
 	"backStyle",
 }
 
+// Adverb returns the adverb attribute, optionally in short form.
 func (dd *DalleDress) Adverb(short bool) string {
 	val := dd.AttribMap["adverb"].Value
 	parts := strings.Split(val, ",")
@@ -120,6 +125,7 @@ func (dd *DalleDress) Adverb(short bool) string {
 	return parts[0] + " (" + parts[1] + ")"
 }
 
+// Adjective returns the adjective attribute, optionally in short form.
 func (dd *DalleDress) Adjective(short bool) string {
 	val := dd.AttribMap["adjective"].Value
 	parts := strings.Split(val, ",")
@@ -129,6 +135,7 @@ func (dd *DalleDress) Adjective(short bool) string {
 	return parts[0] + " (" + parts[1] + ")"
 }
 
+// Noun returns the noun attribute, optionally in short form.
 func (dd *DalleDress) Noun(short bool) string {
 	val := dd.AttribMap["noun"].Value
 	parts := strings.Split(val, ",")
@@ -138,6 +145,7 @@ func (dd *DalleDress) Noun(short bool) string {
 	return parts[0] + " (" + parts[1] + ", " + parts[2] + ")"
 }
 
+// Emotion returns the emotion attribute, optionally in short form.
 func (dd *DalleDress) Emotion(short bool) string {
 	val := dd.AttribMap["emotion"].Value
 	parts := strings.Split(val, ",")
@@ -147,6 +155,7 @@ func (dd *DalleDress) Emotion(short bool) string {
 	return parts[0] + " (" + parts[1] + ", " + parts[4] + ")"
 }
 
+// Occupation returns the occupation attribute, optionally in short form.
 func (dd *DalleDress) Occupation(short bool) string {
 	val := dd.AttribMap["occupation"].Value
 	if val == "none" {
@@ -159,6 +168,7 @@ func (dd *DalleDress) Occupation(short bool) string {
 	return " who works as a " + parts[0] + " (" + parts[1] + ")"
 }
 
+// Action returns the action attribute, optionally in short form.
 func (dd *DalleDress) Action(short bool) string {
 	val := dd.AttribMap["action"].Value
 	parts := strings.Split(val, ",")
@@ -168,6 +178,7 @@ func (dd *DalleDress) Action(short bool) string {
 	return parts[0] + " (" + parts[1] + ")"
 }
 
+// ArtStyle returns the art style attribute, optionally in short form.
 func (dd *DalleDress) ArtStyle(short bool, which int) string {
 	val := dd.AttribMap["artStyle"+fmt.Sprintf("%d", which)].Value
 	parts := strings.Split(val, ",")
@@ -180,11 +191,13 @@ func (dd *DalleDress) ArtStyle(short bool, which int) string {
 	return parts[0] + " (" + parts[2] + ")"
 }
 
+// HasLitStyle checks if the lit style attribute is present and not "none".
 func (dd *DalleDress) HasLitStyle() bool {
 	ret := dd.AttribMap["litStyle"].Value
 	return ret != "none" && ret != ""
 }
 
+// LitStyle returns the lit style attribute, optionally in short form.
 func (dd *DalleDress) LitStyle(short bool) string {
 	val := dd.AttribMap["litStyle"].Value
 	if val == "none" {
@@ -200,6 +213,7 @@ func (dd *DalleDress) LitStyle(short bool) string {
 	return parts[0] + " (" + parts[1] + ")"
 }
 
+// LitStyleDescr returns the description of the lit style attribute.
 func (dd *DalleDress) LitStyleDescr() string {
 	val := dd.AttribMap["litStyle"].Value
 	if val == "none" {
@@ -212,6 +226,7 @@ func (dd *DalleDress) LitStyleDescr() string {
 	return parts[1]
 }
 
+// Color returns the color attribute, optionally in short form.
 func (dd *DalleDress) Color(short bool, which int) string {
 	val := dd.AttribMap["color"+fmt.Sprintf("%d", which)].Value
 	parts := strings.Split(val, ",")
@@ -221,6 +236,7 @@ func (dd *DalleDress) Color(short bool, which int) string {
 	return parts[1] + " (" + parts[0] + ")"
 }
 
+// Orientation returns the orientation attribute, optionally in short form.
 func (dd *DalleDress) Orientation(short bool) string {
 	val := dd.AttribMap["orientation"].Value
 	if short {
@@ -234,6 +250,7 @@ func (dd *DalleDress) Orientation(short bool) string {
 	return ret
 }
 
+// Gaze returns the gaze attribute, optionally in short form.
 func (dd *DalleDress) Gaze(short bool) string {
 	val := dd.AttribMap["gaze"].Value
 	if short {
@@ -243,6 +260,7 @@ func (dd *DalleDress) Gaze(short bool) string {
 	return strings.ReplaceAll(val, ",", ", ")
 }
 
+// BackStyle returns the back style attribute, optionally in short form.
 func (dd *DalleDress) BackStyle(short bool) string {
 	val := dd.AttribMap["backStyle"].Value
 	val = strings.ReplaceAll(val, "[{Color3}]", dd.Color(true, 3))
@@ -250,6 +268,7 @@ func (dd *DalleDress) BackStyle(short bool) string {
 	return val
 }
 
+// LitPrompt generates a literary prompt based on the lit style attribute.
 func (dd *DalleDress) LitPrompt(short bool) string {
 	val := dd.AttribMap["litStyle"].Value
 	if val == "none" {
@@ -264,6 +283,7 @@ func (dd *DalleDress) LitPrompt(short bool) string {
 
 var saveMutex sync.Mutex
 
+// ReportOn logs and saves generated prompt data for a given address and location.
 func (dd *DalleDress) ReportOn(addr, loc, ft, value string) {
 	logger.Info("Generating", loc, "for "+addr)
 	path := filepath.Join("./output/", strings.ToLower(loc))

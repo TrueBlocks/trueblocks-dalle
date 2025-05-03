@@ -4,6 +4,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 )
 
+// Attribute represents a data attribute with metadata used for prompt generation.
 type Attribute struct {
 	Database string  `json:"database"`
 	Name     string  `json:"name"`
@@ -15,6 +16,7 @@ type Attribute struct {
 	Value    string  `json:"value"`
 }
 
+// NewAttribute constructs an Attribute from database info and a byte string.
 func NewAttribute(databases map[string][]string, index int, bytes string) Attribute {
 	attr := Attribute{
 		Database: DatabaseNames[index],

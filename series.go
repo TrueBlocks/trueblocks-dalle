@@ -8,6 +8,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 )
 
+// Series represents a collection of prompt attributes and their values.
 type Series struct {
 	Last         int      `json:"last,omitempty"`
 	Suffix       string   `json:"suffix"`
@@ -25,11 +26,13 @@ type Series struct {
 	Backstyles   []string `json:"backstyles"`
 }
 
+// String returns the JSON representation of the Series.
 func (s *Series) String() string {
 	bytes, _ := json.MarshalIndent(s, "", "  ")
 	return string(bytes)
 }
 
+// SaveSeries saves the Series to a file with the given filename and last index.
 func (s *Series) SaveSeries(fn string, last int) {
 	ss := s
 	ss.Last = last
@@ -37,6 +40,7 @@ func (s *Series) SaveSeries(fn string, last int) {
 	_ = file.StringToAsciiFile(fn, ss.String())
 }
 
+// GetFilter returns a string slice for the given field name in the Series.
 func (s *Series) GetFilter(fieldName string) ([]string, error) {
 	reflectedT := reflect.ValueOf(s)
 	field := reflect.Indirect(reflectedT).FieldByName(fieldName)
