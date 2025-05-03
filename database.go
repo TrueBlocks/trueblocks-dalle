@@ -40,7 +40,7 @@ func (ctx *Context) ReloadDatabases() {
 }
 
 func (ctx *Context) LoadSeries() (Series, error) {
-	lastSeries := ctx.GetSession().LastSeries
+	lastSeries := "five-tone-postal-protozoa" // ctx.GetSession().LastSeries
 	fn := filepath.Join("./output/series", lastSeries+".json")
 	str := strings.TrimSpace(file.AsciiFileToString(fn))
 	logger.Info("lastSeries", lastSeries)
