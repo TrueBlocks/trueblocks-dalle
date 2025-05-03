@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"text/template"
 )
 
 // mockRoundTripper implements http.RoundTripper for testing
@@ -113,5 +114,52 @@ func TestEnhancePrompt_EmptyAPIKey(t *testing.T) {
 	result, err := enhancePromptWithClient("prompt", "author", client, "", json.Marshal)
 	if err != nil || result != "Enhanced!" {
 		t.Errorf("expected success with empty API key, got %v, %s", err, result)
+	}
+}
+
+// Minimal mock for template execution
+// (Must be outside the test function in Go)
+type mockDress struct{}
+
+func (mockDress) LitPrompt(bool) string     { return "LitPrompt" }
+func (mockDress) Adverb(bool) string        { return "Adverb" }
+func (mockDress) Adjective(bool) string     { return "Adjective" }
+func (mockDress) Noun(bool) string          { return "Noun" }
+func (mockDress) Emotion(bool) string       { return "Emotion" }
+func (mockDress) Occupation(bool) string    { return "Occupation" }
+func (mockDress) Action(bool) string        { return "Action" }
+func (mockDress) ArtStyle(bool, int) string { return "ArtStyle" }
+func (mockDress) HasLitStyle() bool         { return true }
+func (mockDress) LitStyle(bool) string      { return "LitStyle" }
+func (mockDress) LitStyleDescr() string     { return "LitStyleDescr" }
+func (mockDress) Color(bool, int) string    { return "Color" }
+func (mockDress) Orientation(bool) string   { return "Orientation" }
+func (mockDress) Gaze(bool) string          { return "Gaze" }
+func (mockDress) BackStyle(bool) string     { return "BackStyle" }
+func (mockDress) Original() string          { return "Original" }
+func (mockDress) Filename() string          { return "Filename" }
+func (mockDress) Seed() string              { return "Seed" }
+
+func TestTemplates_ParseAndRender(t *testing.T) {
+	templates := []struct {
+		tmpl *template.Template
+		name string
+	}{
+		{PromptTemplate, "PromptTemplate"},
+		{DataTemplate, "DataTemplate"},
+		{TerseTemplate, "TerseTemplate"},
+		{TitleTemplate, "TitleTemplate"},
+		{AuthorTemplate, "AuthorTemplate"},
+	}
+
+	for _, tc := range templates {
+		var buf bytes.Buffer
+		err := tc.tmpl.Execute(&buf, mockDress{})
+		if err != nil {
+			t.Errorf("%s failed to render: %v", tc.name, err)
+		}
+		if buf.Len() == 0 {
+			t.Errorf("%s rendered empty output", tc.name)
+		}
 	}
 }

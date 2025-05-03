@@ -16,6 +16,18 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 )
 
+// Allow mocking for testability
+var (
+	openFile     = os.OpenFile
+	annotateFunc = annotate
+	httpGet      = http.Get
+	System       = func(cmd string) { utils.System(cmd) }
+	ioCopy       = io.Copy
+)
+
+// Allow mocking of OpenAI API endpoint for testing
+var openaiAPIURL = "https://api.openai.com/v1/images/generations"
+
 type ImageData struct {
 	EnhancedPrompt string `json:"enhancedPrompt"`
 	TersePrompt    string `json:"tersePrompt"`
@@ -45,7 +57,7 @@ func RequestImage(imageData *ImageData) error {
 		quality = os.Getenv("DALLE_QUALITY")
 	}
 
-	url := "https://api.openai.com/v1/images/generations"
+	url := openaiAPIURL
 	payload := dalleRequest{
 		Prompt:  imageData.EnhancedPrompt,
 		N:       1,
@@ -104,31 +116,31 @@ func RequestImage(imageData *ImageData) error {
 
 	imageURL := dalleResp.Data[0].Url
 
-	imageResp, err := http.Get(imageURL)
+	imageResp, err := httpGet(imageURL)
 	if err != nil {
 		return err
 	}
 	defer imageResp.Body.Close()
 
 	os.Remove(fn)
-	file, err := os.OpenFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return fmt.Errorf("failed to open output file: %s", fn)
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, imageResp.Body)
+	_, err = ioCopy(file, imageResp.Body)
 	if err != nil {
 		return err
 	}
 
-	path, err := annotate(imageData.TersePrompt, fn, "bottom", 0.2)
+	path, err := annotateFunc(imageData.TersePrompt, fn, "bottom", 0.2)
 	if err != nil {
 		return fmt.Errorf("error annotating image: %v", err)
 	}
 	logger.Info(colors.Cyan, imageData.Filename, colors.Green, "- image saved as", colors.White+strings.Trim(path, " "), colors.Off)
 	if os.Getenv("TB_CMD_LINE") == "true" {
-		utils.System("open " + path)
+		System("open " + path)
 	}
 	return nil
 }

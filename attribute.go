@@ -16,6 +16,42 @@ type Attribute struct {
 	Value    string  `json:"value"`
 }
 
+var DatabaseNames = []string{
+	"adverbs",
+	"adjectives",
+	"nouns",
+	"emotions",
+	"occupations",
+	"actions",
+	"artstyles",
+	"artstyles",
+	"litstyles",
+	"colors",
+	"colors",
+	"colors",
+	"orientations",
+	"gazes",
+	"backstyles",
+}
+
+var attributeNames = []string{
+	"adverb",
+	"adjective",
+	"noun",
+	"emotion",
+	"occupation",
+	"action",
+	"artStyle1",
+	"artStyle2",
+	"litStyle",
+	"color1",
+	"color2",
+	"color3",
+	"orientation",
+	"gaze",
+	"backStyle",
+}
+
 // NewAttribute constructs an Attribute from database info and a byte string.
 func NewAttribute(databases map[string][]string, index int, bytes string) Attribute {
 	attr := Attribute{

@@ -1,11 +1,5 @@
 package dalle
 
-import (
-	"path/filepath"
-
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
-)
-
 // var dalleCacheMutex sync.Mutex
 
 // func (a *App) MakeDalleDress(addressIn string) (*dalle.DalleDress, error) {
@@ -124,24 +118,6 @@ import (
 // 		}
 // }
 
-// GetPrompt returns the generated prompt for the given address.
-func (ctx *Context) GetPrompt(addr string) string {
-	if dd, err := ctx.MakeDalleDress(addr); err != nil {
-		return err.Error()
-	} else {
-		return dd.Prompt
-	}
-}
-
-// GetEnhanced returns the enhanced prompt for the given address.
-func (ctx *Context) GetEnhanced(addr string) string {
-	if dd, err := ctx.MakeDalleDress(addr); err != nil {
-		return err.Error()
-	} else {
-		return dd.EnhancedPrompt
-	}
-}
-
 // func (a *App) GetFilename(addr string) string {
 // 	if dd, err := a.MakeDalleDress(addr); err != nil {
 // 		return err.Error()
@@ -149,54 +125,6 @@ func (ctx *Context) GetEnhanced(addr string) string {
 // 		return dd.Filename
 // 		}
 // }
-
-// Save generates and saves prompt data for the given address.
-func (ctx *Context) Save(addr string) bool {
-	if dd, err := ctx.MakeDalleDress(addr); err != nil {
-		return false
-	} else {
-		dd.ReportOn(addr, filepath.Join(ctx.Series.Suffix, "selector"), "json", dd.String())
-		return true
-	}
-}
-
-// GenerateEnhanced generates an enhanced prompt for the given address.
-func (ctx *Context) GenerateEnhanced(addr string) string {
-	if dd, err := ctx.MakeDalleDress(addr); err != nil {
-		return err.Error()
-	} else {
-		authorType, _ := dd.ExecuteTemplate(ctx.AuthorTemplate, nil)
-		if dd.EnhancedPrompt, err = EnhancePrompt(ctx.GetPrompt(addr), authorType); err != nil {
-			logger.Fatal(err.Error())
-		}
-		msg := " DO NOT PUT TEXT IN THE IMAGE. "
-		dd.EnhancedPrompt = msg + dd.EnhancedPrompt + msg
-		return dd.EnhancedPrompt
-	}
-}
-
-// GenerateImage generates an image for the given address.
-func (ctx *Context) GenerateImage(addr string) (string, error) {
-	if dd, err := ctx.MakeDalleDress(addr); err != nil {
-		return err.Error(), err
-	} else {
-		suff := ctx.Series.Suffix
-		dd.EnhancedPrompt = ctx.GenerateEnhanced(addr)
-		dd.ReportOn(addr, filepath.Join(suff, "enhanced"), "txt", dd.EnhancedPrompt)
-		_ = ctx.Save(addr)
-		imageData := ImageData{
-			TitlePrompt:    dd.TitlePrompt,
-			TersePrompt:    dd.TersePrompt,
-			EnhancedPrompt: dd.EnhancedPrompt,
-			SeriesName:     ctx.Series.Suffix,
-			Filename:       dd.Filename,
-		}
-		if err := RequestImage(&imageData); err != nil {
-			return err.Error(), err
-		}
-		return dd.EnhancedPrompt, nil
-	}
-}
 
 // func (a *App) GetExistingAddrs() []string {
 // 	return []string{

@@ -14,6 +14,9 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
+// Allow mocking of file.AsciiFileToLines for testing
+var asciiFileToLines = file.AsciiFileToLines
+
 func (ctx *Context) ReloadDatabases() {
 	ctx.Series = Series{}
 	ctx.Databases = make(map[string][]string)
@@ -42,9 +45,9 @@ func (ctx *Context) ReloadDatabases() {
 func (ctx *Context) LoadSeries() (Series, error) {
 	lastSeries := "five-tone-postal-protozoa" // ctx.GetSession().LastSeries
 	fn := filepath.Join("./output/series", lastSeries+".json")
-	str := strings.TrimSpace(file.AsciiFileToString(fn))
+	str := strings.TrimSpace(asciiFileToString(fn))
 	logger.Info("lastSeries", lastSeries)
-	if len(str) == 0 || !file.FileExists(fn) {
+	if len(str) == 0 || !fileExists(fn) {
 		logger.Info("No series found, creating a new one", fn)
 		ret := Series{
 			Suffix: "simple",
@@ -67,7 +70,7 @@ func (ctx *Context) LoadSeries() (Series, error) {
 
 func (ctx *Context) toLines(db string) ([]string, error) {
 	filename := "./databases/" + db + ".csv"
-	lines := file.AsciiFileToLines(filename)
+	lines := asciiFileToLines(filename)
 	lines = lines[1:] // skip header
 	var err error
 	if len(lines) == 0 {

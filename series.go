@@ -26,6 +26,10 @@ type Series struct {
 	Backstyles   []string `json:"backstyles"`
 }
 
+// Allow mocking of file operations for testing
+var establishFolder = file.EstablishFolder
+var stringToAsciiFile = file.StringToAsciiFile
+
 // String returns the JSON representation of the Series.
 func (s *Series) String() string {
 	bytes, _ := json.MarshalIndent(s, "", "  ")
@@ -36,8 +40,8 @@ func (s *Series) String() string {
 func (s *Series) SaveSeries(fn string, last int) {
 	ss := s
 	ss.Last = last
-	_ = file.EstablishFolder("output/series")
-	_ = file.StringToAsciiFile(fn, ss.String())
+	_ = establishFolder("output/series")
+	_ = stringToAsciiFile(fn, ss.String())
 }
 
 // GetFilter returns a string slice for the given field name in the Series.
