@@ -1,32 +1,70 @@
 # trueblocks-dalle
 
-A Go package for generating, managing, and enhancing creative prompts and images using structured attributes and OpenAI integration. This package is designed to be the core engine for prompt generation, attribute management, and prompt enhancement for the TrueBlocks Dalledress application.
+Welcome to **trueblocks-dalle** — the creative engine for prompt generation, attribute-driven art, and OpenAI-powered enhancement, designed for the TrueBlocks Dalledress application. This project is a robust, extensible Go package for generating, managing, and annotating creative prompts and images, with a focus on clarity, modularity, and developer delight.
 
-## Features
+---
 
-- **Attribute-driven prompt generation**: Compose prompts from a rich set of attributes (adjectives, nouns, art styles, etc.)
-- **Template-based prompt construction**: Use Go templates to generate various prompt formats (data, title, terse, enhanced)
-- **OpenAI integration**: Enhance prompts using the OpenAI API (e.g., GPT-4)
-- **Image annotation utilities**: Annotate images with text and color analysis
-- **Series management**: Organize and filter sets of attributes for batch prompt generation
-- **Caching and performance**: In-memory caching of generated prompts for efficiency
+## 🚀 Features at a Glance
 
-## Directory Structure
+- **Attribute-Driven Prompt Generation**: Compose rich, diverse prompts from a structured set of attributes (adjectives, nouns, art styles, and more).
+- **Template-Based Prompt Construction**: Use Go templates to generate multiple prompt formats (data, title, terse, enhanced, etc.).
+- **OpenAI Integration**: Seamlessly enhance prompts using the OpenAI API (e.g., GPT-4, DALL·E 3). Just set your API key and go!
+- **Image Annotation Utilities**: Annotate images with text overlays, color analysis, and contrast-aware rendering.
+- **Series Management**: Organize, filter, and persist sets of attributes for batch prompt generation and reproducibility.
+- **In-Memory Caching**: Efficiently cache generated prompts and images for lightning-fast access.
+- **Extensible & Testable**: Built with testability and extensibility in mind. Mocks and dependency injection are first-class citizens.
 
-- `attribute.go`   – Attribute struct and constructor
-- `dalledress.go`  – Main DalleDress struct, Context, and prompt generation logic
-- `series.go`      – Series struct and methods for managing attribute sets
-- `openai.go`      – OpenAI request/response types and helpers
-- `prompt.go`      – EnhancePrompt function for OpenAI integration
-- `annotate.go`    – Image annotation utilities
-- `image.go`       – Image processing helpers
-- `backend.go`     – Backend integration points
-- `prompts.go`     – Additional prompt templates/utilities
+---
 
-## Usage
+## 🗂️ Project Structure
 
-### Basic Prompt Generation
+| File/Folder     | Purpose                                                      |
+| --------------- | ------------------------------------------------------------ |
+| `attribute.go`  | Attribute struct and constructor logic                       |
+| `dalledress.go` | Main DalleDress struct, Context, and prompt generation logic |
+| `series.go`     | Series struct and methods for managing attribute sets        |
+| `openai.go`     | OpenAI request/response types and helpers                    |
+| `prompt.go`     | EnhancePrompt function for OpenAI integration                |
+| `annotate.go`   | Image annotation utilities (color, contrast, overlays)       |
+| `image.go`      | Image processing helpers                                     |
+| `backend.go`    | Backend integration points (API, CLI, etc.)                  |
+| `prompts.go`    | Additional prompt templates/utilities                        |
+| `ai/`           | AI-related assets and documentation                          |
+| `output/`       | Output and cache files (auto-generated)                      |
 
+---
+
+## 🛠️ Installation & Setup
+
+### Prerequisites
+- **Go 1.20+** (https://golang.org/dl/)
+- [TrueBlocks Core](https://github.com/TrueBlocks/trueblocks-core) (for some utilities)
+- [OpenAI API Key](https://platform.openai.com/account/api-keys) (for prompt enhancement)
+- [gg](https://github.com/fogleman/gg) and [go-colorful](https://github.com/lucasb-eyer/go-colorful) for image annotation
+
+### Getting Started
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/TrueBlocks/trueblocks-dalle.git
+   cd trueblocks-dalle
+   ```
+2. **Install dependencies:**
+   ```bash
+   go mod tidy
+   ```
+3. **Set your OpenAI API key:**
+   ```bash
+   export OPENAI_API_KEY=sk-...yourkey...
+   ```
+4. **Prepare attribute databases:**
+   - Place your CSV files in the `databases/` directory. Each file should correspond to an attribute (e.g., `nouns.csv`, `adjectives.csv`).
+
+---
+
+## ✨ Usage Examples
+
+### 1. Basic Prompt Generation
 ```go
 import "github.com/TrueBlocks/trueblocks-dalle/v2/pkg/dalle"
 
@@ -40,8 +78,7 @@ if err != nil {
 fmt.Println(dd.Prompt)
 ```
 
-### Enhance a Prompt with OpenAI
-
+### 2. Enhance a Prompt with OpenAI
 ```go
 import "github.com/TrueBlocks/trueblocks-dalle/v2/pkg/dalle"
 
@@ -52,8 +89,7 @@ if err != nil {
 fmt.Println(result)
 ```
 
-### Annotate an Image
-
+### 3. Annotate an Image
 ```go
 import "github.com/TrueBlocks/trueblocks-dalle/v2/pkg/dalle"
 
@@ -64,34 +100,65 @@ if err != nil {
 fmt.Println("Annotated image saved to:", outputPath)
 ```
 
-## Configuration & Dependencies
+---
 
-- Requires Go 1.20+
-- Uses [TrueBlocks Core](https://github.com/TrueBlocks/trueblocks-core) for some utilities
-- Uses [OpenAI API](https://platform.openai.com/docs/api-reference/introduction) for prompt enhancement (set `OPENAI_API_KEY` in your environment)
-- Uses [gg](https://github.com/fogleman/gg) and [go-colorful](https://github.com/lucasb-eyer/go-colorful) for image annotation
+## 🧩 Data & Assets
+- **Attribute Databases:** Place CSV files in the `databases/` directory. Each file should have a header and one value per line.
+- **Output:** Generated prompts, images, and cache files are written to the `output/` directory, organized by series and type.
 
-## Data & Assets
+---
 
-- Attribute databases (CSV files) are expected in the `databases/` directory
-- Output and cache files are written to the `output/` directory
+## 🧪 Testing
 
-## Testing
-
-Run all tests:
-
+Run all tests (unit and integration):
 ```bash
 go test ./...
 ```
 
-## License
+- Tests are written for all core logic, with mocks for file and network operations.
+- To run a specific test file:
+  ```bash
+  go test -v -run TestName ./...
+  ```
+- Coverage is high, but integration tests for image annotation may require macOS and font availability.
 
-This project is licensed under the MIT License. See the [LICENSE](../../LICENSE) file for details.
+---
 
-## Contributing
+## 📝 Contributing
 
-Contributions are welcome! Please open issues or pull requests on GitHub.
+We love contributions! Please:
+- Open issues for bugs, questions, or feature requests.
+- Submit pull requests with clear descriptions and tests.
+- Follow Go best practices and keep code readable and well-documented.
 
-## Authors
+---
 
+## 📜 License
+
+This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for details.
+
+---
+
+## 👩‍💻 Authors & Credits
 - TrueBlocks contributors
+- Special thanks to the open-source community and the authors of [gg](https://github.com/fogleman/gg), [go-colorful](https://github.com/lucasb-eyer/go-colorful), and [OpenAI](https://openai.com/).
+
+---
+
+## 💡 Tips & Best Practices
+- **Environment Variables:** Set `OPENAI_API_KEY` and (optionally) `DALLE_QUALITY` for best results.
+- **Extending Attributes:** Add new CSVs to `databases/` and update attribute lists in `attribute.go`.
+- **Debugging:** Use Go’s built-in testing and logging for troubleshooting.
+- **Performance:** Caching is built-in, but you can tune batch sizes and rate limits in `context.go` and `database.go`.
+
+---
+
+## 🌈 Why trueblocks-dalle?
+- **Modular:** Swap in new templates, attributes, or enhancement models with ease.
+- **Transparent:** All logic is open, testable, and documented.
+- **Creative:** Designed to inspire and enable new forms of generative art and prompt engineering.
+
+---
+
+## 📬 Questions?
+Open an issue or reach out on GitHub. We’re here to help you build, create, and imagine with trueblocks-dalle!
