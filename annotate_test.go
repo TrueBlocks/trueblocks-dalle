@@ -7,11 +7,6 @@ import (
 	"testing"
 )
 
-// Mock image and file operations for annotate.go
-// type mockFile struct{}
-
-// func (m *mockFile) Close() error { return nil }
-
 func TestParseHexColor_Valid(t *testing.T) {
 	c, err := parseHexColor("#FF00FF")
 	if err != nil {
