@@ -119,7 +119,7 @@ func TestSeries_GetFilter_NotStringSlice(t *testing.T) {
 		t.Skip("Test only relevant if field is a non-string slice")
 	}
 	// Simulate GetFilter logic
-	if field.Type().Elem().Kind() != reflect.String {
-		// Should error
-	}
+	// if field.Type().Elem().Kind() != reflect.String {
+	// 	// Should error
+	// }
 }

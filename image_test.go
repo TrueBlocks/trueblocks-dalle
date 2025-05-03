@@ -17,14 +17,14 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 	// Mock OpenAI API image generation response
 	openaiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte(`{"data":[{"url":"http://mockimage.com/image.png"}]}`))
+		_, _ = w.Write([]byte(`{"data":[{"url":"http://mockimage.com/image.png"}]}`))
 	}))
 	defer openaiServer.Close()
 
 	// Mock image download server
 	imageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte("PNGDATA"))
+		_, _ = w.Write([]byte("PNGDATA"))
 	}))
 	defer imageServer.Close()
 
