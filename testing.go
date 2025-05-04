@@ -119,4 +119,3 @@ var fileExists = file.FileExists
 var establishFolder = file.EstablishFolder
 var asciiFileToString = file.AsciiFileToString
 var stringToAsciiFile = file.StringToAsciiFile
-var asciiFileToLines = file.AsciiFileToLines
