@@ -7,27 +7,6 @@ import (
 	"testing"
 )
 
-type mockFileOps struct {
-	establishCalled     bool
-	stringToAsciiCalled bool
-	lastFn              string
-	lastContent         string
-	establishErr        error
-	stringToAsciiErr    error
-}
-
-func (m *mockFileOps) establishFolder(path string) error {
-	m.establishCalled = true
-	return m.establishErr
-}
-
-func (m *mockFileOps) stringToAsciiFile(fn, content string) error {
-	m.stringToAsciiCalled = true
-	m.lastFn = fn
-	m.lastContent = content
-	return m.stringToAsciiErr
-}
-
 func TestSeries_String(t *testing.T) {
 	s := &Series{
 		Suffix:  "test",
@@ -44,11 +23,11 @@ func TestSeries_String(t *testing.T) {
 }
 
 func TestSeries_SaveSeries(t *testing.T) {
-	mock := &mockFileOps{}
+	mock := &MockFileOps{}
 	oldEstablish := establishFolder
 	oldStringToAscii := stringToAsciiFile
-	establishFolder = mock.establishFolder
-	stringToAsciiFile = mock.stringToAsciiFile
+	establishFolder = mock.EstablishFolder
+	stringToAsciiFile = mock.StringToAsciiFile
 	defer func() {
 		establishFolder = oldEstablish
 		stringToAsciiFile = oldStringToAscii
@@ -56,17 +35,17 @@ func TestSeries_SaveSeries(t *testing.T) {
 
 	s := &Series{Suffix: "test"}
 	s.SaveSeries("filename.txt", 42)
-	if !mock.establishCalled {
+	if !mock.EstablishCalled {
 		t.Error("establishFolder was not called")
 	}
-	if !mock.stringToAsciiCalled {
+	if !mock.StringToAsciiCalled {
 		t.Error("stringToAsciiFile was not called")
 	}
-	if mock.lastFn != "filename.txt" {
-		t.Errorf("stringToAsciiFile called with wrong filename: %s", mock.lastFn)
+	if mock.LastFn != "filename.txt" {
+		t.Errorf("stringToAsciiFile called with wrong filename: %s", mock.LastFn)
 	}
 	var out Series
-	if err := json.Unmarshal([]byte(mock.lastContent), &out); err != nil {
+	if err := json.Unmarshal([]byte(mock.LastContent), &out); err != nil {
 		t.Errorf("stringToAsciiFile content not valid JSON: %v", err)
 	}
 	if out.Last != 42 {

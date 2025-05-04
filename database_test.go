@@ -4,40 +4,9 @@ import (
 	"testing"
 )
 
-// Mock file and logger dependencies for database.go
-var (
-	dbMockEstablishFolderCalled   bool
-	dbMockAsciiFileToStringCalled bool
-	dbMockFileExistsCalled        bool
-)
-
-func dbMockEstablishFolder(_ string) error {
-	dbMockEstablishFolderCalled = true
-	return nil
-}
-
-func dbMockAsciiFileToString(_ string) string {
-	dbMockAsciiFileToStringCalled = true
-	return "{\"suffix\":\"test\"}"
-}
-
-func dbMockFileExists(_ string) bool {
-	dbMockFileExistsCalled = true
-	return false // Simulate file does not exist
-}
-
-func dbMockAsciiFileToLines(_ string) []string {
-	return []string{"header", "cat", "dog"}
-}
-
-func resetDbMocks() {
-	dbMockEstablishFolderCalled = false
-	dbMockAsciiFileToStringCalled = false
-	dbMockFileExistsCalled = false
-}
-
 func TestLoadSeries_NewAndExisting(t *testing.T) {
 	ctx := &Context{}
+	ResetFileMocks()
 	oldEstablish := establishFolder
 	oldAsciiFileToString := asciiFileToString
 	oldFileExists := fileExists
@@ -47,11 +16,13 @@ func TestLoadSeries_NewAndExisting(t *testing.T) {
 		fileExists = oldFileExists
 	}()
 
-	establishFolder = dbMockEstablishFolder
-	asciiFileToString = dbMockAsciiFileToString
-	fileExists = dbMockFileExists
+	establishFolder = MockEstablishFolder
+	asciiFileToString = func(_ string) string { return "{}" }
+	fileExists = func(path string) bool {
+		MockFileExistsCalled = true
+		return false
+	}
 
-	resetDbMocks()
 	series, err := ctx.LoadSeries()
 	if err != nil {
 		t.Fatalf("LoadSeries failed: %v", err)
@@ -59,7 +30,7 @@ func TestLoadSeries_NewAndExisting(t *testing.T) {
 	if series.Suffix != "simple" {
 		t.Errorf("Expected Suffix 'simple', got %q", series.Suffix)
 	}
-	if !dbMockFileExistsCalled {
+	if !MockFileExistsCalled {
 		t.Error("Expected file existence check to be called")
 	}
 }
@@ -67,7 +38,7 @@ func TestLoadSeries_NewAndExisting(t *testing.T) {
 func TestToLines_EmptyAndFiltered(t *testing.T) {
 	ctx := &Context{Series: Series{Nouns: []string{"cat", "dog"}}}
 	oldAsciiFileToLines := asciiFileToLines
-	asciiFileToLines = dbMockAsciiFileToLines
+	asciiFileToLines = func(_ string) []string { return []string{"header", "cat", "dog"} }
 	defer func() { asciiFileToLines = oldAsciiFileToLines }()
 	// Simulate lines with and without filtering
 	lines, err := ctx.toLines("nouns")

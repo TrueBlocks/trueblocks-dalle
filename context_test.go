@@ -6,42 +6,7 @@ import (
 	"text/template"
 )
 
-// --- Mocks ---
-var (
-	mockEstablishFolderCalled   bool
-	mockStringToAsciiFileCalled bool
-	mockFileExistsCalled        bool
-	mockAsciiFileToStringCalled bool
-)
-
-func mockEstablishFolder(_ string) error {
-	mockEstablishFolderCalled = true
-	return nil
-}
-
-func mockStringToAsciiFile(_, _ string) error {
-	mockStringToAsciiFileCalled = true
-	return nil
-}
-
-func mockFileExists(_ string) bool {
-	mockFileExistsCalled = true
-	return false
-}
-
-func mockAsciiFileToString(_ string) string {
-	mockAsciiFileToStringCalled = true
-	return ""
-}
-
 // --- Test helpers ---
-func resetMocks() {
-	mockEstablishFolderCalled = false
-	mockStringToAsciiFileCalled = false
-	mockFileExistsCalled = false
-	mockAsciiFileToStringCalled = false
-}
-
 func minimalContext() *Context {
 	tmpl := template.Must(template.New("x").Parse("ok"))
 	return &Context{
@@ -83,12 +48,12 @@ func TestMakeDalleDress_ValidAndCache(t *testing.T) {
 		fileExists = oldFileExists
 		asciiFileToString = oldAsciiFileToString
 	}()
-	establishFolder = mockEstablishFolder
-	stringToAsciiFile = mockStringToAsciiFile
-	fileExists = mockFileExists
-	asciiFileToString = mockAsciiFileToString
+	establishFolder = MockEstablishFolder
+	stringToAsciiFile = MockStringToAsciiFile
+	fileExists = MockFileExists
+	asciiFileToString = MockAsciiFileToString
 
-	resetMocks()
+	ResetFileMocks()
 	addr := "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
 	dress, err := ctx.MakeDalleDress(addr)
 	if err != nil {
@@ -97,11 +62,11 @@ func TestMakeDalleDress_ValidAndCache(t *testing.T) {
 	if dress == nil {
 		t.Fatal("expected non-nil DalleDress")
 	}
-	if !mockEstablishFolderCalled || !mockStringToAsciiFileCalled {
+	if !MockEstablishFolderCalled || !MockStringToAsciiFileCalled {
 		t.Error("expected file operations to be called")
 	}
 	// Test cache
-	resetMocks()
+	ResetFileMocks()
 	dress2, err2 := ctx.MakeDalleDress(addr)
 	if err2 != nil || dress2 != dress {
 		t.Error("expected cached DalleDress to be returned")
@@ -129,12 +94,12 @@ func TestGetPromptAndEnhanced(t *testing.T) {
 		fileExists = oldFileExists
 		asciiFileToString = oldAsciiFileToString
 	}()
-	establishFolder = mockEstablishFolder
-	stringToAsciiFile = mockStringToAsciiFile
-	fileExists = mockFileExists
-	asciiFileToString = mockAsciiFileToString
+	establishFolder = MockEstablishFolder
+	stringToAsciiFile = MockStringToAsciiFile
+	fileExists = MockFileExists
+	asciiFileToString = MockAsciiFileToString
 
-	resetMocks()
+	ResetFileMocks()
 	addr := "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
 	_, _ = ctx.MakeDalleDress(addr) // populate cache
 	if got := ctx.GetPrompt(addr); got == "" {
@@ -157,12 +122,12 @@ func TestSave(t *testing.T) {
 		fileExists = oldFileExists
 		asciiFileToString = oldAsciiFileToString
 	}()
-	establishFolder = mockEstablishFolder
-	stringToAsciiFile = mockStringToAsciiFile
-	fileExists = mockFileExists
-	asciiFileToString = mockAsciiFileToString
+	establishFolder = MockEstablishFolder
+	stringToAsciiFile = MockStringToAsciiFile
+	fileExists = MockFileExists
+	asciiFileToString = MockAsciiFileToString
 
-	resetMocks()
+	ResetFileMocks()
 	addr := "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
 	_, _ = ctx.MakeDalleDress(addr)
 	if !ctx.Save(addr) {
