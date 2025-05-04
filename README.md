@@ -1,6 +1,6 @@
 # trueblocks-dalle
 
-**trueblocks-dalle** is a Go package for generating, enhancing, and annotating creative prompts and images, powering the TrueBlocks Dalledress application. It combines attribute-driven prompt generation, OpenAI integration, and image annotation in a modular, testable, and extensible design.
+**Trueblocks Dalle** is a Go package for generating, enhancing, and annotating creative prompts and images, powering the TrueBlocks Dalledress application. It combines attribute-driven prompt generation, OpenAI integration, and image annotation in a modular, testable, and extensible design.
 
 ---
 
