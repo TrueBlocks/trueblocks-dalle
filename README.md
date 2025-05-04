@@ -45,26 +45,30 @@ Welcome to **trueblocks-dalle** — the creative engine for prompt generation, a
 ### Getting Started
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/TrueBlocks/trueblocks-dalle.git
    cd trueblocks-dalle
    ```
+
 2. **Install dependencies:**
+
    ```bash
    go mod tidy
    ```
+
 3. **Set your OpenAI API key:**
+
    ```bash
    export OPENAI_API_KEY=sk-...yourkey...
    ```
-4. **Prepare attribute databases:**
-   - Place your CSV files in the `databases/` directory. Each file should correspond to an attribute (e.g., `nouns.csv`, `adjectives.csv`).
 
 ---
 
 ## ✨ Usage Examples
 
 ### 1. Basic Prompt Generation
+
 ```go
 import "github.com/TrueBlocks/trueblocks-dalle/v2/pkg/dalle"
 
@@ -79,6 +83,7 @@ fmt.Println(dd.Prompt)
 ```
 
 ### 2. Enhance a Prompt with OpenAI
+
 ```go
 import "github.com/TrueBlocks/trueblocks-dalle/v2/pkg/dalle"
 
@@ -90,6 +95,7 @@ fmt.Println(result)
 ```
 
 ### 3. Annotate an Image
+
 ```go
 import "github.com/TrueBlocks/trueblocks-dalle/v2/pkg/dalle"
 
@@ -103,6 +109,7 @@ fmt.Println("Annotated image saved to:", outputPath)
 ---
 
 ## 🧩 Data & Assets
+
 - **Attribute Databases:** Place CSV files in the `databases/` directory. Each file should have a header and one value per line.
 - **Output:** Generated prompts, images, and cache files are written to the `output/` directory, organized by series and type.
 
@@ -111,15 +118,18 @@ fmt.Println("Annotated image saved to:", outputPath)
 ## 🧪 Testing
 
 Run all tests (unit and integration):
+
 ```bash
 go test ./...
 ```
 
 - Tests are written for all core logic, with mocks for file and network operations.
 - To run a specific test file:
+
   ```bash
   go test -v -run TestName ./...
   ```
+
 - Coverage is high, but integration tests for image annotation may require macOS and font availability.
 
 ---
@@ -127,6 +137,7 @@ go test ./...
 ## 📝 Contributing
 
 We love contributions! Please:
+
 - Open issues for bugs, questions, or feature requests.
 - Submit pull requests with clear descriptions and tests.
 - Follow Go best practices and keep code readable and well-documented.
@@ -140,12 +151,14 @@ This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE)
 ---
 
 ## 👩‍💻 Authors & Credits
+
 - TrueBlocks contributors
 - Special thanks to the open-source community and the authors of [gg](https://github.com/fogleman/gg), [go-colorful](https://github.com/lucasb-eyer/go-colorful), and [OpenAI](https://openai.com/).
 
 ---
 
 ## 💡 Tips & Best Practices
+
 - **Environment Variables:** Set `OPENAI_API_KEY` and (optionally) `DALLE_QUALITY` for best results.
 - **Extending Attributes:** Add new CSVs to `databases/` and update attribute lists in `attribute.go`.
 - **Debugging:** Use Go’s built-in testing and logging for troubleshooting.
@@ -154,6 +167,7 @@ This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE)
 ---
 
 ## 🌈 Why trueblocks-dalle?
+
 - **Modular:** Swap in new templates, attributes, or enhancement models with ease.
 - **Transparent:** All logic is open, testable, and documented.
 - **Creative:** Designed to inspire and enable new forms of generative art and prompt engineering.
@@ -161,4 +175,5 @@ This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE)
 ---
 
 ## 📬 Questions?
+
 Open an issue or reach out on GitHub. We’re here to help you build, create, and imagine with trueblocks-dalle!

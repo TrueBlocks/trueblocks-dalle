@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 )
 
 // Series represents a collection of prompt attributes and their values.
@@ -25,10 +23,6 @@ type Series struct {
 	Gazes        []string `json:"gazes"`
 	Backstyles   []string `json:"backstyles"`
 }
-
-// Allow mocking of file operations for testing
-var establishFolder = file.EstablishFolder
-var stringToAsciiFile = file.StringToAsciiFile
 
 // String returns the JSON representation of the Series.
 func (s *Series) String() string {

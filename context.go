@@ -7,15 +7,10 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
-// Allow mocking of file operations for testing
-var fileExists = file.FileExists
-var asciiFileToString = file.AsciiFileToString
-
-// Context holds templates, series, databases, and cache for prompt generation.
+// Context holds templates, series, dbs, and cache for prompt generation.
 type Context struct {
 	PromptTemplate *template.Template
 	DataTemplate   *template.Template
@@ -41,7 +36,7 @@ func (dd *DalleDress) ReportOn(addr, loc, ft, value string) {
 	_ = stringToAsciiFile(filepath.Join(path, dd.Filename+"."+ft), value)
 }
 
-// MakeDalleDress builds or retrieves a DalleDress for the given address using the context's templates, series, databases, and cache.
+// MakeDalleDress builds or retrieves a DalleDress for the given address using the context's templates, series, dbs, and cache.
 func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 	ctx.CacheMutex.Lock()
 	defer ctx.CacheMutex.Unlock()

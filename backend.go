@@ -50,12 +50,12 @@ package dalle
 
 // 	for i := 0; i < len(dd.Seed); i = i + 8 {
 // 		index := len(dd.Attribs)
-// 		attr := dalle.NewAttribute(a.databases, index, dd.Seed[i:i+6])
+// 		attr := dalle.NewAttribute(a.dbs, index, dd.Seed[i:i+6])
 // 		dd.Attribs = append(dd.Attribs, attr)
 // 		dd.AttribMap[attr.Name] = attr
 // 		if i+4+6 < len(dd.Seed) {
 // 			index = len(dd.Attribs)
-// 			attr = dalle.NewAttribute(a.databases, index, dd.Seed[i+4:i+4+6])
+// 			attr = dalle.NewAttribute(a.dbs, index, dd.Seed[i+4:i+4+6])
 // 			dd.Attribs = append(dd.Attribs, attr)
 // 			dd.AttribMap[attr.Name] = attr
 // 		}

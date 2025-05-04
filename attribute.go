@@ -53,7 +53,7 @@ var attributeNames = []string{
 }
 
 // NewAttribute constructs an Attribute from database info and a byte string.
-func NewAttribute(databases map[string][]string, index int, bytes string) Attribute {
+func NewAttribute(dbs map[string][]string, index int, bytes string) Attribute {
 	attr := Attribute{
 		Database: DatabaseNames[index],
 		Name:     attributeNames[index],
@@ -64,8 +64,8 @@ func NewAttribute(databases map[string][]string, index int, bytes string) Attrib
 		Selector: 0,
 		Value:    "",
 	}
-	attr.Count = uint64(len(databases[attr.Database]))
+	attr.Count = uint64(len(dbs[attr.Database]))
 	attr.Selector = uint64(float64(attr.Count) * attr.Factor)
-	attr.Value = databases[attr.Database][attr.Selector]
+	attr.Value = dbs[attr.Database][attr.Selector]
 	return attr
 }

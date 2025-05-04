@@ -36,16 +36,28 @@ func TestLoadSeries_NewAndExisting(t *testing.T) {
 }
 
 func TestToLines_EmptyAndFiltered(t *testing.T) {
-	ctx := &Context{Series: Series{Nouns: []string{"cat", "dog"}}}
-	oldAsciiFileToLines := asciiFileToLines
-	asciiFileToLines = func(_ string) []string { return []string{"header", "cat", "dog"} }
-	defer func() { asciiFileToLines = oldAsciiFileToLines }()
-	// Simulate lines with and without filtering
-	lines, err := ctx.toLines("nouns")
+	lines, err := ReadDatabaseCSV("nouns")
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
 	if len(lines) == 0 {
 		t.Error("Expected at least one line (should append 'none' if empty)")
+	}
+}
+
+func TestReloadDatabases_Basic(t *testing.T) {
+	ctx := &Context{}
+	ResetFileMocks()
+
+	// Provide DatabaseNames for the test
+	DatabaseNames = []string{"nouns"}
+
+	ctx.ReloadDatabases()
+
+	if len(ctx.Databases) == 0 {
+		t.Error("Databases not loaded")
+	}
+	if got := ctx.Databases["nouns"]; len(got) == 0 {
+		t.Errorf("Database 'nouns' is empty: %v", got)
 	}
 }

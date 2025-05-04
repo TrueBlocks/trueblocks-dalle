@@ -4,7 +4,12 @@ package dalle
 
 import (
 	"errors"
+	"io"
 	"net/http"
+	"os"
+
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 )
 
 // --- File operation mocks (used in context_test.go, database_test.go, series_test.go) ---
@@ -100,3 +105,18 @@ func (MockDress) BackStyle(bool) string     { return "BackStyle" }
 func (MockDress) Original() string          { return "Original" }
 func (MockDress) Filename() string          { return "Filename" }
 func (MockDress) Seed() string              { return "Seed" }
+
+var (
+	openFile     = os.OpenFile
+	annotateFunc = annotate
+	httpGet      = http.Get
+	System       = func(cmd string) { utils.System(cmd) }
+	ioCopy       = io.Copy
+)
+
+var openaiAPIURL = "https://api.openai.com/v1/images/generations"
+var fileExists = file.FileExists
+var establishFolder = file.EstablishFolder
+var asciiFileToString = file.AsciiFileToString
+var stringToAsciiFile = file.StringToAsciiFile
+var asciiFileToLines = file.AsciiFileToLines

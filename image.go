@@ -13,20 +13,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 )
-
-// Allow mocking for testability
-var (
-	openFile     = os.OpenFile
-	annotateFunc = annotate
-	httpGet      = http.Get
-	System       = func(cmd string) { utils.System(cmd) }
-	ioCopy       = io.Copy
-)
-
-// Allow mocking of OpenAI API endpoint for testing
-var openaiAPIURL = "https://api.openai.com/v1/images/generations"
 
 type ImageData struct {
 	EnhancedPrompt string `json:"enhancedPrompt"`
