@@ -13,6 +13,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 )
 
 type ImageData struct {
@@ -23,8 +24,8 @@ type ImageData struct {
 	Filename       string `json:"filename"`
 }
 
-func RequestImage(imageData *ImageData) error {
-	generated := filepath.Join("./output", imageData.SeriesName, "generated")
+func RequestImage(outputPath string, imageData *ImageData) error {
+	generated := outputPath
 	_ = file.EstablishFolder(generated)
 	annotated := strings.Replace(generated, "/generated", "/annotated", -1)
 	_ = file.EstablishFolder(annotated)
@@ -127,7 +128,7 @@ func RequestImage(imageData *ImageData) error {
 	}
 	logger.Info(colors.Cyan, imageData.Filename, colors.Green, "- image saved as", colors.White+strings.Trim(path, " "), colors.Off)
 	if os.Getenv("TB_CMD_LINE") == "true" {
-		System("open " + path)
+		utils.System("open " + path)
 	}
 	return nil
 }

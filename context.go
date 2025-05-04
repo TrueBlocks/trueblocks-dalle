@@ -7,33 +7,51 @@ import (
 	"sync"
 	"text/template"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
 // Context holds templates, series, dbs, and cache for prompt generation.
 type Context struct {
-	PromptTemplate *template.Template
-	DataTemplate   *template.Template
-	TitleTemplate  *template.Template
-	TerseTemplate  *template.Template
-	AuthorTemplate *template.Template
 	Series         Series
 	Databases      map[string][]string
 	DalleCache     map[string]*DalleDress
 	CacheMutex     sync.Mutex
+	OutputPath     string
+	promptTemplate *template.Template
+	dataTemplate   *template.Template
+	titleTemplate  *template.Template
+	terseTemplate  *template.Template
+	authorTemplate *template.Template
+}
+
+func NewContext(outputPath string) *Context {
+	ctx := Context{
+		promptTemplate: promptTemplate,
+		dataTemplate:   dataTemplate,
+		titleTemplate:  titleTemplate,
+		terseTemplate:  terseTemplate,
+		authorTemplate: authorTemplate,
+		Series:         Series{},
+		Databases:      make(map[string][]string),
+		DalleCache:     make(map[string]*DalleDress),
+		OutputPath:     outputPath,
+	}
+	ctx.ReloadDatabases()
+	return &ctx
 }
 
 var saveMutex sync.Mutex
 
-// ReportOn logs and saves generated prompt data for a given address and location.
-func (dd *DalleDress) ReportOn(addr, loc, ft, value string) {
+// reportOn logs and saves generated prompt data for a given address and location.
+func (ctx *Context) reportOn(dd *DalleDress, addr, loc, ft, value string) {
 	logger.Info("Generating", loc, "for "+addr)
-	path := filepath.Join("./output/", strings.ToLower(loc))
+	path := filepath.Join(ctx.OutputPath, strings.ToLower(loc))
 
 	saveMutex.Lock()
 	defer saveMutex.Unlock()
-	_ = establishFolder(path)
-	_ = stringToAsciiFile(filepath.Join(path, dd.Filename+"."+ft), value)
+	_ = file.EstablishFolder(path)
+	_ = file.StringToAsciiFile(filepath.Join(path, dd.Filename+"."+ft), value)
 }
 
 // MakeDalleDress builds or retrieves a DalleDress for the given address using the context's templates, series, dbs, and cache.
@@ -86,18 +104,18 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 	}
 
 	suff := ctx.Series.Suffix
-	dd.DataPrompt, _ = dd.ExecuteTemplate(ctx.DataTemplate, nil)
-	dd.ReportOn(addressIn, filepath.Join(suff, "data"), "txt", dd.DataPrompt)
-	dd.TitlePrompt, _ = dd.ExecuteTemplate(ctx.TitleTemplate, nil)
-	dd.ReportOn(addressIn, filepath.Join(suff, "title"), "txt", dd.TitlePrompt)
-	dd.TersePrompt, _ = dd.ExecuteTemplate(ctx.TerseTemplate, nil)
-	dd.ReportOn(addressIn, filepath.Join(suff, "terse"), "txt", dd.TersePrompt)
-	dd.Prompt, _ = dd.ExecuteTemplate(ctx.PromptTemplate, nil)
-	dd.ReportOn(addressIn, filepath.Join(suff, "prompt"), "txt", dd.Prompt)
-	fnPath := filepath.Join("output", ctx.Series.Suffix, "enhanced", dd.Filename+".txt")
+	dd.DataPrompt, _ = dd.ExecuteTemplate(ctx.dataTemplate, nil)
+	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "data"), "txt", dd.DataPrompt)
+	dd.TitlePrompt, _ = dd.ExecuteTemplate(ctx.titleTemplate, nil)
+	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "title"), "txt", dd.TitlePrompt)
+	dd.TersePrompt, _ = dd.ExecuteTemplate(ctx.terseTemplate, nil)
+	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "terse"), "txt", dd.TersePrompt)
+	dd.Prompt, _ = dd.ExecuteTemplate(ctx.promptTemplate, nil)
+	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "prompt"), "txt", dd.Prompt)
+	fnPath := filepath.Join(ctx.OutputPath, ctx.Series.Suffix, "enhanced", dd.Filename+".txt")
 	dd.EnhancedPrompt = ""
-	if fileExists(fnPath) {
-		dd.EnhancedPrompt = asciiFileToString(fnPath)
+	if file.FileExists(fnPath) {
+		dd.EnhancedPrompt = file.AsciiFileToString(fnPath)
 	}
 
 	ctx.DalleCache[dd.Filename] = &dd
@@ -129,7 +147,7 @@ func (ctx *Context) Save(addr string) bool {
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return false
 	} else {
-		dd.ReportOn(addr, filepath.Join(ctx.Series.Suffix, "selector"), "json", dd.String())
+		ctx.reportOn(dd, addr, filepath.Join(ctx.Series.Suffix, "selector"), "json", dd.String())
 		return true
 	}
 }
@@ -139,7 +157,7 @@ func (ctx *Context) GenerateEnhanced(addr string) string {
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error()
 	} else {
-		authorType, _ := dd.ExecuteTemplate(ctx.AuthorTemplate, nil)
+		authorType, _ := dd.ExecuteTemplate(ctx.authorTemplate, nil)
 		if dd.EnhancedPrompt, err = EnhancePrompt(ctx.GetPrompt(addr), authorType); err != nil {
 			logger.Fatal(err.Error())
 		}
@@ -156,7 +174,7 @@ func (ctx *Context) GenerateImage(addr string) (string, error) {
 	} else {
 		suff := ctx.Series.Suffix
 		dd.EnhancedPrompt = ctx.GenerateEnhanced(addr)
-		dd.ReportOn(addr, filepath.Join(suff, "enhanced"), "txt", dd.EnhancedPrompt)
+		ctx.reportOn(dd, addr, filepath.Join(suff, "enhanced"), "txt", dd.EnhancedPrompt)
 		_ = ctx.Save(addr)
 		imageData := ImageData{
 			TitlePrompt:    dd.TitlePrompt,
@@ -165,7 +183,8 @@ func (ctx *Context) GenerateImage(addr string) (string, error) {
 			SeriesName:     ctx.Series.Suffix,
 			Filename:       dd.Filename,
 		}
-		if err := RequestImage(&imageData); err != nil {
+		outputPath := filepath.Join(ctx.OutputPath, imageData.SeriesName, "generated")
+		if err := RequestImage(outputPath, &imageData); err != nil {
 			return err.Error(), err
 		}
 		return dd.EnhancedPrompt, nil

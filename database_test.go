@@ -5,23 +5,8 @@ import (
 )
 
 func TestLoadSeries_NewAndExisting(t *testing.T) {
-	ctx := &Context{}
-	ResetFileMocks()
-	oldEstablish := establishFolder
-	oldAsciiFileToString := asciiFileToString
-	oldFileExists := fileExists
-	defer func() {
-		establishFolder = oldEstablish
-		asciiFileToString = oldAsciiFileToString
-		fileExists = oldFileExists
-	}()
-
-	establishFolder = MockEstablishFolder
-	asciiFileToString = func(_ string) string { return "{}" }
-	fileExists = func(path string) bool {
-		MockFileExistsCalled = true
-		return false
-	}
+	tmpDir := t.TempDir()
+	ctx := NewContext(tmpDir)
 
 	series, err := ctx.LoadSeries()
 	if err != nil {
@@ -29,9 +14,6 @@ func TestLoadSeries_NewAndExisting(t *testing.T) {
 	}
 	if series.Suffix != "simple" {
 		t.Errorf("Expected Suffix 'simple', got %q", series.Suffix)
-	}
-	if !MockFileExistsCalled {
-		t.Error("Expected file existence check to be called")
 	}
 }
 
@@ -46,8 +28,8 @@ func TestToLines_EmptyAndFiltered(t *testing.T) {
 }
 
 func TestReloadDatabases_Basic(t *testing.T) {
-	ctx := &Context{}
-	ResetFileMocks()
+	tmpDir := t.TempDir()
+	ctx := NewContext(tmpDir)
 
 	// Provide DatabaseNames for the test
 	DatabaseNames = []string{"nouns"}

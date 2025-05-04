@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
@@ -59,10 +60,10 @@ func (ctx *Context) ReloadDatabases() {
 
 func (ctx *Context) LoadSeries() (Series, error) {
 	lastSeries := "five-tone-postal-protozoa" // ctx.GetSession().LastSeries
-	fn := filepath.Join("./output/series", lastSeries+".json")
-	str := strings.TrimSpace(asciiFileToString(fn))
+	fn := filepath.Join(filepath.Join(ctx.OutputPath, "series"), lastSeries+".json")
+	str := strings.TrimSpace(file.AsciiFileToString(fn))
 	logger.Info("lastSeries", lastSeries)
-	if len(str) == 0 || !fileExists(fn) {
+	if len(str) == 0 || !file.FileExists(fn) {
 		logger.Info("No series found, creating a new one", fn)
 		ret := Series{
 			Suffix: "simple",
@@ -79,6 +80,6 @@ func (ctx *Context) LoadSeries() (Series, error) {
 	}
 
 	s.Suffix = strings.Trim(strings.ReplaceAll(s.Suffix, " ", "-"), "-")
-	s.SaveSeries(filepath.Join("./output/series", s.Suffix+".json"), 0)
+	s.SaveSeries(filepath.Join(ctx.OutputPath, "series", s.Suffix+".json"), 0)
 	return s, nil
 }

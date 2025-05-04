@@ -37,7 +37,8 @@ Welcome to **trueblocks-dalle** — the creative engine for prompt generation, a
 ## 🛠️ Installation & Setup
 
 ### Prerequisites
-- **Go 1.20+** (https://golang.org/dl/)
+
+- **Go 1.23+**
 - [TrueBlocks Core](https://github.com/TrueBlocks/trueblocks-core) (for some utilities)
 - [OpenAI API Key](https://platform.openai.com/account/api-keys) (for prompt enhancement)
 - [gg](https://github.com/fogleman/gg) and [go-colorful](https://github.com/lucasb-eyer/go-colorful) for image annotation

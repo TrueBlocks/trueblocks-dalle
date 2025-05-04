@@ -72,11 +72,11 @@ const authorTemplateStr = `{{if .HasLitStyle}}You are an award winning author wh
 style called {{.LitStyle true}}. Take on the persona of such an author.
 {{.LitStyle true}} is a genre or literary style that {{.LitStyleDescr}}.{{end}}`
 
-var PromptTemplate = template.Must(template.New("prompt").Parse(promptTemplateStr))
-var DataTemplate = template.Must(template.New("data").Parse(dataTemplateStr))
-var TerseTemplate = template.Must(template.New("terse").Parse(terseTemplateStr))
-var TitleTemplate = template.Must(template.New("title").Parse(titleTemplateStr))
-var AuthorTemplate = template.Must(template.New("author").Parse(authorTemplateStr))
+var promptTemplate = template.Must(template.New("prompt").Parse(promptTemplateStr))
+var dataTemplate = template.Must(template.New("data").Parse(dataTemplateStr))
+var terseTemplate = template.Must(template.New("terse").Parse(terseTemplateStr))
+var titleTemplate = template.Must(template.New("title").Parse(titleTemplateStr))
+var authorTemplate = template.Must(template.New("author").Parse(authorTemplateStr))
 
 // EnhancePrompt calls the OpenAI API to enhance a prompt using the given author type.
 func EnhancePrompt(prompt, authorType string) (string, error) {

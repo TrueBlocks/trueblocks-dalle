@@ -63,13 +63,13 @@ package dalle
 
 // 	suff := a.Series.Suffix
 // 	dd.DataPrompt, _ = dd.ExecuteTemplate(a.dataTemplate, nil)
-// 	dd.ReportOn(addressIn, filepath.Join(suff, "data"), "txt", dd.DataPrompt)
+// 	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "data"), "txt", dd.DataPrompt)
 // 	dd.TitlePrompt, _ = dd.ExecuteTemplate(a.titleTemplate, nil)
-// 	dd.ReportOn(addressIn, filepath.Join(suff, "title"), "txt", dd.TitlePrompt)
+// 	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "title"), "txt", dd.TitlePrompt)
 // 	dd.TersePrompt, _ = dd.ExecuteTemplate(a.terseTemplate, nil)
-// 	dd.ReportOn(addressIn, filepath.Join(suff, "terse"), "txt", dd.TersePrompt)
+// 	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "terse"), "txt", dd.TersePrompt)
 // 	dd.Prompt, _ = dd.ExecuteTemplate(a.promptTemplate, nil)
-// 	dd.ReportOn(addressIn, filepath.Join(suff, "prompt"), "txt", dd.Prompt)
+// 	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "prompt"), "txt", dd.Prompt)
 // 	fn = filepath.Join("output", a.Series.Suffix, "enhanced", dd.Filename+".txt")
 // 	dd.EnhancedPrompt = ""
 // 	if file.FileExists(fn) {

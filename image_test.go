@@ -28,23 +28,14 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 	}))
 	defer imageServer.Close()
 
-	// Patch the OpenAI URL and image URL in the function (simulate via env and string replace)
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	os.Setenv("DALLE_QUALITY", "standard")
-
 	// Patch file operations
-	oldEstablish := establishFolder
 	oldOpenFile := openFile
 	oldAnnotate := annotateFunc
-	oldSystem := System
 	defer func() {
-		establishFolder = oldEstablish
 		openFile = oldOpenFile
 		annotateFunc = oldAnnotate
-		System = oldSystem
 	}()
 
-	establishFolder = func(path string) error { return nil }
 	openFile = func(name string, flag int, perm os.FileMode) (*os.File, error) {
 		// Return a fake file that implements Write and Close
 		return nil, nil // We'll mock io.Copy below
@@ -59,7 +50,6 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 	annotateFunc = func(text, fileName, location string, annoPct float64) (string, error) {
 		return strings.Replace(fileName, "generated/", "annotated/", 1), nil
 	}
-	System = func(cmd string) {}
 
 	// Patch http.Get to redirect to our imageServer
 	oldHTTPGet := httpGet
@@ -86,7 +76,9 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 		SeriesName:     "testseries",
 		Filename:       "testfile",
 	}
-	err := RequestImage(imgData)
+	// Create a temporary output folder for the test
+	outputPath := t.TempDir()
+	err := RequestImage(outputPath, imgData)
 	if err != nil {
 		t.Errorf("RequestImage failed: %v", err)
 	}

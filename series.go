@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 )
 
 // Series represents a collection of prompt attributes and their values.
@@ -34,8 +36,9 @@ func (s *Series) String() string {
 func (s *Series) SaveSeries(fn string, last int) {
 	ss := s
 	ss.Last = last
-	_ = establishFolder("output/series")
-	_ = stringToAsciiFile(fn, ss.String())
+	// x509
+	_ = file.EstablishFolder("output/series")
+	_ = file.StringToAsciiFile(fn, ss.String())
 }
 
 // GetFilter returns a string slice for the given field name in the Series.
