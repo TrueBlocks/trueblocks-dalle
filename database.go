@@ -21,7 +21,7 @@ func (ctx *Context) ReloadDatabases() {
 
 	for _, db := range DatabaseNames {
 		if ctx.Databases[db] == nil {
-			lines, err := ReadDatabaseCSV(db + ".csv")
+			lines, err := readDatabaseCSV(db + ".csv")
 			if err != nil {
 				logger.Fatal(err)
 			}

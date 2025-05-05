@@ -36,7 +36,6 @@ func (s *Series) String() string {
 func (s *Series) SaveSeries(fn string, last int) {
 	ss := s
 	ss.Last = last
-	// x509
 	_ = file.EstablishFolder("output/series")
 	_ = file.StringToAsciiFile(fn, ss.String())
 }

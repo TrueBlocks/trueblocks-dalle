@@ -10,19 +10,19 @@ import (
 )
 
 // --- HTTP and template mocks (from prompt_test.go) ---
-type MockRoundTripper struct {
+type mockRoundTripper struct {
 	Resp *http.Response
 	Err  error
 }
 
-func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return m.Resp, m.Err
 }
 
-type BadReader struct{}
+type badReader struct{}
 
-func (BadReader) Read([]byte) (int, error) { return 0, errors.New("read error") }
-func (BadReader) Close() error             { return nil }
+func (badReader) Read([]byte) (int, error) { return 0, errors.New("read error") }
+func (badReader) Close() error             { return nil }
 
 var (
 	openFile     = os.OpenFile

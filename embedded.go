@@ -12,11 +12,11 @@ import (
 )
 
 //go:embed databases.tar.gz
-var EmbeddedTarGz []byte
+var embeddedDbs []byte
 
-// ReadDatabaseCSV extracts the named CSV file from the embedded .tar.gz and returns its lines.
-func ReadDatabaseCSV(name string) ([]string, error) {
-	gzr, err := gzip.NewReader(bytes.NewReader(EmbeddedTarGz))
+// readDatabaseCSV extracts the named CSV file from the embedded .tar.gz and returns its lines.
+func readDatabaseCSV(name string) ([]string, error) {
+	gzr, err := gzip.NewReader(bytes.NewReader(embeddedDbs))
 	if err != nil {
 		return nil, err
 	}

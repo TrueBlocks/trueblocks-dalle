@@ -16,7 +16,7 @@ import (
 func TestEnhancePrompt_Success(t *testing.T) {
 	mockBody := `{"choices":[{"message":{"content":"Enhanced prompt!"}}]}`
 	client := &http.Client{
-		Transport: &MockRoundTripper{
+		Transport: &mockRoundTripper{
 			Resp: &http.Response{
 				StatusCode: 200,
 				Body:       io.NopCloser(bytes.NewBufferString(mockBody)),
@@ -44,7 +44,7 @@ func TestEnhancePrompt_JSONMarshalError(t *testing.T) {
 
 func TestEnhancePrompt_HTTPError(t *testing.T) {
 	client := &http.Client{
-		Transport: &MockRoundTripper{Err: errors.New("network error")},
+		Transport: &mockRoundTripper{Err: errors.New("network error")},
 	}
 	_, err := enhancePromptWithClient("prompt", "author", client, "key", json.Marshal)
 	if err == nil || !strings.Contains(err.Error(), "network error") {
@@ -53,9 +53,9 @@ func TestEnhancePrompt_HTTPError(t *testing.T) {
 }
 
 func TestEnhancePrompt_BodyReadError(t *testing.T) {
-	errReadCloser := io.NopCloser(BadReader{})
+	errReadCloser := io.NopCloser(badReader{})
 	client := &http.Client{
-		Transport: &MockRoundTripper{
+		Transport: &mockRoundTripper{
 			Resp: &http.Response{
 				StatusCode: 200,
 				Body:       errReadCloser,
@@ -71,7 +71,7 @@ func TestEnhancePrompt_BodyReadError(t *testing.T) {
 
 func TestEnhancePrompt_UnmarshalError(t *testing.T) {
 	client := &http.Client{
-		Transport: &MockRoundTripper{
+		Transport: &mockRoundTripper{
 			Resp: &http.Response{
 				StatusCode: 200,
 				Body:       io.NopCloser(bytes.NewBufferString("not json")),
@@ -87,7 +87,7 @@ func TestEnhancePrompt_UnmarshalError(t *testing.T) {
 
 func TestEnhancePrompt_EmptyAPIKey(t *testing.T) {
 	client := &http.Client{
-		Transport: &MockRoundTripper{
+		Transport: &mockRoundTripper{
 			Resp: &http.Response{
 				StatusCode: 200,
 				Body:       io.NopCloser(bytes.NewBufferString(`{"choices":[{"message":{"content":"Enhanced!"}}]}`)),

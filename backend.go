@@ -115,7 +115,7 @@ package dalle
 // 		return err.Error()
 // 	} else {
 // 		return dd.TersePrompt
-// 		}
+// 	}
 // }
 
 // func (a *App) GetFilename(addr string) string {
@@ -123,7 +123,7 @@ package dalle
 // 		return err.Error()
 // 	} else {
 // 		return dd.Filename
-// 		}
+// 	}
 // }
 
 // func (a *App) GetExistingAddrs() []string {

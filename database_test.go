@@ -18,7 +18,7 @@ func TestLoadSeries_NewAndExisting(t *testing.T) {
 }
 
 func TestToLines_EmptyAndFiltered(t *testing.T) {
-	lines, err := ReadDatabaseCSV("nouns.csv")
+	lines, err := readDatabaseCSV("nouns.csv")
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
