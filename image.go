@@ -61,10 +61,6 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	}
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		logger.Fatal("No OPENAI_API_KEY key found")
-	}
-
 	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- generating the image...", colors.Off)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
