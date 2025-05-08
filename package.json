@@ -1,6 +1,6 @@
 {
   "scripts": {
     "lint": "golangci-lint run",
-    "test": "go tests ./.."
+    "test": "go test ./..."
   }
 }
