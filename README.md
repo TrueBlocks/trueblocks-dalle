@@ -58,6 +58,7 @@ export OPENAI_API_KEY=sk-...yourkey...
 ## ✨ Usage
 
 **Basic Prompt Generation:**
+
 ```go
 import "github.com/TrueBlocks/trueblocks-dalle/v2/pkg/dalle"
 
@@ -68,12 +69,14 @@ fmt.Println(dd.Prompt)
 ```
 
 **Enhance a Prompt:**
+
 ```go
 result, err := dalle.EnhancePrompt("A cat in a hat", "author")
 fmt.Println(result)
 ```
 
 **Annotate an Image:**
+
 ```go
 outputPath, err := dalle.annotate("Hello World", "input.png", "bottom", 0.1)
 fmt.Println("Annotated image saved to:", outputPath)
@@ -91,9 +94,11 @@ fmt.Println("Annotated image saved to:", outputPath)
 ## 🧪 Testing
 
 Run all tests:
+
 ```bash
 go test ./...
 ```
+
 - Tests cover core logic, with mocks for file/network operations.
 - Some image annotation tests may require macOS and system fonts.
 
