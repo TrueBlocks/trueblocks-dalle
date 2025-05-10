@@ -1,13 +1,13 @@
 # Public Interface
 
-DalleDress is designed with a minimal, focused public interface. The following are the primary types and functions you’ll use in most applications:
+**trueblocks-dalle** is designed with a minimal, focused public interface. The following are the primary types and functions you’ll use in most applications:
 
 ## Context
 
 The `Context` type is the main entry point for all operations.
 
 ```go
-ctx := dalledress.NewContext()
+ctx := dalle.NewContext()
 ```
 
 ## Image Generation

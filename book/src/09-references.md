@@ -1,6 +1,6 @@
 # References
 
-- [DalleDress GitHub Repository](https://github.com/trueblocks/dalledress)
+- [**trueblocks-dalle** GitHub Repository](https://github.com/trueblocks/dalle)
 - [Original Design Document](https://docs.google.com/document/d/1jNUonGHN6mHT4FqrmI7TlS82epNOqHECcxwobLQGxTo/edit?tab=t.0)
 - [Go Documentation](https://golang.org/doc/)
 - [mdBook Documentation](https://rust-lang.github.io/mdBook/)

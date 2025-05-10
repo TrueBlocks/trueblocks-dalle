@@ -1,6 +1,7 @@
 {
   "scripts": {
     "lint": "golangci-lint run",
-    "test": "go test ./..."
+    "test": "go test ./...",
+    "book": "cd book && make serve"
   }
 }

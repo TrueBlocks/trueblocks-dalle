@@ -2,7 +2,7 @@
 
 ## Running Tests
 
-DalleDress uses Go’s standard testing tools. To run all tests, first load your environment variables (if needed):
+**trueblocks-dalle** uses Go’s standard testing tools. To run all tests, first load your environment variables (if needed):
 
 ```sh
 export $(grep -v '^#' .env | xargs) && go test ./...
@@ -20,6 +20,7 @@ We welcome contributions! To get started:
 Please follow Go best practices and keep the public interface minimal.
 
 ## Code Style
+
 - Use `gofmt` for formatting
 - Write clear, concise comments
 - Prefer composition over inheritance

@@ -7,12 +7,12 @@ package main
 
 import (
     "fmt"
-    "github.com/trueblocks/dalledress"
+    "github.com/TrueBlocks/trueblocks/dalle/v2"
 )
 
 func main() {
-    // Create a new DalleDress context
-    ctx := dalledress.NewContext()
+    // Create a new dalle context
+    ctx := dalle.NewContext()
 
     // Generate an image from a prompt
     img, err := ctx.GenerateImage("A futuristic cityscape at sunset")

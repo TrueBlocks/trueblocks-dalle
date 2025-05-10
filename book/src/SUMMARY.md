@@ -1,6 +1,6 @@
-# DalleDress: Local-First Image Generation for Go
+# **trueblocks-dalle**: Local-First Image Generation for Go
 
-A technical guide to using, understanding, and extending the DalleDress Go package for local-first image generation.
+A technical guide to using, understanding, and extending the **trueblocks-dalle** Go package for local-first image generation.
 
 - [Introduction](01-introduction.md)
 - [Getting Started](02-getting-started.md)
