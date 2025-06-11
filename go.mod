@@ -1,6 +1,7 @@
 module github.com/TrueBlocks/trueblocks-dalle/v2
 
-go 1.23.1
+// GoLang Version
+go 1.23.8
 
 require (
 	git.sr.ht/~sbinet/gg v0.6.0
