@@ -15,3 +15,7 @@ clean:
 	@rm -fR node_modules
 	@rm -fR build/bin
 
+# Build & serve documentation book (mdBook) from ./book
+.PHONY: book
+book:
+	$(MAKE) -C book serve
