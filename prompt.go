@@ -2,11 +2,15 @@ package dalle
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"os"
 	"text/template"
+	"time"
+
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
 // Template strings and compiled templates (moved from prompts.go)
@@ -80,14 +84,34 @@ var authorTemplate = template.Must(template.New("author").Parse(authorTemplateSt
 
 // EnhancePrompt calls the OpenAI API to enhance a prompt using the given author type.
 func EnhancePrompt(prompt, authorType string) (string, error) {
+	start := time.Now()
+	logger.Info("EnhancePrompt:start")
+	if os.Getenv("DALLESERVER_NO_ENHANCE") == "1" {
+		logger.Info("EnhancePrompt:skipped no-enhance flag")
+		return prompt, nil
+	}
 	apiKey := os.Getenv("OPENAI_API_KEY")
-	return enhancePromptWithClient(prompt, authorType, &http.Client{}, apiKey, json.Marshal)
+	if apiKey == "" { // no key: skip enhancement silently
+		logger.Info("EnhancePrompt:skipped missing api key")
+		return prompt, nil
+	}
+	out, err := enhancePromptWithClient(prompt, authorType, &http.Client{}, apiKey, json.Marshal)
+	logger.Info("EnhancePrompt:end", "elapsed", time.Since(start).String())
+	return out, err
 }
 
 // enhancePromptWithClient is like EnhancePrompt but allows injecting an HTTP client, API key, and marshal function (for testing).
 func enhancePromptWithClient(prompt, authorType string, client *http.Client, apiKey string, marshal func(v interface{}) ([]byte, error)) (string, error) {
 	_ = authorType // authorType is not used in this function, but could be used for future enhancements
 	url := "https://api.openai.com/v1/chat/completions"
+
+	// timeout config (default extended from 15s to 60s to accommodate slower responses)
+	to := 60 * time.Second
+	if v := os.Getenv("DALLESERVER_ENHANCE_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			to = d
+		}
+	}
 	payload := dalleRequest{
 		Model:     "gpt-4",
 		Seed:      1337,
@@ -99,18 +123,23 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 		return "", err
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
+	ctx, cancel := context.WithTimeout(context.Background(), to)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
-
+	start := time.Now()
+	logger.Info("EnhancePrompt: sending request")
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	logger.Info("EnhancePrompt: response in", time.Since(start).String())
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
@@ -56,6 +57,8 @@ func (ctx *Context) reportOn(dd *DalleDress, addr, loc, ft, value string) {
 
 // MakeDalleDress builds or retrieves a DalleDress for the given address using the context's templates, series, dbs, and cache.
 func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
+	makeStart := time.Now()
+	logger.Info("MakeDalleDress:start", addressIn)
 	ctx.CacheMutex.Lock()
 	defer ctx.CacheMutex.Unlock()
 	if ctx.DalleCache[addressIn] != nil {
@@ -120,7 +123,7 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 
 	ctx.DalleCache[dd.Filename] = &dd
 	ctx.DalleCache[addressIn] = &dd
-
+	logger.Info("MakeDalleDress:end", addressIn, "elapsed", time.Since(makeStart).String())
 	return &dd, nil
 }
 
@@ -154,6 +157,8 @@ func (ctx *Context) Save(addr string) bool {
 
 // GenerateEnhanced generates an enhanced prompt for the given address.
 func (ctx *Context) GenerateEnhanced(addr string) string {
+	geStart := time.Now()
+	logger.Info("GenerateEnhanced:start", addr)
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error()
 	} else {
@@ -163,12 +168,15 @@ func (ctx *Context) GenerateEnhanced(addr string) string {
 		}
 		msg := " DO NOT PUT TEXT IN THE IMAGE. "
 		dd.EnhancedPrompt = msg + dd.EnhancedPrompt + msg
+		logger.Info("GenerateEnhanced:end", addr, "elapsed", time.Since(geStart).String())
 		return dd.EnhancedPrompt
 	}
 }
 
 // GenerateImage generates an image for the given address.
 func (ctx *Context) GenerateImage(addr string) (string, error) {
+	giStart := time.Now()
+	logger.Info("GenerateImage:start", addr)
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error(), err
 	} else {
@@ -187,6 +195,7 @@ func (ctx *Context) GenerateImage(addr string) (string, error) {
 		if err := RequestImage(outputPath, &imageData); err != nil {
 			return err.Error(), err
 		}
+		logger.Info("GenerateImage:end", addr, "elapsed", time.Since(giStart).String())
 		return dd.EnhancedPrompt, nil
 	}
 }
