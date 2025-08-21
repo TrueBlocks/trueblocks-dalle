@@ -76,7 +76,7 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 		SeriesName:     "testseries",
 		Filename:       "testfile",
 	}
-	// Create a temporary output folder for the test
+	// Create a temporary folder for the test
 	outputPath := t.TempDir()
 	err := RequestImage(outputPath, imgData)
 	if err != nil {

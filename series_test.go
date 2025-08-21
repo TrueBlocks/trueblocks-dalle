@@ -18,7 +18,7 @@ func TestSeries_String(t *testing.T) {
 		t.Fatalf("String() did not return valid JSON: %v", err)
 	}
 	if out.Suffix != "test" || len(out.Adverbs) != 2 {
-		t.Errorf("String() output mismatch: %+v", out)
+		t.Errorf("String() mismatch: %+v", out)
 	}
 }
 

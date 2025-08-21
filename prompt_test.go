@@ -123,7 +123,7 @@ func TestEnhancePrompt_EmptyAPIKey(t *testing.T) {
 // 			t.Errorf("%s failed to render: %v", tc.name, err)
 // 		}
 // 		if buf.Len() == 0 {
-// 			t.Errorf("%s rendered empty output", tc.name)
+// 			t.Errorf("%s rendered empty buffer", tc.name)
 // 		}
 // 	}
 // }

@@ -139,7 +139,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	os.Remove(fn)
 	file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
-		return fmt.Errorf("failed to open output file: %s", fn)
+		return fmt.Errorf("failed to open file: %s", fn)
 	}
 	defer file.Close()
 

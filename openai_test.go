@@ -27,7 +27,7 @@ func TestDalleRequest_String(t *testing.T) {
 		t.Errorf("String() did not return valid JSON: %v", err)
 	}
 	if out["Prompt"] != "prompt text" && out["prompt"] != "prompt text" {
-		t.Errorf("Expected prompt field in JSON output")
+		t.Errorf("Expected prompt field in JSON map")
 	}
 }
 

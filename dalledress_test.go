@@ -22,7 +22,7 @@ func TestDalleDress_ExecuteTemplate(t *testing.T) {
 		t.Fatalf("ExecuteTemplate failed: %v", err)
 	}
 	if out != "foo-bar" {
-		t.Errorf("ExecuteTemplate output wrong: %s", out)
+		t.Errorf("ExecuteTemplate result wrong: %s", out)
 	}
 	// With post-processing
 	out2, err2 := d.ExecuteTemplate(tmpl, strings.ToUpper)
