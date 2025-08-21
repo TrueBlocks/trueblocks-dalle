@@ -175,25 +175,65 @@ func GenerateAnnotatedImage(series, address, outputDir string, skipImage bool, l
 		lockTTL = 5 * time.Minute
 	}
 	key := series + ":" + address
+	annotatedPath := filepath.Join(outputDir, series, "annotated", address+".png")
+	// Fast path: if annotated file exists, treat as cache hit (do not acquire new run if another generation not in progress)
+	if file.FileExists(annotatedPath) {
+		// Start a minimal completed progress run if none exists yet
+		if progressMgr.GetReport(series, address) == nil { // no active run
+			// We need a DalleDress to attach; attempt to build (cached or new) context
+			if mc, err2 := getContext(series, outputDir); err2 == nil {
+				if dd, err3 := mc.ctx.MakeDalleDress(address); err3 == nil {
+					progressMgr.StartRun(series, address, dd)
+					progressMgr.MarkCacheHit(series, address)
+					progressMgr.Transition(series, address, PhaseBasePrompts)
+					progressMgr.Transition(series, address, PhaseCompleted)
+					dd.CacheHit = true
+					dd.Completed = true
+					progressMgr.Complete(series, address)
+				}
+			}
+		}
+		return annotatedPath, nil
+	}
 	if !acquireLock(key, lockTTL) {
-		return filepath.Join(outputDir, series, "annotated", address+".png"), nil
+		// Existing run or completed image (lock held by another or recently): return path
+		return annotatedPath, nil
 	}
 	defer releaseLock(key)
 	mc, err := getContext(series, outputDir)
 	if err != nil {
 		return "", err
 	}
-	if _, err := mc.ctx.MakeDalleDress(address); err != nil {
+	dd, err := mc.ctx.MakeDalleDress(address)
+	if err != nil {
 		return "", err
 	}
+	// Start progress tracking (setup already implicitly started when struct created)
+	progressMgr.StartRun(series, address, dd)
+	progressMgr.Transition(series, address, PhaseBasePrompts)
 	if !skipImage {
+		progressMgr.Transition(series, address, PhaseEnhance)
 		if _, err := mc.ctx.GenerateImage(address); err != nil {
+			progressMgr.Fail(series, address, err)
 			return "", err
 		}
+		// ImagePrep transition happens inside GenerateImage via RequestImage modifications
 	} else {
 		logger.Info("GenerateAnnotatedImage:skipImage true - not calling GenerateImage", series, address)
+		progressMgr.Skip(series, address, PhaseEnhance)
+		progressMgr.Skip(series, address, PhaseImagePrep)
+		progressMgr.Skip(series, address, PhaseImageWait)
+		progressMgr.Skip(series, address, PhaseImageDownload)
+	}
+	// Annotation phase managed by RequestImage now; if skipImage we simulate it immediately
+	if skipImage {
+		progressMgr.Transition(series, address, PhaseAnnotate)
 	}
 	out := filepath.Join(outputDir, series, "annotated", address+".png")
+	// Mark completion
+	dd.Completed = true
+	progressMgr.Transition(series, address, PhaseCompleted)
+	progressMgr.Complete(series, address)
 	logger.Info("GenerateAnnotatedImage:end", series, address, "elapsed", time.Since(start).String())
 	return out, nil
 }

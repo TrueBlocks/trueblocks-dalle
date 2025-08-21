@@ -6,7 +6,6 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
-	"log"
 	"math"
 	"os"
 	"sort"
@@ -64,7 +63,7 @@ func annotate(text, fileName, location string, annoPct float64) (ret string, err
 
 	gc := gg.NewContextForImage(newImg)
 	if err := gc.LoadFontFace("/System/Library/Fonts/Monaco.ttf", estimatedFontSize); err != nil {
-		log.Fatalf("Error loading font: %v", err) // Handle the error appropriately
+		return "", fmt.Errorf("load font: %w", err)
 	}
 	borderCol := darkenColor(col)
 	gc.SetColor(borderCol)

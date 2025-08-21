@@ -26,7 +26,7 @@ type Context struct {
 	authorTemplate *template.Template
 }
 
-func NewContext(outputPath string) *Context {
+func NewContext(outputPath string) *Context { // signature preserved for existing callers; internal errors logged
 	ctx := Context{
 		promptTemplate: promptTemplate,
 		dataTemplate:   dataTemplate,
@@ -38,7 +38,9 @@ func NewContext(outputPath string) *Context {
 		DalleCache:     make(map[string]*DalleDress),
 		OutputPath:     outputPath,
 	}
-	ctx.ReloadDatabases()
+	if err := ctx.ReloadDatabases(); err != nil {
+		logger.Error("ReloadDatabases error:", err)
+	}
 	return &ctx
 }
 
@@ -86,22 +88,40 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 	}
 
 	dd := DalleDress{
-		Original:  addressIn,
-		Filename:  fn,
-		Seed:      seed,
-		AttribMap: make(map[string]Attribute),
+		Original:        addressIn,
+		Filename:        fn,
+		Seed:            seed,
+		AttribMap:       make(map[string]Attribute),
+		SeedChunks:      []string{},
+		SelectedTokens:  []string{},
+		SelectedRecords: []string{},
+		Attribs:         []Attribute{},
 	}
 
+	// Generate attributes from the seed. We cap the number of attributes to the number of
+	// configured databases (DatabaseNames) and carefully guard slice bounds so we never
+	// index past the seed or database lists. The original logic could overrun both the
+	// seed slicing (i+6) and the database name list when the seed was long enough to
+	// generate more than len(DatabaseNames) attributes.
+	maxAttribs := len(DatabaseNames)
 	cnt := 0
-	for i := 0; i < len(dd.Seed); i = i + 8 {
+	for i := 0; i+6 <= len(dd.Seed) && cnt < maxAttribs; i += 8 { // ensure we have 6 chars
 		attr := NewAttribute(ctx.Databases, cnt, dd.Seed[i:i+6])
 		dd.Attribs = append(dd.Attribs, attr)
 		dd.AttribMap[attr.Name] = attr
+		dd.SeedChunks = append(dd.SeedChunks, attr.Value)
+		dd.SelectedTokens = append(dd.SelectedTokens, attr.Name)
+		dd.SelectedRecords = append(dd.SelectedRecords, attr.Value)
 		cnt++
-		if i+4+6 < len(dd.Seed) {
+		// Optional overlapping attribute starting 4 chars later (original heuristic) provided
+		// we still remain within bounds and under maxAttribs.
+		if cnt < maxAttribs && i+4+6 <= len(dd.Seed) {
 			attr = NewAttribute(ctx.Databases, cnt, dd.Seed[i+4:i+4+6])
 			dd.Attribs = append(dd.Attribs, attr)
 			dd.AttribMap[attr.Name] = attr
+			dd.SeedChunks = append(dd.SeedChunks, attr.Value)
+			dd.SelectedTokens = append(dd.SelectedTokens, attr.Name)
+			dd.SelectedRecords = append(dd.SelectedRecords, attr.Value)
 			cnt++
 		}
 	}
@@ -156,20 +176,21 @@ func (ctx *Context) Save(addr string) bool {
 }
 
 // GenerateEnhanced generates an enhanced prompt for the given address.
-func (ctx *Context) GenerateEnhanced(addr string) string {
+func (ctx *Context) GenerateEnhanced(addr string) (string, error) {
 	geStart := time.Now()
 	logger.Info("GenerateEnhanced:start", addr)
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
-		return err.Error()
+		return err.Error(), err
 	} else {
 		authorType, _ := dd.ExecuteTemplate(ctx.authorTemplate, nil)
 		if dd.EnhancedPrompt, err = EnhancePrompt(ctx.GetPrompt(addr), authorType); err != nil {
-			logger.Fatal(err.Error())
+			logger.Error("EnhancePrompt error:", err)
+			return "", err
 		}
 		msg := " DO NOT PUT TEXT IN THE IMAGE. "
 		dd.EnhancedPrompt = msg + dd.EnhancedPrompt + msg
 		logger.Info("GenerateEnhanced:end", addr, "elapsed", time.Since(geStart).String())
-		return dd.EnhancedPrompt
+		return dd.EnhancedPrompt, nil
 	}
 }
 
@@ -181,7 +202,11 @@ func (ctx *Context) GenerateImage(addr string) (string, error) {
 		return err.Error(), err
 	} else {
 		suff := ctx.Series.Suffix
-		dd.EnhancedPrompt = ctx.GenerateEnhanced(addr)
+		if ep, eperr := ctx.GenerateEnhanced(addr); eperr != nil {
+			return eperr.Error(), eperr
+		} else {
+			dd.EnhancedPrompt = ep
+		}
 		ctx.reportOn(dd, addr, filepath.Join(suff, "enhanced"), "txt", dd.EnhancedPrompt)
 		_ = ctx.Save(addr)
 		imageData := ImageData{
@@ -190,7 +215,11 @@ func (ctx *Context) GenerateImage(addr string) (string, error) {
 			EnhancedPrompt: dd.EnhancedPrompt,
 			SeriesName:     ctx.Series.Suffix,
 			Filename:       dd.Filename,
+			Series:         ctx.Series.Suffix,
+			Address:        addr,
 		}
+		// Transition to image_prep prior to network operations if progress run exists
+		progressMgr.Transition(ctx.Series.Suffix, addr, PhaseImagePrep)
 		outputPath := filepath.Join(ctx.OutputPath, imageData.SeriesName, "generated")
 		if err := RequestImage(outputPath, &imageData); err != nil {
 			return err.Error(), err

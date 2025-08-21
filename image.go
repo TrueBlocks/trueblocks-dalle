@@ -24,6 +24,8 @@ type ImageData struct {
 	TitlePrompt    string `json:"titlePrompt"`
 	SeriesName     string `json:"seriesName"`
 	Filename       string `json:"filename"`
+	Series         string `json:"-"`
+	Address        string `json:"-"`
 }
 
 func RequestImage(outputPath string, imageData *ImageData) error {
@@ -75,13 +77,15 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	}
 	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- generating the image...", colors.Off)
 
-	imgTO := 30 * time.Second
+	timeOut := 60 * time.Second
 	if v := os.Getenv("DALLESERVER_IMAGE_TIMEOUT"); v != "" {
 		if d, err2 := time.ParseDuration(v); err2 == nil {
-			imgTO = d
+			timeOut = d
 		}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), imgTO)
+	// Transition: image_prep complete, recording wait start
+	progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageWait)
+	ctx, cancel := context.WithTimeout(context.Background(), timeOut)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
@@ -122,8 +126,10 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	}
 
 	imageURL := dalleResp.Data[0].Url
+	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.ImageURL = imageURL })
+	progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
 
-	ctx2, cancel2 := context.WithTimeout(context.Background(), imgTO)
+	ctx2, cancel2 := context.WithTimeout(context.Background(), timeOut)
 	defer cancel2()
 	imageReq, err := http.NewRequestWithContext(ctx2, "GET", imageURL, nil)
 	if err != nil {
@@ -152,6 +158,8 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	if err != nil {
 		return fmt.Errorf("error annotating image: %v", err)
 	}
+	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.AnnotatedPath = path })
+	progressMgr.Transition(imageData.Series, imageData.Address, PhaseAnnotate)
 	logger.Info(colors.Cyan, imageData.Filename, colors.Green, "- image saved as", colors.White+strings.Trim(path, " "), colors.Off)
 	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- RequestImage:end", time.Since(start).String(), colors.Off)
 	if os.Getenv("TB_CMD_LINE") == "true" {

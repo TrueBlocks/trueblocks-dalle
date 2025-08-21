@@ -10,16 +10,24 @@ import (
 
 // DalleDress represents a generated prompt and its associated attributes.
 type DalleDress struct {
-	Original       string               `json:"original"`
-	Filename       string               `json:"fileName"`
-	Seed           string               `json:"seed"`
-	Prompt         string               `json:"prompt,omitempty"`
-	DataPrompt     string               `json:"dataPrompt,omitempty"`
-	TitlePrompt    string               `json:"titlePrompt,omitempty"`
-	TersePrompt    string               `json:"tersePrompt,omitempty"`
-	EnhancedPrompt string               `json:"enhancedPrompt,omitempty"`
-	Attribs        []Attribute          `json:"attributes"`
-	AttribMap      map[string]Attribute `json:"-"`
+	Original        string               `json:"original"`
+	Filename        string               `json:"fileName"`
+	Seed            string               `json:"seed"`
+	Prompt          string               `json:"prompt"`
+	DataPrompt      string               `json:"dataPrompt"`
+	TitlePrompt     string               `json:"titlePrompt"`
+	TersePrompt     string               `json:"tersePrompt"`
+	EnhancedPrompt  string               `json:"enhancedPrompt"`
+	Attribs         []Attribute          `json:"attributes"`
+	AttribMap       map[string]Attribute `json:"-"`
+	SeedChunks      []string             `json:"seedChunks"`
+	SelectedTokens  []string             `json:"selectedTokens"`
+	SelectedRecords []string             `json:"selectedRecords"`
+	ImageURL        string               `json:"imageUrl"`
+	AnnotatedPath   string               `json:"annotatedPath"`
+	IPFSHash        string               `json:"ipfsHash"`
+	CacheHit        bool                 `json:"cacheHit"`
+	Completed       bool                 `json:"completed"`
 }
 
 // String returns the JSON representation of the DalleDress.

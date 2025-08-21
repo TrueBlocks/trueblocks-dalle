@@ -12,6 +12,7 @@
 - **Image Annotation:** Overlay text on images with color/contrast analysis.
 - **Series Management:** Organize and persist sets of attributes for reproducibility.
 - **Caching:** In-memory cache for fast prompt/image retrieval.
+- **Live Progress & Metrics:** Phase-based progress reporting with percent and ETA plus persisted rolling phase averages and cache-hit stats.
 - **Testability:** Centralized mocks and dependency injection for robust testing.
 
 ---
@@ -128,6 +129,7 @@ This project is licensed under the **GNU GPL v3**. See [LICENSE](./LICENSE).
 ## 💡 Tips
 
 - Set `OPENAI_API_KEY` and (optionally) `DALLE_QUALITY`.
+- Progress JSON is always available during generation; poll the server endpoint returning the embedded DalleDress and phase timings.
 - Extend attributes by adding CSVs and updating `attribute.go`.
 - Use Go’s testing/logging for debugging.
 - Caching is built-in; tune batch sizes/rate limits as needed.
@@ -145,3 +147,59 @@ This project is licensed under the **GNU GPL v3**. See [LICENSE](./LICENSE).
 ## 📬 Questions?
 
 Open an issue or reach out on GitHub. Happy prompting!
+
+---
+
+## 📊 Progress Reporting & Metrics
+
+The generation pipeline emits a canonical set of phases:
+
+`setup → base_prompts → enhance_prompt → image_prep → image_wait → image_download → annotate → completed`
+
+Every request produces a JSON progress snapshot containing:
+
+```
+{
+	"series": "simple",
+	"address": "0x...",
+	"currentPhase": "image_wait",
+	"startedNs": 1730000000000000000,
+	"percent": 37.2,
+	"etaSeconds": 12.4,
+	"done": false,
+	"error": "",
+	"cacheHit": false,
+	"phases": [
+		{"name":"setup","startedNs":...,"endedNs":...,"skipped":false,"error":""},
+		...
+	],
+	"dalleDress": { /* always-present extended object; no omitempty fields */ },
+	"phaseAverages": { "image_wait": 2500000000, ... }
+}
+```
+
+Key points:
+
+- Fields are never omitted or null; empty slices are `[]`.
+- `percent` & `etaSeconds` derive from an EMA of prior completed phase durations (alpha=0.2). A phase with no prior average contributes 0 to total; percent remains 0 until at least one average exists.
+- Cache hits short‑circuit: a minimal run is marked `cacheHit=true` and does not update EMAs or `generationRuns`.
+- Metrics persist to `metrics/progress_phase_stats.json` (schema version `v1`). Example:
+
+```
+{
+	"version": "v1",
+	"phaseAverages": { "image_wait": {"count": 4, "avgNs": 2100000000} },
+	"generationRuns": 12,
+	"cacheHits": 5
+}
+```
+
+Testing helpers: `ResetMetricsForTest()`, `ForceMetricsSave()`, `GetProgress(series,address)`.
+
+Cache hit behavior: if an annotated image already exists when a request arrives, a completed progress snapshot is synthesized (if no active run) and metrics file updated with an incremented `cacheHits` counter only.
+
+Concurrency: a single `ProgressManager` serializes per-(series,address) updates; the same `DalleDress` pointer is reused (treat as read‑only outside the manager).
+
+ETA visibility: `etaSeconds` is 0 until sufficient historical averages exist to compute remaining time; elapsed time in the current phase is capped at its average to limit over-estimation.
+
+---

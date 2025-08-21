@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -106,10 +107,10 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 	url := "https://api.openai.com/v1/chat/completions"
 
 	// timeout config (default extended from 15s to 60s to accommodate slower responses)
-	to := 60 * time.Second
+	timeOut := 60 * time.Second
 	if v := os.Getenv("DALLESERVER_ENHANCE_TIMEOUT"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
-			to = d
+			timeOut = d
 		}
 	}
 	payload := dalleRequest{
@@ -123,7 +124,7 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 		return "", err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), to)
+	ctx, cancel := context.WithTimeout(context.Background(), timeOut)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
@@ -138,6 +139,13 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 		return "", err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		if len(bodyBytes) > 512 { // truncate to keep logs readable
+			bodyBytes = bodyBytes[:512]
+		}
+		return "", fmt.Errorf("enhance prompt: status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
 
 	logger.Info("EnhancePrompt: response in", time.Since(start).String())
 
@@ -154,7 +162,15 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 	var response dalleResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return "", err
-	} else {
-		return response.Choices[0].Message.Content, nil
 	}
+	if len(response.Choices) == 0 {
+		logger.Info("EnhancePrompt: empty choices - returning original prompt")
+		return prompt, nil
+	}
+	content := response.Choices[0].Message.Content
+	if content == "" { // defensive
+		logger.Info("EnhancePrompt: empty content - returning original prompt")
+		return prompt, nil
+	}
+	return content, nil
 }
