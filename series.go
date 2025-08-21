@@ -3,6 +3,7 @@ package dalle
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"reflect"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
@@ -33,12 +34,15 @@ func (s *Series) String() string {
 }
 
 // SaveSeries saves the Series to a file with the given filename and last index.
-func (s *Series) SaveSeries(fn string, last int) {
+func (s *Series) SaveSeries(seriesDir, fn string, last int) {
 	ss := s
 	ss.Last = last
-	// OUTPUT_DIR
-	_ = file.EstablishFolder("output/series")
-	_ = file.StringToAsciiFile(fn, ss.String())
+	_ = file.EstablishFolder(seriesDir)
+	target := fn
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(seriesDir, filepath.Base(fn))
+	}
+	_ = file.StringToAsciiFile(target, ss.String())
 }
 
 // GetFilter returns a string slice for the given field name in the Series.

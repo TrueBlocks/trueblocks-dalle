@@ -92,7 +92,8 @@ func getContext(series, outputDir string) (*managedContext, error) {
 		return mc, nil
 	}
 	c := NewContext(outputDir)
-	seriesJSON := filepath.Join(outputDir, "series", series+".json")
+	base := filepath.Dir(outputDir) // DataDir
+	seriesJSON := filepath.Join(base, "series", series+".json")
 	if file.FileExists(seriesJSON) {
 		if ser, err := c.LoadSeries(); err == nil {
 			ser.Suffix = series
@@ -198,9 +199,9 @@ func GenerateAnnotatedImage(series, address, outputDir string, skipImage bool, l
 }
 
 // ListSeries returns the list of existing series (json files) beneath outputDir/series.
-func ListSeries(outputDir string) []string {
+func ListSeries(seriesBase string) []string {
 	list := []string{}
-	base := filepath.Join(outputDir, "series")
+	base := seriesBase
 	vFunc := func(fn string, vP any) (bool, error) {
 		if strings.HasSuffix(fn, ".json") {
 			fn = strings.ReplaceAll(fn, base+"/", "")
@@ -211,6 +212,14 @@ func ListSeries(outputDir string) []string {
 	}
 	_ = walk.ForEveryFileInFolder(base, vFunc, nil)
 	return list
+}
+
+// ResetContextManagerForTest clears context cache (test helper).
+func ResetContextManagerForTest() {
+	contextManager.Lock()
+	contextManager.items = map[string]*managedContext{}
+	contextManager.order = []string{}
+	contextManager.Unlock()
 }
 
 // IsValidSeries determines whether a requested series is valid given an optional list.
