@@ -165,15 +165,15 @@ func TestProgressFullRun(t *testing.T) {
 
 	// Ensure OPENAI_API_KEY is set so RequestImage does not treat as offline skip (which would look like a cache-style fast path)
 	oldKey := os.Getenv("OPENAI_API_KEY")
-	oldNoEnhance := os.Getenv("DALLESERVER_NO_ENHANCE")
+	oldNoEnhance := os.Getenv("TB_DALLE_NO_ENHANCE")
 	_ = os.Setenv("OPENAI_API_KEY", "test-key")
-	_ = os.Setenv("DALLESERVER_NO_ENHANCE", "1") // skip enhancement to avoid chat completions network
+	_ = os.Setenv("TB_DALLE_NO_ENHANCE", "1") // skip enhancement to avoid chat completions network
 	defer func() {
 		_ = os.Setenv("OPENAI_API_KEY", oldKey)
 		if oldNoEnhance == "" {
-			_ = os.Unsetenv("DALLESERVER_NO_ENHANCE")
+			_ = os.Unsetenv("TB_DALLE_NO_ENHANCE")
 		} else {
-			_ = os.Setenv("DALLESERVER_NO_ENHANCE", oldNoEnhance)
+			_ = os.Setenv("TB_DALLE_NO_ENHANCE", oldNoEnhance)
 		}
 	}()
 
@@ -275,7 +275,7 @@ func TestProgressFullRun(t *testing.T) {
 	}
 }
 
-// TestProgressArchive verifies that setting DALLESERVER_ARCHIVE_RUNS=1 writes a run snapshot file.
+// TestProgressArchive verifies that setting TB_DALLE_ARCHIVE_RUNS=1 writes a run snapshot file.
 func TestProgressArchive(t *testing.T) {
 	tmp, err := os.MkdirTemp("", "dalle-progress-archive")
 	if err != nil {
@@ -290,21 +290,21 @@ func TestProgressArchive(t *testing.T) {
 
 	oldKey := os.Getenv("OPENAI_API_KEY")
 	_ = os.Setenv("OPENAI_API_KEY", "test-key")
-	oldNoEnhance := os.Getenv("DALLESERVER_NO_ENHANCE")
-	_ = os.Setenv("DALLESERVER_NO_ENHANCE", "1")
-	oldArchive := os.Getenv("DALLESERVER_ARCHIVE_RUNS")
-	_ = os.Setenv("DALLESERVER_ARCHIVE_RUNS", "1")
+	oldNoEnhance := os.Getenv("TB_DALLE_NO_ENHANCE")
+	_ = os.Setenv("TB_DALLE_NO_ENHANCE", "1")
+	oldArchive := os.Getenv("TB_DALLE_ARCHIVE_RUNS")
+	_ = os.Setenv("TB_DALLE_ARCHIVE_RUNS", "1")
 	defer func() {
 		_ = os.Setenv("OPENAI_API_KEY", oldKey)
 		if oldNoEnhance == "" {
-			_ = os.Unsetenv("DALLESERVER_NO_ENHANCE")
+			_ = os.Unsetenv("TB_DALLE_NO_ENHANCE")
 		} else {
-			_ = os.Setenv("DALLESERVER_NO_ENHANCE", oldNoEnhance)
+			_ = os.Setenv("TB_DALLE_NO_ENHANCE", oldNoEnhance)
 		}
 		if oldArchive == "" {
-			_ = os.Unsetenv("DALLESERVER_ARCHIVE_RUNS")
+			_ = os.Unsetenv("TB_DALLE_ARCHIVE_RUNS")
 		} else {
-			_ = os.Setenv("DALLESERVER_ARCHIVE_RUNS", oldArchive)
+			_ = os.Setenv("TB_DALLE_ARCHIVE_RUNS", oldArchive)
 		}
 	}()
 

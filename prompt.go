@@ -87,7 +87,7 @@ var authorTemplate = template.Must(template.New("author").Parse(authorTemplateSt
 func EnhancePrompt(prompt, authorType string) (string, error) {
 	start := time.Now()
 	logger.Info("EnhancePrompt:start")
-	if os.Getenv("DALLESERVER_NO_ENHANCE") == "1" {
+	if os.Getenv("TB_DALLE_NO_ENHANCE") == "1" {
 		logger.Info("EnhancePrompt:skipped no-enhance flag")
 		return prompt, nil
 	}
@@ -108,7 +108,7 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 
 	// timeout config (default extended from 15s to 60s to accommodate slower responses)
 	timeOut := 60 * time.Second
-	if v := os.Getenv("DALLESERVER_ENHANCE_TIMEOUT"); v != "" {
+	if v := os.Getenv("TB_DALLE_ENHANCE_TIMEOUT"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			timeOut = d
 		}

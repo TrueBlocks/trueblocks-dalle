@@ -78,7 +78,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- generating the image...", colors.Off)
 
 	timeOut := 60 * time.Second
-	if v := os.Getenv("DALLESERVER_IMAGE_TIMEOUT"); v != "" {
+	if v := os.Getenv("TB_DALLE_IMAGE_TIMEOUT"); v != "" {
 		if d, err2 := time.ParseDuration(v); err2 == nil {
 			timeOut = d
 		}

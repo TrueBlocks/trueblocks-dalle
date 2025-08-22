@@ -104,7 +104,7 @@ var progressMgr = &ProgressManager{runs: map[string]*progressRun{}, metrics: met
 
 const metricsDirName = "metrics"
 const metricsFile = "progress_phase_stats.json"
-const archiveEnv = "DALLESERVER_ARCHIVE_RUNS"
+const archiveEnv = "TB_DALLE_ARCHIVE_RUNS"
 
 var metricsDir = metricsDirName // overridden at runtime to DataDir/metrics via SetMetricsDir
 
