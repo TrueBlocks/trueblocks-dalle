@@ -1,6 +1,7 @@
 package dalle
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -14,15 +15,25 @@ var (
 )
 
 func initDataDir(flagVal string) {
+	envVal := os.Getenv("TB_DALLE_DATA_DIR")
+	if hasLeadingTilde(flagVal) || hasLeadingTilde(envVal) {
+		fmt.Fprintln(os.Stderr, "ERROR: data directory must not start with '~'; use $HOME or an absolute path (shell expansion did not occur).")
+		os.Exit(2)
+	}
 	dataDir = flagVal
 	if dataDir == "" {
-		dataDir = os.Getenv("TB_DALLE_DATA_DIR")
+		dataDir = envVal
 	}
 	if dataDir == "" {
-		if home, herr := os.UserHomeDir(); herr == nil && home != "" {
-			dataDir = filepath.Join(home, ".local", "share", "trueblocks", "dalle")
+		if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
+			dataDir = filepath.Join(xdg, "trueblocks", "dalle")
 		} else {
-			dataDir = "."
+			home, herr := os.UserHomeDir()
+			if herr == nil && home != "" {
+				dataDir = filepath.Join(home, ".local", "share", "trueblocks", "dalle")
+			} else {
+				dataDir = filepath.Join(".", ".local", "share", "trueblocks", "dalle")
+			}
 		}
 	}
 	dataDir = filepath.Clean(dataDir)
@@ -74,4 +85,11 @@ func EnsureWritable(path string) error {
 	}
 	_ = os.Remove(sentinel)
 	return nil
+}
+
+func hasLeadingTilde(s string) bool {
+	if s == "" {
+		return false
+	}
+	return s[0] == '~'
 }

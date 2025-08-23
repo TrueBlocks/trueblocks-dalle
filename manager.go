@@ -82,34 +82,6 @@ func cleanupLocks() {
 	requestLocks.Unlock()
 }
 
-// getContext returns (and possibly creates) a managed Context for a series.
-func getContext(series string) (*managedContext, error) {
-	contextManager.Lock()
-	defer contextManager.Unlock()
-	if mc, ok := contextManager.items[series]; ok {
-		mc.lastUsed = time.Now()
-		bumpOrder(series)
-		return mc, nil
-	}
-	c := NewContext()
-	seriesJSON := filepath.Join(DataDir(), "series", series+".json")
-	if file.FileExists(seriesJSON) {
-		if ser, err := c.LoadSeries(); err == nil {
-			ser.Suffix = series
-			c.Series = ser
-		} else {
-			c.Series.Suffix = series
-		}
-	} else {
-		c.Series.Suffix = series
-	}
-	mc := &managedContext{ctx: c, series: series, lastUsed: time.Now()}
-	contextManager.items[series] = mc
-	contextManager.order = append(contextManager.order, series)
-	enforceContextLimits()
-	return mc, nil
-}
-
 func bumpOrder(series string) {
 	for i, s := range contextManager.order {
 		if s == series {
@@ -159,6 +131,23 @@ func rebuildOrder() {
 	for k := range contextManager.items {
 		contextManager.order = append(contextManager.order, k)
 	}
+}
+
+// getContext returns (and possibly creates) a managed Context for a series.
+func getContext(series string) (*managedContext, error) {
+	contextManager.Lock()
+	defer contextManager.Unlock()
+	if mc, ok := contextManager.items[series]; ok {
+		mc.lastUsed = time.Now()
+		bumpOrder(series)
+		return mc, nil
+	}
+	c := NewContext()
+	mc := &managedContext{ctx: c, series: series, lastUsed: time.Now()}
+	contextManager.items[series] = mc
+	contextManager.order = append(contextManager.order, series)
+	enforceContextLimits()
+	return mc, nil
 }
 
 // GenerateAnnotatedImage builds (and optionally generates) an annotated image path.
@@ -250,6 +239,12 @@ func ListSeries() []string {
 	}
 	_ = walk.ForEveryFileInFolder(seriesDir(), vFunc, nil)
 	return list
+}
+
+// ListSeriesModels returns a slice of Series objects after loading each from disc
+func ListSeriesModels(seriesBase string) []*Series {
+	items, _ := LoadSeriesModels(seriesBase)
+	return items
 }
 
 // ResetContextManagerForTest clears context cache (test helper).
