@@ -108,15 +108,12 @@ const archiveEnv = "TB_DALLE_ARCHIVE_RUNS"
 
 var metricsDir = metricsDirName // overridden at runtime to DataDir/metrics via SetMetricsDir
 
-// SetMetricsBaseDir sets the root directory where the metrics folder ("metrics") lives.
-// Call early during application startup (e.g., after resolving DataDir). Tests may also
-// override to temp directories for isolation.
-func SetMetricsDir(base string) {
-	if base == "" {
+func SetMetricsDir(dir string) {
+	if dir == "" {
 		metricsDir = metricsDirName
 		return
 	}
-	metricsDir = filepath.Join(base, metricsDirName)
+	metricsDir = dir
 }
 
 var metricsLoaded bool

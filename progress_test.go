@@ -29,8 +29,10 @@ func TestProgressSkipImageAndMetrics(t *testing.T) {
 	_ = os.MkdirAll(out, 0o755)
 	writeSeries(t, out, "simple")
 	ResetMetricsForTest()
-	// Ensure no persisted metrics bleed in
-	_ = os.RemoveAll("metrics")
+	// Direct metrics into temp DataDir (prevent cwd ./metrics creation)
+	metricsBase := filepath.Join(tmp, "metrics")
+	_ = os.RemoveAll(metricsBase)
+	SetMetricsDir(metricsBase)
 
 	addr := "0xf503017d7baf7fbc0fff7492b751025c6a78179b"
 	if _, err := GenerateAnnotatedImage("simple", addr, out, true, time.Second); err != nil {
@@ -66,7 +68,7 @@ func TestProgressSkipImageAndMetrics(t *testing.T) {
 		t.Errorf("expected annotate phase present")
 	}
 
-	metricsPath := filepath.Join("metrics", "progress_phase_stats.json")
+	metricsPath := filepath.Join(metricsBase, "progress_phase_stats.json")
 	if _, err = os.Stat(metricsPath); err != nil {
 		t.Fatalf("expected metrics file: %v", err)
 	}
@@ -91,6 +93,9 @@ func TestProgressCacheHit(t *testing.T) {
 	_ = os.MkdirAll(out, 0o755)
 	writeSeries(t, out, "series1")
 	ResetMetricsForTest()
+	metricsBase := filepath.Join(tmp, "metrics")
+	_ = os.RemoveAll(metricsBase)
+	SetMetricsDir(metricsBase)
 
 	addr := "0x1111111111111111111111111111111111111111"
 	annotatedDir := filepath.Join(out, "series1", "annotated")
@@ -126,7 +131,7 @@ func TestProgressCacheHit(t *testing.T) {
 	}
 
 	// Inspect metrics file
-	metricsPath := filepath.Join("metrics", "progress_phase_stats.json")
+	metricsPath := filepath.Join(metricsBase, "progress_phase_stats.json")
 	raw, err := os.ReadFile(metricsPath)
 	if err != nil {
 		t.Fatalf("expected metrics file: %v", err)
@@ -162,6 +167,9 @@ func TestProgressFullRun(t *testing.T) {
 	_ = os.MkdirAll(out, 0o755)
 	writeSeries(t, out, "srx")
 	ResetMetricsForTest()
+	metricsBase := filepath.Join(tmp, "metrics")
+	_ = os.RemoveAll(metricsBase)
+	SetMetricsDir(metricsBase)
 
 	// Ensure OPENAI_API_KEY is set so RequestImage does not treat as offline skip (which would look like a cache-style fast path)
 	oldKey := os.Getenv("OPENAI_API_KEY")
@@ -255,7 +263,7 @@ func TestProgressFullRun(t *testing.T) {
 		t.Errorf("expected percent ~100 got %f", pr.Percent)
 	}
 	// Metrics file sanity: at least one generation, cache hits should not exceed generations and run report not marked cacheHit.
-	raw, err := os.ReadFile(filepath.Join("metrics", "progress_phase_stats.json"))
+	raw, err := os.ReadFile(filepath.Join(metricsBase, "progress_phase_stats.json"))
 	if err != nil {
 		t.Fatalf("read metrics: %v", err)
 	}
@@ -286,7 +294,9 @@ func TestProgressArchive(t *testing.T) {
 	_ = os.MkdirAll(out, 0o755)
 	writeSeries(t, out, "arch")
 	ResetMetricsForTest()
-	_ = os.RemoveAll("metrics")
+	metricsBase := filepath.Join(tmp, "metrics")
+	_ = os.RemoveAll(metricsBase)
+	SetMetricsDir(metricsBase)
 
 	oldKey := os.Getenv("OPENAI_API_KEY")
 	_ = os.Setenv("OPENAI_API_KEY", "test-key")
@@ -344,7 +354,7 @@ func TestProgressArchive(t *testing.T) {
 	_ = GetProgress("arch", addr)
 
 	// Check archive directory
-	entries, _ := os.ReadDir(filepath.Join("metrics", "runs"))
+	entries, _ := os.ReadDir(filepath.Join(metricsBase, "runs"))
 	found := false
 	for _, e := range entries {
 		if strings.Contains(e.Name(), addr) {
