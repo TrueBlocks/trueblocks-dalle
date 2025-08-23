@@ -92,7 +92,7 @@ func getContext(series, outputDir string) (*managedContext, error) {
 		return mc, nil
 	}
 	c := NewContext(outputDir)
-	base := filepath.Dir(outputDir) // DataDir
+	base := filepath.Dir(outputDir)
 	seriesJSON := filepath.Join(base, "series", series+".json")
 	if file.FileExists(seriesJSON) {
 		if ser, err := c.LoadSeries(); err == nil {

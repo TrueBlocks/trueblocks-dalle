@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// Public test helper: creates isolated DataDir with series and output, sets skip image.
+// Public test helper: creates isolated data dir with series and output, sets skip image.
 // Intended for consumers writing tests against the dalle package.
 type SetupTestOptions struct {
 	Series        []string

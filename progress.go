@@ -106,7 +106,7 @@ const metricsDirName = "metrics"
 const metricsFile = "progress_phase_stats.json"
 const archiveEnv = "TB_DALLE_ARCHIVE_RUNS"
 
-var metricsDir = metricsDirName // overridden at runtime to DataDir/metrics via SetMetricsDir
+var metricsDir = metricsDirName
 
 func SetMetricsDir(dir string) {
 	if dir == "" {
