@@ -3,32 +3,34 @@ package dalle
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
-// ComputeDataDir resolves a base data directory using precedence: explicit flag > env > default (under home).
-// Exported for server code and tests.
-func ComputeDataDir(flagVal string) (string, error) {
-	dataDir := flagVal
+var (
+	dataDirOnce sync.Once
+	dataDir     string
+)
+
+func initDataDir(flagVal string) {
+	dataDir = flagVal
 	if dataDir == "" {
 		dataDir = os.Getenv("TB_DALLE_DATA_DIR")
 	}
 	if dataDir == "" {
-		if home, herr := os.UserHomeDir(); herr != nil {
-			return "", herr
-		} else {
+		if home, herr := os.UserHomeDir(); herr == nil && home != "" {
 			dataDir = filepath.Join(home, ".local", "share", "trueblocks", "dalle")
+		} else {
+			dataDir = "."
 		}
 	}
 	dataDir = filepath.Clean(dataDir)
-
 	if !filepath.IsAbs(dataDir) {
 		if abs, aerr := filepath.Abs(dataDir); aerr == nil {
 			dataDir = abs
 		}
 	}
-
 	if err := EnsureWritable(dataDir); err != nil {
 		if tmp, terr := os.MkdirTemp("", "dalleserver-fallback-*"); terr != nil {
 			logger.Error("ERROR: cannot establish writable data dir:", err)
@@ -38,15 +40,19 @@ func ComputeDataDir(flagVal string) (string, error) {
 			dataDir = tmp
 		}
 	}
-
-	return dataDir, nil
 }
 
+// ConfigureDataDir sets an explicit flag-derived base directory before first use.
+func ConfigureDataDir(flagVal string) { dataDirOnce.Do(func() { initDataDir(flagVal) }) }
+
+// DataDir returns the lazily-initialized base directory.
+func DataDir() string { ConfigureDataDir(""); return dataDir }
+
 // Dir helpers (pure functions) derived from a base data directory.
-func OutputDir(base string) string  { return filepath.Join(base, "output") }
-func SeriesDir(base string) string  { return filepath.Join(base, "series") }
-func LogsDir(base string) string    { return filepath.Join(base, "logs") }
-func MetricsDir(base string) string { return filepath.Join(base, "metrics") }
+func OutputDir() string  { return filepath.Join(DataDir(), "output") }
+func SeriesDir() string  { return filepath.Join(DataDir(), "series") }
+func LogsDir() string    { return filepath.Join(DataDir(), "logs") }
+func MetricsDir() string { return filepath.Join(DataDir(), "metrics") }
 
 // EnsureWritable makes sure directory exists and is writable.
 func EnsureWritable(path string) error {
