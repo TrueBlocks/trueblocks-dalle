@@ -18,7 +18,6 @@ type Context struct {
 	Databases      map[string][]string
 	DalleCache     map[string]*DalleDress
 	CacheMutex     sync.Mutex
-	OutputPath     string
 	promptTemplate *template.Template
 	dataTemplate   *template.Template
 	titleTemplate  *template.Template
@@ -26,7 +25,7 @@ type Context struct {
 	authorTemplate *template.Template
 }
 
-func NewContext(outputPath string) *Context { // signature preserved for existing callers; internal errors logged
+func NewContext() *Context {
 	ctx := Context{
 		promptTemplate: promptTemplate,
 		dataTemplate:   dataTemplate,
@@ -36,7 +35,6 @@ func NewContext(outputPath string) *Context { // signature preserved for existin
 		Series:         Series{},
 		Databases:      make(map[string][]string),
 		DalleCache:     make(map[string]*DalleDress),
-		OutputPath:     outputPath,
 	}
 	if err := ctx.ReloadDatabases(); err != nil {
 		logger.Error("ReloadDatabases error:", err)
@@ -49,7 +47,7 @@ var saveMutex sync.Mutex
 // reportOn logs and saves generated prompt data for a given address and location.
 func (ctx *Context) reportOn(dd *DalleDress, addr, loc, ft, value string) {
 	logger.Info("Generating", loc, "for "+addr)
-	path := filepath.Join(ctx.OutputPath, strings.ToLower(loc))
+	path := filepath.Join(OutputDir(), strings.ToLower(loc))
 
 	saveMutex.Lock()
 	defer saveMutex.Unlock()
@@ -135,7 +133,10 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "terse"), "txt", dd.TersePrompt)
 	dd.Prompt, _ = dd.ExecuteTemplate(ctx.promptTemplate, nil)
 	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "prompt"), "txt", dd.Prompt)
-	fnPath := filepath.Join(ctx.OutputPath, ctx.Series.Suffix, "enhanced", dd.Filename+".txt")
+	fnPath := filepath.Join(OutputDir(), ctx.Series.Suffix, "enhanced", dd.Filename+".txt")
+	if !file.FileExists(fnPath) {
+		fnPath = filepath.Join(OutputDir(), ctx.Series.Suffix, "enhanced", dd.Filename+".txt")
+	}
 	dd.EnhancedPrompt = ""
 	if file.FileExists(fnPath) {
 		dd.EnhancedPrompt = file.AsciiFileToString(fnPath)
@@ -220,7 +221,7 @@ func (ctx *Context) GenerateImage(addr string) (string, error) {
 		}
 		// Transition to image_prep prior to network operations if progress run exists
 		progressMgr.Transition(ctx.Series.Suffix, addr, PhaseImagePrep)
-		outputPath := filepath.Join(ctx.OutputPath, imageData.SeriesName, "generated")
+		outputPath := filepath.Join(OutputDir(), imageData.SeriesName, "generated")
 		if err := RequestImage(outputPath, &imageData); err != nil {
 			return err.Error(), err
 		}

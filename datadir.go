@@ -49,10 +49,17 @@ func ConfigureDataDir(flagVal string) { dataDirOnce.Do(func() { initDataDir(flag
 func DataDir() string { ConfigureDataDir(""); return dataDir }
 
 // Dir helpers (pure functions) derived from a base data directory.
-func OutputDir() string  { return filepath.Join(DataDir(), "output") }
-func SeriesDir() string  { return filepath.Join(DataDir(), "series") }
-func LogsDir() string    { return filepath.Join(DataDir(), "logs") }
-func MetricsDir() string { return filepath.Join(DataDir(), "metrics") }
+func OutputDir() string { return filepath.Join(DataDir(), "output") }
+func seriesDir() string {
+	seriesDir := filepath.Join(DataDir(), "series")
+	_ = os.MkdirAll(seriesDir, 0o750)
+	return seriesDir
+}
+func metricsDir() string {
+	metricsDir := filepath.Join(DataDir(), "metrics")
+	_ = os.MkdirAll(metricsDir, 0o750)
+	return metricsDir
+}
 
 // EnsureWritable makes sure directory exists and is writable.
 func EnsureWritable(path string) error {

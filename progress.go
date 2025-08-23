@@ -102,19 +102,8 @@ type ProgressManager struct {
 // global singleton (can be replaced in tests)
 var progressMgr = &ProgressManager{runs: map[string]*progressRun{}, metrics: metricsPersistence{Version: "v1", Phase: map[Phase]*phaseAverage{}}, clock: realClock{}}
 
-const metricsDirName = "metrics"
 const metricsFile = "progress_phase_stats.json"
 const archiveEnv = "TB_DALLE_ARCHIVE_RUNS"
-
-var metricsDir = metricsDirName
-
-func SetMetricsDir(dir string) {
-	if dir == "" {
-		metricsDir = metricsDirName
-		return
-	}
-	metricsDir = dir
-}
 
 var metricsLoaded bool
 
@@ -122,7 +111,7 @@ func loadMetricsLocked(pm *ProgressManager) {
 	if metricsLoaded {
 		return
 	}
-	path := filepath.Join(metricsDir, metricsFile)
+	path := filepath.Join(metricsDir(), metricsFile)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		metricsLoaded = true
@@ -142,8 +131,8 @@ func saveMetricsLocked(pm *ProgressManager) {
 	if pm.metrics.Version == "" {
 		pm.metrics.Version = "v1"
 	}
-	_ = os.MkdirAll(metricsDir, 0o755)
-	path := filepath.Join(metricsDir, metricsFile)
+	_ = os.MkdirAll(metricsDir(), 0o755)
+	path := filepath.Join(metricsDir(), metricsFile)
 	b, err := json.MarshalIndent(pm.metrics, "", "  ")
 	if err != nil {
 		return
@@ -340,9 +329,9 @@ func (pm *ProgressManager) maybeArchiveRunLocked(run *progressRun) {
 		}
 	}
 	pm.computePercentETA(pr, run)
-	_ = os.MkdirAll(filepath.Join(metricsDir, "runs"), 0o755)
+	_ = os.MkdirAll(filepath.Join(metricsDir(), "runs"), 0o755)
 	fn := fmt.Sprintf("%s_%s_%d.json", run.series, run.address, time.Now().Unix())
-	path := filepath.Join(metricsDir, "runs", fn)
+	path := filepath.Join(metricsDir(), "runs", fn)
 	if b, err := json.MarshalIndent(pr, "", "  "); err == nil {
 		_ = os.WriteFile(path, b, 0o644)
 	}

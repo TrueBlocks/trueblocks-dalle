@@ -6,7 +6,9 @@ import (
 
 func TestLoadSeries_NewAndExisting(t *testing.T) {
 	tmpDir := t.TempDir()
-	ctx := NewContext(tmpDir)
+	TestOnlyResetDataDir()
+	ConfigureDataDir(tmpDir)
+	ctx := NewContext()
 
 	series, err := ctx.LoadSeries()
 	if err != nil {
@@ -29,7 +31,9 @@ func TestToLines_EmptyAndFiltered(t *testing.T) {
 
 func TestReloadDatabases_Basic(t *testing.T) {
 	tmpDir := t.TempDir()
-	ctx := NewContext(tmpDir)
+	TestOnlyResetDataDir()
+	ConfigureDataDir(tmpDir)
+	ctx := NewContext()
 
 	// Provide DatabaseNames for the test
 	DatabaseNames = []string{"nouns"}

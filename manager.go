@@ -83,7 +83,7 @@ func cleanupLocks() {
 }
 
 // getContext returns (and possibly creates) a managed Context for a series.
-func getContext(series, outputDir string) (*managedContext, error) {
+func getContext(series string) (*managedContext, error) {
 	contextManager.Lock()
 	defer contextManager.Unlock()
 	if mc, ok := contextManager.items[series]; ok {
@@ -91,9 +91,8 @@ func getContext(series, outputDir string) (*managedContext, error) {
 		bumpOrder(series)
 		return mc, nil
 	}
-	c := NewContext(outputDir)
-	base := filepath.Dir(outputDir)
-	seriesJSON := filepath.Join(base, "series", series+".json")
+	c := NewContext()
+	seriesJSON := filepath.Join(DataDir(), "series", series+".json")
 	if file.FileExists(seriesJSON) {
 		if ser, err := c.LoadSeries(); err == nil {
 			ser.Suffix = series
@@ -164,7 +163,7 @@ func rebuildOrder() {
 
 // GenerateAnnotatedImage builds (and optionally generates) an annotated image path.
 // The image generation step is skipped if skipImage is true.
-func GenerateAnnotatedImage(series, address, outputDir string, skipImage bool, lockTTL time.Duration) (string, error) {
+func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time.Duration) (string, error) {
 	start := time.Now()
 	logger.Info("GenerateAnnotatedImage:start", series, address)
 	if address == "" {
@@ -175,13 +174,13 @@ func GenerateAnnotatedImage(series, address, outputDir string, skipImage bool, l
 		lockTTL = 5 * time.Minute
 	}
 	key := series + ":" + address
-	annotatedPath := filepath.Join(outputDir, series, "annotated", address+".png")
+	annotatedPath := filepath.Join(OutputDir(), series, "annotated", address+".png")
 	// Fast path: if annotated file exists, treat as cache hit (do not acquire new run if another generation not in progress)
 	if file.FileExists(annotatedPath) {
 		// Start a minimal completed progress run if none exists yet
 		if progressMgr.GetReport(series, address) == nil { // no active run
 			// We need a DalleDress to attach; attempt to build (cached or new) context
-			if mc, err2 := getContext(series, outputDir); err2 == nil {
+			if mc, err2 := getContext(series); err2 == nil {
 				if dd, err3 := mc.ctx.MakeDalleDress(address); err3 == nil {
 					progressMgr.StartRun(series, address, dd)
 					progressMgr.MarkCacheHit(series, address)
@@ -200,7 +199,7 @@ func GenerateAnnotatedImage(series, address, outputDir string, skipImage bool, l
 		return annotatedPath, nil
 	}
 	defer releaseLock(key)
-	mc, err := getContext(series, outputDir)
+	mc, err := getContext(series)
 	if err != nil {
 		return "", err
 	}
@@ -229,7 +228,7 @@ func GenerateAnnotatedImage(series, address, outputDir string, skipImage bool, l
 	if skipImage {
 		progressMgr.Transition(series, address, PhaseAnnotate)
 	}
-	out := filepath.Join(outputDir, series, "annotated", address+".png")
+	out := filepath.Join(OutputDir(), series, "annotated", address+".png")
 	// Mark completion
 	dd.Completed = true
 	progressMgr.Transition(series, address, PhaseCompleted)
@@ -238,19 +237,18 @@ func GenerateAnnotatedImage(series, address, outputDir string, skipImage bool, l
 	return out, nil
 }
 
-// ListSeries returns the list of existing series (json files) beneath outputDir/series.
-func ListSeries(seriesBase string) []string {
+// ListSeries returns the list of existing series (json files) beneath output Dir/series.
+func ListSeries() []string {
 	list := []string{}
-	base := seriesBase
 	vFunc := func(fn string, vP any) (bool, error) {
 		if strings.HasSuffix(fn, ".json") {
-			fn = strings.ReplaceAll(fn, base+"/", "")
+			fn = strings.ReplaceAll(fn, seriesDir()+"/", "")
 			fn = strings.ReplaceAll(fn, ".json", "")
 			list = append(list, fn)
 		}
 		return true, nil
 	}
-	_ = walk.ForEveryFileInFolder(base, vFunc, nil)
+	_ = walk.ForEveryFileInFolder(seriesDir(), vFunc, nil)
 	return list
 }
 

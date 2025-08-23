@@ -62,9 +62,7 @@ func (ctx *Context) ReloadDatabases() error {
 
 func (ctx *Context) LoadSeries() (Series, error) {
 	lastSeries := "five-tone-postal-protozoa" // ctx.GetSession().LastSeries
-	// Series JSONs now reside in sibling series directory to output
-	dataDir := filepath.Dir(ctx.OutputPath)
-	fn := filepath.Join(dataDir, "series", lastSeries+".json")
+	fn := filepath.Join(DataDir(), "series", lastSeries+".json")
 	str := strings.TrimSpace(file.AsciiFileToString(fn))
 	logger.Info("lastSeries", lastSeries)
 	if len(str) == 0 || !file.FileExists(fn) {
@@ -72,7 +70,7 @@ func (ctx *Context) LoadSeries() (Series, error) {
 		ret := Series{
 			Suffix: "simple",
 		}
-		ret.SaveSeries(filepath.Join(dataDir, "series"), fn, 0)
+		ret.SaveSeries(filepath.Join(DataDir(), "series"), fn, 0)
 		return ret, nil
 	}
 
@@ -84,6 +82,6 @@ func (ctx *Context) LoadSeries() (Series, error) {
 	}
 
 	s.Suffix = strings.Trim(strings.ReplaceAll(s.Suffix, " ", "-"), "-")
-	s.SaveSeries(filepath.Join(dataDir, "series"), filepath.Join(dataDir, "series", s.Suffix+".json"), 0)
+	s.SaveSeries(filepath.Join(DataDir(), "series"), filepath.Join(dataDir, "series", s.Suffix+".json"), 0)
 	return s, nil
 }

@@ -8,8 +8,8 @@ import (
 
 // --- Test helpers ---
 func minimalContext(t *testing.T) *Context {
+	t.Helper()
 	tmpl := template.Must(template.New("x").Parse("ok"))
-	tmpDir := t.TempDir()
 	return &Context{
 		promptTemplate: tmpl,
 		dataTemplate:   tmpl,
@@ -33,7 +33,6 @@ func minimalContext(t *testing.T) *Context {
 		},
 		DalleCache: make(map[string]*DalleDress),
 		CacheMutex: sync.Mutex{},
-		OutputPath: tmpDir,
 	}
 }
 
