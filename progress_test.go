@@ -29,7 +29,6 @@ func TestProgressSkipImageAndMetrics(t *testing.T) {
 	_ = os.MkdirAll(out, 0o755)
 	writeSeries(t, out, "simple")
 	ResetMetricsForTest()
-	// Direct metrics into temp DataDir (prevent cwd ./metrics creation)
 	metricsBase := filepath.Join(tmp, "metrics")
 	_ = os.RemoveAll(metricsBase)
 	SetMetricsDir(metricsBase)
