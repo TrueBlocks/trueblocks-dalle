@@ -94,6 +94,12 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
+	// Debug curl output (before request is sent)
+	debugCurl("OPENAI IMAGE (RequestImage)", "POST", url, map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": "Bearer " + apiKey,
+	}, payload)
+
 	client := &http.Client{}
 	reqStart := time.Now()
 	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- POSTing image request", colors.Off)

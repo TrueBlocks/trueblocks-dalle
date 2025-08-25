@@ -94,6 +94,7 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 		SelectedTokens:  []string{},
 		SelectedRecords: []string{},
 		Attribs:         []Attribute{},
+		RequestedSeries: ctx.Series.Suffix,
 	}
 
 	// Generate attributes from the seed. We cap the number of attributes to the number of
@@ -144,6 +145,10 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 
 	ctx.DalleCache[dd.Filename] = &dd
 	ctx.DalleCache[addressIn] = &dd
+	// Defensive - should not happen
+	if dd.RequestedSeries != ctx.Series.Suffix {
+		logger.Error("MakeDalleDress:seriesMismatch", addressIn, "requested", dd.RequestedSeries, "loaded", ctx.Series.Suffix)
+	}
 	logger.Info("MakeDalleDress:end", addressIn, "elapsed", time.Since(makeStart).String())
 	return &dd, nil
 }

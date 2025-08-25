@@ -28,6 +28,7 @@ type DalleDress struct {
 	IPFSHash        string               `json:"ipfsHash"`
 	CacheHit        bool                 `json:"cacheHit"`
 	Completed       bool                 `json:"completed"`
+	RequestedSeries string               `json:"requestedSeries"`
 }
 
 // String returns the JSON representation of the DalleDress.
