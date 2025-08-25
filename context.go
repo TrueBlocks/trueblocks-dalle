@@ -36,7 +36,7 @@ func NewContext() *Context {
 		Databases:      make(map[string][]string),
 		DalleCache:     make(map[string]*DalleDress),
 	}
-	if err := ctx.ReloadDatabases(); err != nil {
+	if err := ctx.ReloadDatabases("empty"); err != nil {
 		logger.Error("ReloadDatabases error:", err)
 	}
 	return &ctx

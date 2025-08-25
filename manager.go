@@ -143,6 +143,8 @@ func getContext(series string) (*managedContext, error) {
 		return mc, nil
 	}
 	c := NewContext()
+	// Reinitialize databases for requested series (overrides default hard-coded load)
+	_ = c.ReloadDatabases(series)
 	mc := &managedContext{ctx: c, series: series, lastUsed: time.Now()}
 	contextManager.items[series] = mc
 	contextManager.order = append(contextManager.order, series)
