@@ -14,12 +14,12 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 	ctx.Series = Series{}
 	ctx.Databases = make(map[string][]string)
 
-	if s, err := ctx.LoadSeries(); err != nil {
+	if s, err := ctx.loadSeries(filter); err != nil {
 		return err
 	} else {
 		ctx.Series = s
 	}
-	logger.InfoG("db.series.load", "series", ctx.Series.Suffix)
+	logger.InfoG("db.series.reload", "series", ctx.Series.Suffix)
 
 	for _, db := range DatabaseNames {
 		if ctx.Databases[db] != nil {
@@ -53,32 +53,34 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 		}
 		ctx.Databases[db] = lines
 	}
-	logger.InfoG("db.databases.load", "count", len(DatabaseNames))
+	logger.InfoG("db.databases.reload", "count", len(DatabaseNames))
 	return nil
 }
 
-func (ctx *Context) LoadSeries() (Series, error) {
-	lastSeries := "five-tone-postal-protozoa" // ctx.GetSession().LastSeries
-	fn := filepath.Join(DataDir(), "series", lastSeries+".json")
+func (ctx *Context) loadSeries(filterIn string) (Series, error) {
+	logger.Info("db.load.series", "series", filterIn)
+	filter := strings.ToLower(strings.Trim(strings.ReplaceAll(filterIn, " ", "-"), "-"))
+	if filterIn != filter {
+		logger.Info("db.load.series", "series", filterIn, "normalized", filter)
+	}
+
+	fn := filepath.Join(DataDir(), "series", filter+".json")
 	str := strings.TrimSpace(file.AsciiFileToString(fn))
-	logger.Info("lastSeries", lastSeries)
-	if len(str) == 0 || !file.FileExists(fn) {
-		logger.Info("No series found, creating a new one", fn)
-		ret := Series{
-			Suffix: "empty",
-		}
-		ret.SaveSeries(filepath.Join(DataDir(), "series"), fn, 0)
+
+	ret := Series{
+		Suffix: filter,
+	}
+
+	if !file.FileExists(fn) || len(str) == 0 {
+		logger.Info("no series found, creating a new file", fn)
+		ret.SaveSeries(filter, 0)
 		return ret, nil
 	}
 
-	bytes := []byte(str)
-	var s Series
-	if err := json.Unmarshal(bytes, &s); err != nil {
+	if err := json.Unmarshal([]byte(str), &ret); err != nil {
 		logger.Error("could not unmarshal series:", err)
-		return Series{}, err
+		return ret, err
 	}
 
-	s.Suffix = strings.Trim(strings.ReplaceAll(s.Suffix, " ", "-"), "-")
-	s.SaveSeries(filepath.Join(DataDir(), "series"), filepath.Join(dataDir, "series", s.Suffix+".json"), 0)
-	return s, nil
+	return ret, nil
 }

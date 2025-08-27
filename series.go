@@ -34,14 +34,10 @@ func (s *Series) String() string {
 }
 
 // SaveSeries saves the Series to a file with the given filename and last index.
-func (s *Series) SaveSeries(seriesDir, fn string, last int) {
+func (s *Series) SaveSeries(series string, last int) {
 	ss := s
 	ss.Last = last
-	_ = file.EstablishFolder(seriesDir)
-	target := fn
-	if !filepath.IsAbs(target) {
-		target = filepath.Join(seriesDir, filepath.Base(fn))
-	}
+	target := filepath.Join(seriesDir(), series+".json") // creates the folder
 	_ = file.StringToAsciiFile(target, ss.String())
 }
 

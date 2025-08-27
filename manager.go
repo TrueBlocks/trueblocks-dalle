@@ -143,17 +143,11 @@ func getContext(series string) (*managedContext, error) {
 		return mc, nil
 	}
 	c := NewContext()
-	seriesJSON := filepath.Join(DataDir(), "series", series+".json")
-	if file.FileExists(seriesJSON) {
-		if ser, err := c.LoadSeries(); err == nil {
-			ser.Suffix = series
-			c.Series = ser
-		} else {
-			c.Series.Suffix = series
-		}
-	} else {
-		c.Series.Suffix = series
+	if s, err := c.loadSeries(series); err == nil {
+		c.Series = s
 	}
+	c.Series.Suffix = series
+
 	mc := &managedContext{ctx: c, series: series, lastUsed: time.Now()}
 	contextManager.items[series] = mc
 	contextManager.order = append(contextManager.order, series)
