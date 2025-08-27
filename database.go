@@ -9,15 +9,17 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
-func (ctx *Context) ReloadDatabases() error {
+// ReloadDatabases reloads databases applying filters from the specified series suffix.
+func (ctx *Context) ReloadDatabases(filter string) error {
 	ctx.Series = Series{}
 	ctx.Databases = make(map[string][]string)
 
-	var err error
-	if ctx.Series, err = ctx.LoadSeries(); err != nil {
+	if s, err := ctx.LoadSeries(); err != nil {
 		return err
+	} else {
+		ctx.Series = s
 	}
-	logger.Info("Loaded series:", ctx.Series.Suffix)
+	logger.InfoG("db.series.load", "series", ctx.Series.Suffix)
 
 	for _, db := range DatabaseNames {
 		if ctx.Databases[db] != nil {
@@ -34,11 +36,7 @@ func (ctx *Context) ReloadDatabases() error {
 			lines = lines[1:] // skip header
 		}
 		fn := strings.ToUpper(db[:1]) + db[1:]
-		filter, ferr := ctx.Series.GetFilter(fn)
-		if ferr != nil {
-			return ferr
-		}
-		if len(filter) > 0 {
+		if filter, ferr := ctx.Series.GetFilter(fn); ferr == nil && len(filter) > 0 {
 			filtered := make([]string, 0, len(lines))
 			for _, line := range lines {
 				for _, f := range filter {
@@ -55,8 +53,7 @@ func (ctx *Context) ReloadDatabases() error {
 		}
 		ctx.Databases[db] = lines
 	}
-
-	logger.Info("Loaded", len(DatabaseNames), "databases")
+	logger.InfoG("db.databases.load", "count", len(DatabaseNames))
 	return nil
 }
 

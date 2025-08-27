@@ -36,8 +36,8 @@ func NewContext() *Context {
 		Databases:      make(map[string][]string),
 		DalleCache:     make(map[string]*DalleDress),
 	}
-	if err := ctx.ReloadDatabases(); err != nil {
-		logger.Error("ReloadDatabases error:", err)
+	if err := ctx.ReloadDatabases("empty"); err != nil {
+		logger.Error("error reloading databases:", err)
 	}
 	return &ctx
 }
@@ -58,16 +58,16 @@ func (ctx *Context) reportOn(dd *DalleDress, addr, loc, ft, value string) {
 // MakeDalleDress builds or retrieves a DalleDress for the given address using the context's templates, series, dbs, and cache.
 func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 	makeStart := time.Now()
-	logger.Info("MakeDalleDress:start", addressIn)
+	logger.Info("dress.build.start", "addr", addressIn)
 	ctx.CacheMutex.Lock()
 	defer ctx.CacheMutex.Unlock()
 	if ctx.DalleCache[addressIn] != nil {
-		logger.Info("Returning cached dalle for", addressIn)
+		logger.Info("dress.build.cache_hit", "addr", addressIn)
 		return ctx.DalleCache[addressIn], nil
 	}
 
 	address := addressIn
-	logger.Info("Making dalle for", addressIn)
+	logger.Info("dress.build.generate", "addr", addressIn)
 	// ENS resolution should be handled outside, but you can add it here if needed
 
 	parts := strings.Split(address, ",")
@@ -81,7 +81,7 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 
 	fn := validFilename(address)
 	if ctx.DalleCache[fn] != nil {
-		logger.Info("Returning cached dalle for", addressIn)
+		logger.Info("dress.build.cache_hit", "addr", addressIn)
 		return ctx.DalleCache[fn], nil
 	}
 
@@ -144,7 +144,7 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 
 	ctx.DalleCache[dd.Filename] = &dd
 	ctx.DalleCache[addressIn] = &dd
-	logger.Info("MakeDalleDress:end", addressIn, "elapsed", time.Since(makeStart).String())
+	logger.InfoG("dress.build.end", "addr", addressIn, "durMs", time.Since(makeStart).Milliseconds())
 	return &dd, nil
 }
 
@@ -179,7 +179,7 @@ func (ctx *Context) Save(addr string) bool {
 // GenerateEnhanced generates an enhanced prompt for the given address.
 func (ctx *Context) GenerateEnhanced(addr string) (string, error) {
 	geStart := time.Now()
-	logger.Info("GenerateEnhanced:start", addr)
+	logger.Info("prompt.enhance.start", "addr", addr)
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error(), err
 	} else {
@@ -190,7 +190,7 @@ func (ctx *Context) GenerateEnhanced(addr string) (string, error) {
 		}
 		msg := " DO NOT PUT TEXT IN THE IMAGE. "
 		dd.EnhancedPrompt = msg + dd.EnhancedPrompt + msg
-		logger.Info("GenerateEnhanced:end", addr, "elapsed", time.Since(geStart).String())
+		logger.InfoG("prompt.enhance.end", "addr", addr, "durMs", time.Since(geStart).Milliseconds())
 		return dd.EnhancedPrompt, nil
 	}
 }
@@ -198,7 +198,7 @@ func (ctx *Context) GenerateEnhanced(addr string) (string, error) {
 // GenerateImage generates an image for the given address.
 func (ctx *Context) GenerateImage(addr string) (string, error) {
 	giStart := time.Now()
-	logger.Info("GenerateImage:start", addr)
+	logger.Info("image.pipeline.start", "addr", addr)
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error(), err
 	} else {
@@ -225,7 +225,7 @@ func (ctx *Context) GenerateImage(addr string) (string, error) {
 		if err := RequestImage(outputPath, &imageData); err != nil {
 			return err.Error(), err
 		}
-		logger.Info("GenerateImage:end", addr, "elapsed", time.Since(giStart).String())
+		logger.InfoG("image.pipeline.end", "addr", addr, "durMs", time.Since(giStart).Milliseconds())
 		return dd.EnhancedPrompt, nil
 	}
 }
