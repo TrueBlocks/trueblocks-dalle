@@ -82,34 +82,6 @@ func cleanupLocks() {
 	requestLocks.Unlock()
 }
 
-// getContext returns (and possibly creates) a managed Context for a series.
-func getContext(series string) (*managedContext, error) {
-	contextManager.Lock()
-	defer contextManager.Unlock()
-	if mc, ok := contextManager.items[series]; ok {
-		mc.lastUsed = time.Now()
-		bumpOrder(series)
-		return mc, nil
-	}
-	c := NewContext()
-	seriesJSON := filepath.Join(DataDir(), "series", series+".json")
-	if file.FileExists(seriesJSON) {
-		if ser, err := c.LoadSeries(); err == nil {
-			ser.Suffix = series
-			c.Series = ser
-		} else {
-			c.Series.Suffix = series
-		}
-	} else {
-		c.Series.Suffix = series
-	}
-	mc := &managedContext{ctx: c, series: series, lastUsed: time.Now()}
-	contextManager.items[series] = mc
-	contextManager.order = append(contextManager.order, series)
-	enforceContextLimits()
-	return mc, nil
-}
-
 func bumpOrder(series string) {
 	for i, s := range contextManager.order {
 		if s == series {
@@ -161,11 +133,39 @@ func rebuildOrder() {
 	}
 }
 
+// getContext returns (and possibly creates) a managed Context for a series.
+func getContext(series string) (*managedContext, error) {
+	contextManager.Lock()
+	defer contextManager.Unlock()
+	if mc, ok := contextManager.items[series]; ok {
+		mc.lastUsed = time.Now()
+		bumpOrder(series)
+		return mc, nil
+	}
+	c := NewContext()
+	seriesJSON := filepath.Join(DataDir(), "series", series+".json")
+	if file.FileExists(seriesJSON) {
+		if ser, err := c.LoadSeries(); err == nil {
+			ser.Suffix = series
+			c.Series = ser
+		} else {
+			c.Series.Suffix = series
+		}
+	} else {
+		c.Series.Suffix = series
+	}
+	mc := &managedContext{ctx: c, series: series, lastUsed: time.Now()}
+	contextManager.items[series] = mc
+	contextManager.order = append(contextManager.order, series)
+	enforceContextLimits()
+	return mc, nil
+}
+
 // GenerateAnnotatedImage builds (and optionally generates) an annotated image path.
 // The image generation step is skipped if skipImage is true.
 func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time.Duration) (string, error) {
 	start := time.Now()
-	logger.Info("GenerateAnnotatedImage:start", series, address)
+	logger.Info("annotated.build.start", "series", series, "addr", address, "skipImage", skipImage)
 	if address == "" {
 		return "", errors.New("address required")
 	}
@@ -218,7 +218,7 @@ func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time
 		}
 		// ImagePrep transition happens inside GenerateImage via RequestImage modifications
 	} else {
-		logger.Info("GenerateAnnotatedImage:skipImage true - not calling GenerateImage", series, address)
+		logger.Info("annotated.build.skip_image", "series", series, "addr", address)
 		progressMgr.Skip(series, address, PhaseEnhance)
 		progressMgr.Skip(series, address, PhaseImagePrep)
 		progressMgr.Skip(series, address, PhaseImageWait)
@@ -233,7 +233,7 @@ func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time
 	dd.Completed = true
 	progressMgr.Transition(series, address, PhaseCompleted)
 	progressMgr.Complete(series, address)
-	logger.Info("GenerateAnnotatedImage:end", series, address, "elapsed", time.Since(start).String())
+	logger.InfoG("annotated.build.end", "series", series, "addr", address, "durMs", time.Since(start).Milliseconds())
 	return out, nil
 }
 
