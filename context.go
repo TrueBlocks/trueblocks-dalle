@@ -100,7 +100,7 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 	// configured databases (DatabaseNames) and carefully guard slice bounds so we never
 	// index past the seed or database lists. The original logic could overrun both the
 	// seed slicing (i+6) and the database name list when the seed was long enough to
-	// generate more than len(DatabaseNames) attributes.
+	// create more than len(DatabaseNames) attributes.
 	maxAttribs := len(DatabaseNames)
 	cnt := 0
 	for i := 0; i+6 <= len(dd.Seed) && cnt < maxAttribs; i += 8 { // ensure we have 6 chars
