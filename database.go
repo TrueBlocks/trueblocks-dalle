@@ -68,7 +68,7 @@ func (ctx *Context) LoadSeries() (Series, error) {
 	if len(str) == 0 || !file.FileExists(fn) {
 		logger.Info("No series found, creating a new one", fn)
 		ret := Series{
-			Suffix: "simple",
+			Suffix: "empty",
 		}
 		ret.SaveSeries(filepath.Join(DataDir(), "series"), fn, 0)
 		return ret, nil

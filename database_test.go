@@ -14,8 +14,8 @@ func TestLoadSeries_NewAndExisting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadSeries failed: %v", err)
 	}
-	if series.Suffix != "simple" {
-		t.Errorf("Expected Suffix 'simple', got %q", series.Suffix)
+	if series.Suffix != "empty" {
+		t.Errorf("Expected Suffix 'empty', got %q", series.Suffix)
 	}
 }
 
