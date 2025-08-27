@@ -1,5 +1,8 @@
 .PHONY: app
 
+test:
+	@export $(grep -v '^#' ../.env | xargs) >/dev/null && go test ./...
+
 update:
 	@go get "github.com/TrueBlocks/trueblocks-sdk/v5@latest"
 	@go get github.com/TrueBlocks/trueblocks-core/src/apps/chifra@latest
@@ -7,9 +10,6 @@ update:
 
 lint:
 	@yarn lint
-
-test:
-	@export $(grep -v '^#' ../.env | xargs) >/dev/null && go test ./...
 
 clean:
 	@rm -fR node_modules

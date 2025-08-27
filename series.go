@@ -25,6 +25,7 @@ type Series struct {
 	Orientations []string `json:"orientations"`
 	Gazes        []string `json:"gazes"`
 	Backstyles   []string `json:"backstyles"`
+	ModifiedAt   string   `json:"modifiedAt,omitempty"`
 }
 
 // String returns the JSON representation of the Series.

@@ -28,6 +28,15 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 	}))
 	defer imageServer.Close()
 
+	oldHTTPGet := httpGet
+	httpGet = func(url string) (*http.Response, error) {
+		if strings.Contains(url, "mockimage.com") {
+			return http.Get(imageServer.URL)
+		}
+		return http.Get(url)
+	}
+	defer func() { httpGet = oldHTTPGet }()
+
 	// Patch file operations
 	oldOpenFile := openFile
 	oldAnnotate := annotateFunc
@@ -50,16 +59,6 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 	annotateFunc = func(text, fileName, location string, annoPct float64) (string, error) {
 		return strings.Replace(fileName, "generated/", "annotated/", 1), nil
 	}
-
-	// Patch http.Get to redirect to our imageServer
-	oldHTTPGet := httpGet
-	httpGet = func(url string) (*http.Response, error) {
-		if strings.Contains(url, "mockimage.com") {
-			return http.Get(imageServer.URL)
-		}
-		return http.Get(url)
-	}
-	defer func() { httpGet = oldHTTPGet }()
 
 	// Patch OpenAI API endpoint to use our mock server
 	oldOpenaiAPIURL := openaiAPIURL

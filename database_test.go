@@ -24,7 +24,7 @@ func TestReloadDatabases_Basic(t *testing.T) {
 	DatabaseNames = []string{"nouns"}
 
 	if err := ctx.ReloadDatabases("empty"); err != nil {
-		t.Fatalf("error reloading databases: %v", err)
+		t.Fatalf("error reloading database: %v", err)
 	}
 
 	if len(ctx.Databases) == 0 {

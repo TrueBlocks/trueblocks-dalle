@@ -182,8 +182,8 @@ func TestProgressFullRun(t *testing.T) {
 	}()
 
 	// Mock OpenAI generation & image download with small delays to record timings.
-	genDelay := 15 * time.Millisecond
-	dlDelay := 10 * time.Millisecond
+	genDelay := 2 * time.Millisecond
+	dlDelay := 1 * time.Millisecond
 
 	imageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(dlDelay)
