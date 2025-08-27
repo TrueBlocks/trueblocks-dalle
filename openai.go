@@ -1,6 +1,11 @@
 package dalle
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
+
+var deadline = 60 * time.Second
 
 // message represents a message for the OpenAI API request.
 type message struct {
@@ -30,6 +35,6 @@ func (req *dalleRequest) String() string {
 
 type dalleResponse1 struct {
 	Data []struct {
-		Url string `json:"url"`
+		Url     string `json:"url"`
 	} `json:"data"`
 }

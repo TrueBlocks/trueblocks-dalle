@@ -46,7 +46,7 @@ var saveMutex sync.Mutex
 
 // reportOn logs and saves generated prompt data for a given address and location.
 func (ctx *Context) reportOn(dd *DalleDress, addr, loc, ft, value string) {
-	logger.Info("Generating", loc, "for "+addr)
+	_ = addr
 	path := filepath.Join(OutputDir(), strings.ToLower(loc))
 
 	saveMutex.Lock()
@@ -94,6 +94,7 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 		SelectedTokens:  []string{},
 		SelectedRecords: []string{},
 		Attribs:         []Attribute{},
+		RequestedSeries: ctx.Series.Suffix,
 	}
 
 	// Generate attributes from the seed. We cap the number of attributes to the number of
@@ -144,6 +145,9 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 
 	ctx.DalleCache[dd.Filename] = &dd
 	ctx.DalleCache[addressIn] = &dd
+	if dd.RequestedSeries != ctx.Series.Suffix {
+		logger.Error("MakeDalleDress:seriesMismatch", addressIn, "requested", dd.RequestedSeries, "loaded", ctx.Series.Suffix)
+	}
 	logger.InfoG("dress.build.end", "addr", addressIn, "durMs", time.Since(makeStart).Milliseconds())
 	return &dd, nil
 }

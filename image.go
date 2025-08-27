@@ -77,15 +77,9 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	}
 	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- generating the image...", colors.Off)
 
-	timeOut := 60 * time.Second
-	if v := os.Getenv("TB_DALLE_IMAGE_TIMEOUT"); v != "" {
-		if d, err2 := time.ParseDuration(v); err2 == nil {
-			timeOut = d
-		}
-	}
 	// Transition: image_prep complete, recording wait start
 	progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageWait)
-	ctx, cancel := context.WithTimeout(context.Background(), timeOut)
+	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
@@ -129,7 +123,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.ImageURL = imageURL })
 	progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
 
-	ctx2, cancel2 := context.WithTimeout(context.Background(), timeOut)
+	ctx2, cancel2 := context.WithTimeout(context.Background(), deadline)
 	defer cancel2()
 	imageReq, err := http.NewRequestWithContext(ctx2, "GET", imageURL, nil)
 	if err != nil {

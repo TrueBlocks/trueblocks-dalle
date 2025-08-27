@@ -85,46 +85,30 @@ var authorTemplate = template.Must(template.New("author").Parse(authorTemplateSt
 
 // EnhancePrompt calls the OpenAI API to enhance a prompt using the given author type.
 func EnhancePrompt(prompt, authorType string) (string, error) {
-	start := time.Now()
-	logger.Info("EnhancePrompt:start")
 	if os.Getenv("TB_DALLE_NO_ENHANCE") == "1" {
-		logger.Info("EnhancePrompt:skipped no-enhance flag")
 		return prompt, nil
 	}
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" { // no key: skip enhancement silently
-		logger.Info("EnhancePrompt:skipped missing api key")
 		return prompt, nil
 	}
 	out, err := enhancePromptWithClient(prompt, authorType, &http.Client{}, apiKey, json.Marshal)
-	logger.Info("EnhancePrompt:end", "elapsed", time.Since(start).String())
 	return out, err
 }
 
 // enhancePromptWithClient is like EnhancePrompt but allows injecting an HTTP client, API key, and marshal function (for testing).
 func enhancePromptWithClient(prompt, authorType string, client *http.Client, apiKey string, marshal func(v interface{}) ([]byte, error)) (string, error) {
-	_ = authorType // authorType is not used in this function, but could be used for future enhancements
+	_ = authorType
 	url := "https://api.openai.com/v1/chat/completions"
 
-	// timeout config (default extended from 15s to 60s to accommodate slower responses)
-	timeOut := 60 * time.Second
-	if v := os.Getenv("TB_DALLE_ENHANCE_TIMEOUT"); v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			timeOut = d
-		}
-	}
-	payload := dalleRequest{
-		Model:     "gpt-4",
-		Seed:      1337,
-		Tempature: 0.2,
-	}
+	payload := dalleRequest{Model: "gpt-4", Seed: 1337, Tempature: 0.2}
 	payload.Messages = append(payload.Messages, message{Role: "system", Content: prompt})
 	payloadBytes, err := marshal(payload)
 	if err != nil {
 		return "", err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeOut)
+	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
@@ -132,8 +116,12 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
+
 	start := time.Now()
-	logger.Info("EnhancePrompt: sending request")
+	debugCurl("OPENAI CHAT (EnhancePrompt)", "POST", url, map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": "Bearer " + apiKey,
+	}, payload)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -147,7 +135,7 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 		return "", fmt.Errorf("enhance prompt: status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	logger.Info("EnhancePrompt: response in", time.Since(start).String())
+	logger.InfoG("prompt.enhance.http", "durMs", time.Since(start).Milliseconds(), "status", resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -164,12 +152,12 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 		return "", err
 	}
 	if len(response.Choices) == 0 {
-		logger.Info("EnhancePrompt: empty choices - returning original prompt")
+		logger.InfoR("prompt.enhance.empty_choices")
 		return prompt, nil
 	}
 	content := response.Choices[0].Message.Content
 	if content == "" { // defensive
-		logger.Info("EnhancePrompt: empty content - returning original prompt")
+		logger.InfoR("prompt.enhance.empty_content")
 		return prompt, nil
 	}
 	return content, nil
