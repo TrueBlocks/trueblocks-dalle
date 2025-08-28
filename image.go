@@ -215,32 +215,30 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		logger.InfoG("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "url")
 	}
 
-	// ctx2 and cancel2 are no longer needed; httpGet handles the request
-	// imageReq is no longer needed; httpGet handles the request
-       dlStart := time.Now()
-       if !b64Fallback {
-	       logger.Info("image.download.start", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename)
-	       imageResp, err := httpGet(imageURL)
-	       if err != nil {
-		       logger.InfoR("image.download.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", errString(err))
-		       return err
-	       }
-	       defer imageResp.Body.Close()
+	dlStart := time.Now()
+	if !b64Fallback {
+		logger.Info("image.download.start", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename)
+		imageResp, err := httpGet(imageURL)
+		if err != nil {
+			logger.InfoR("image.download.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", errString(err))
+			return err
+		}
+		defer imageResp.Body.Close()
 
-	       os.Remove(fn)
-	       file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-	       if err != nil {
-		       return fmt.Errorf("failed to open file: %s", fn)
-	       }
-	       defer file.Close()
+		os.Remove(fn)
+		file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+		if err != nil {
+			return fmt.Errorf("failed to open file: %s", fn)
+		}
+		defer file.Close()
 
-	       written, err := ioCopy(file, imageResp.Body)
-	       if err != nil {
-		       logger.InfoR("image.download.read_error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())
-		       return err
-	       }
-	       logger.InfoG("image.download.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", imageResp.StatusCode, "durMs", time.Since(dlStart).Milliseconds(), "bytes", written)
-       }
+		written, err := ioCopy(file, imageResp.Body)
+		if err != nil {
+			logger.InfoR("image.download.read_error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())
+			return err
+		}
+		logger.InfoG("image.download.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", imageResp.StatusCode, "durMs", time.Since(dlStart).Milliseconds(), "bytes", written)
+	}
 
 	path, err := annotateFunc(imageData.TersePrompt, fn, "bottom", 0.2)
 	if err != nil {
