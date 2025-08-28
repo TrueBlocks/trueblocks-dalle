@@ -36,5 +36,6 @@ func (req *dalleRequest) String() string {
 type dalleResponse1 struct {
 	Data []struct {
 		Url     string `json:"url"`
+		B64Data string `json:"b64_json"` // do not change the json tag
 	} `json:"data"`
 }
