@@ -15,8 +15,6 @@ import (
 
 // TestSuccessOrdering ensures a normal successful generation emits tokens in expected order.
 func TestSuccessOrdering(t *testing.T) {
-	t.Skip("skipping finished porting image.go")
-
 	SetupTest(t, SetupTestOptions{Series: []string{"seriessuccess"}})
 	// Provide API key so we don't hit skip path.
 	os.Setenv("OPENAI_API_KEY", "test-key")

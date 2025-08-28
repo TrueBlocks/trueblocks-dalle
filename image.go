@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"encoding/base64"
+
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
@@ -169,44 +171,42 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	imageURL := dalleResp.Data[0].Url
 	fn := filepath.Join(generated, fmt.Sprintf("%s.png", imageData.Filename))
 
-	// TODO: BOGUS - Support for b64 needed for new OpenAi image generate gpt-image-1
+	// b64 fallback logic for OpenAI image generate gpt-image-1
 	b64Fallback := false
-	/*
-		if imageURL == "" {
-			b64Data := ""
-			if len(dalleResp.Data) > 0 {
-				b64Data = dalleResp.Data[0].B64Data
-			}
-			if b64Data != "" {
-				decoded, decErr := base64.StdEncoding.DecodeString(b64Data)
-				if decErr == nil {
-					os.Remove(fn)
-					if err := os.WriteFile(fn, decoded, 0o644); err != nil {
-						return fmt.Errorf("write b64 image: %w", err)
-					}
-					// Success: b64 fallback used
-					logger.InfoG("image.post.b64_fallback", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "bytes", len(decoded))
-					progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.GeneratedPath = fn; dd.DownloadMode = "b64" })
-					progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
-					logger.Info("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "b64")
-					b64Fallback = true
-				} else {
-					// decoding failed; treat as missing url
-					b64Data = ""
+	if imageURL == "" {
+		b64Data := ""
+		if len(dalleResp.Data) > 0 {
+			b64Data = dalleResp.Data[0].B64Data
+		}
+		if b64Data != "" {
+			decoded, decErr := base64.StdEncoding.DecodeString(b64Data)
+			if decErr == nil {
+				os.Remove(fn)
+				if err := os.WriteFile(fn, decoded, 0o644); err != nil {
+					return fmt.Errorf("write b64 image: %w", err)
 				}
-			}
-			if !b64Fallback { // still missing
-				// Log a body snippet (first 200 bytes) to aid debugging
-				snippet := bodyStr
-				if len(snippet) > 200 {
-					snippet = snippet[:200]
-				}
-				// Error: missing both URL and b64
-				logger.InfoR("image.post.missing_url", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "snippet", strings.ReplaceAll(strings.ReplaceAll(snippet, "\n", " "), "\t", " "))
-				return fmt.Errorf("image response missing both url and b64_json")
+				// Success: b64 fallback used
+				logger.InfoG("image.post.b64_fallback", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "bytes", len(decoded))
+				progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.GeneratedPath = fn; dd.DownloadMode = "b64" })
+				progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
+				logger.Info("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "b64")
+				b64Fallback = true
+			} else {
+				// decoding failed; treat as missing url
+				b64Data = ""
 			}
 		}
-	*/
+		if !b64Fallback { // still missing
+			// Log a body snippet (first 200 bytes) to aid debugging
+			snippet := bodyStr
+			if len(snippet) > 200 {
+				snippet = snippet[:200]
+			}
+			// Error: missing both URL and b64
+			logger.InfoR("image.post.missing_url", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "snippet", strings.ReplaceAll(strings.ReplaceAll(snippet, "\n", " "), "\t", " "))
+			return fmt.Errorf("image response missing both url and b64_json")
+		}
+	}
 	logger.InfoG("image.post.parsed", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "dataCount", len(dalleResp.Data))
 	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.ImageURL = imageURL })
 	if !b64Fallback {
@@ -215,36 +215,32 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		logger.InfoG("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "url")
 	}
 
-	ctx2, cancel2 := context.WithTimeout(context.Background(), deadline)
-	defer cancel2()
-	imageReq, err := http.NewRequestWithContext(ctx2, "GET", imageURL, nil)
-	if err != nil {
-		return err
-	}
-	dlStart := time.Now()
-	if !b64Fallback {
-		logger.Info("image.download.start", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename)
-		imageResp, err := (&http.Client{}).Do(imageReq)
-		if err != nil {
-			logger.InfoR("image.download.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", errString(err))
-			return err
-		}
-		defer imageResp.Body.Close()
+	// ctx2 and cancel2 are no longer needed; httpGet handles the request
+	// imageReq is no longer needed; httpGet handles the request
+       dlStart := time.Now()
+       if !b64Fallback {
+	       logger.Info("image.download.start", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename)
+	       imageResp, err := httpGet(imageURL)
+	       if err != nil {
+		       logger.InfoR("image.download.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", errString(err))
+		       return err
+	       }
+	       defer imageResp.Body.Close()
 
-		os.Remove(fn)
-		file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-		if err != nil {
-			return fmt.Errorf("failed to open file: %s", fn)
-		}
-		defer file.Close()
+	       os.Remove(fn)
+	       file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	       if err != nil {
+		       return fmt.Errorf("failed to open file: %s", fn)
+	       }
+	       defer file.Close()
 
-		written, err := ioCopy(file, imageResp.Body)
-		if err != nil {
-			logger.InfoR("image.download.read_error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())
-			return err
-		}
-		logger.InfoG("image.download.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", imageResp.StatusCode, "durMs", time.Since(dlStart).Milliseconds(), "bytes", written)
-	}
+	       written, err := ioCopy(file, imageResp.Body)
+	       if err != nil {
+		       logger.InfoR("image.download.read_error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())
+		       return err
+	       }
+	       logger.InfoG("image.download.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", imageResp.StatusCode, "durMs", time.Since(dlStart).Milliseconds(), "bytes", written)
+       }
 
 	path, err := annotateFunc(imageData.TersePrompt, fn, "bottom", 0.2)
 	if err != nil {

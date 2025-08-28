@@ -246,12 +246,6 @@ func ListSeries() []string {
 	return list
 }
 
-// // ListSeriesModels returns a slice of Series objects after loading each from disc
-// func ListSeriesModels(seriesBase string) []*Series {
-// 	items, _ := LoadSeriesModels(seriesBase)
-// 	return items
-// }
-
 // ResetContextManagerForTest clears context cache (test helper).
 func ResetContextManagerForTest() {
 	contextManager.Lock()

@@ -26,8 +26,6 @@ func captureLogs(f func()) string {
 
 // TestLoggingImagePipeline exercises a full (mocked) image generation ensuring key log tokens appear.
 func TestLoggingImagePipeline(t *testing.T) {
-	t.Skip("skipping finished porting image.go")
-
 	SetupTest(t, SetupTestOptions{Series: []string{"seriesx"}})
 	t.Setenv("OPENAI_API_KEY", "test-key")
 	t.Setenv("TB_DALLE_NO_ENHANCE", "1")

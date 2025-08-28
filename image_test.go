@@ -14,8 +14,6 @@ func TestRequestImage_Success(t *testing.T) {
 }
 
 func TestRequestImage_MockSuccess(t *testing.T) {
-	t.Skip("skipping finished porting image.go")
-
 	// Mock OpenAI API image generation response
 	openaiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)

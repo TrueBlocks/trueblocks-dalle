@@ -13,8 +13,6 @@ import (
 )
 
 func TestFailureOrderingBasic(t *testing.T) {
-	t.Skip("skipping finished porting image.go")
-
 	SetupTest(t, SetupTestOptions{Series: []string{"seriesorder"}})
 	t.Setenv("OPENAI_API_KEY", "test-key")
 	t.Setenv("TB_DALLE_NO_ENHANCE", "1")

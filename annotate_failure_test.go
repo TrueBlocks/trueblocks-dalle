@@ -15,8 +15,6 @@ import (
 )
 
 func TestAnnotateFailureLogging(t *testing.T) {
-	t.Skip("skipping finished porting image.go")
-
 	SetupTest(t, SetupTestOptions{Series: []string{"seriesannofail"}})
 	os.Setenv("OPENAI_API_KEY", "test-key")
 	os.Setenv("TB_DALLE_NO_ENHANCE", "1")
