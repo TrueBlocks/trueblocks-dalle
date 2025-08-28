@@ -24,10 +24,13 @@ type DalleDress struct {
 	SelectedTokens  []string             `json:"selectedTokens"`
 	SelectedRecords []string             `json:"selectedRecords"`
 	ImageURL        string               `json:"imageUrl"`
+	GeneratedPath   string               `json:"generatedPath"`
 	AnnotatedPath   string               `json:"annotatedPath"`
+	DownloadMode    string               `json:"downloadMode"`
 	IPFSHash        string               `json:"ipfsHash"`
 	CacheHit        bool                 `json:"cacheHit"`
 	Completed       bool                 `json:"completed"`
+	RequestedSeries string               `json:"requestedSeries"`
 }
 
 // String returns the JSON representation of the DalleDress.

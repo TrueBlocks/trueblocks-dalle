@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
 // Phase represents a canonical generation phase.
@@ -181,7 +183,9 @@ func (pm *ProgressManager) Transition(series, addr string, ph Phase) {
 	if next.StartedNs == 0 {
 		next.StartedNs = now
 	}
+	prev := run.current
 	run.current = ph
+	logger.Info("phase.transition", "series", series, "addr", addr, "from", prev, "to", ph)
 }
 
 // Complete finalizes the run.
@@ -207,6 +211,21 @@ func (pm *ProgressManager) Complete(series, addr string) {
 	}
 	run.current = PhaseCompleted
 	run.done = true
+	logger.InfoG("phase.complete", "series", series, "addr", addr)
+
+	var phasesDone int
+	for _, ph := range run.order {
+		pt := run.phases[ph]
+		if pt.EndedNs != 0 || pt.Skipped {
+			phasesDone++
+		}
+	}
+	totalDurMs := int64(0)
+	if run.start.UnixNano() > 0 {
+		totalDurMs = (now - run.start.UnixNano()) / 1_000_000
+	}
+	logger.InfoG("run.summary", "series", series, "addr", addr, "durMs", totalDurMs, "phases", phasesDone, "cacheHit", run.cacheHit, "error", "", "downloadMode", run.dress.DownloadMode)
+
 	if !run.cacheHit {
 		pm.metrics.GenerationRuns++
 		// Persist metrics after a new full generation
@@ -240,6 +259,21 @@ func (pm *ProgressManager) Fail(series, addr string, err error) {
 	if comp.EndedNs == 0 {
 		comp.EndedNs = now
 	}
+	logger.InfoR("phase.fail", "series", series, "addr", addr, "at", run.current, "error", err.Error())
+
+	var phasesDone int
+	for _, ph := range run.order {
+		pt := run.phases[ph]
+		if pt.EndedNs != 0 || pt.Skipped {
+			phasesDone++
+		}
+	}
+	totalDurMs := int64(0)
+	if run.start.UnixNano() > 0 {
+		totalDurMs = (now - run.start.UnixNano()) / 1_000_000
+	}
+	logger.InfoR("run.summary", "series", series, "addr", addr, "durMs", totalDurMs, "phases", phasesDone, "cacheHit", run.cacheHit, "error", run.err, "downloadMode", run.dress.DownloadMode)
+
 	pm.maybeArchiveRunLocked(run)
 }
 
@@ -262,6 +296,7 @@ func (pm *ProgressManager) Skip(series, addr string, ph Phase) {
 	if p.EndedNs == 0 {
 		p.EndedNs = p.StartedNs
 	}
+	logger.Info("phase.skip", "series", series, "addr", addr, "phase", ph)
 }
 
 // MarkCacheHit notes a cache hit.
@@ -428,6 +463,41 @@ func MarshalProgressReport(pr *ProgressReport) []byte {
 
 // GetProgress returns the current progress report (public helper).
 func GetProgress(series, addr string) *ProgressReport { return progressMgr.GetReport(series, addr) }
+
+// ActiveProgressReports returns a slice of snapshots for all in-progress (non-completed) runs.
+// Completed runs are pruned (same behavior as GetReport) and are not returned. This enables
+// callers (e.g. a status printer goroutine) to periodically inspect active work without
+// mutating phase timing state beyond pruning finished runs.
+func ActiveProgressReports() []*ProgressReport {
+	progressMgr.mu.Lock()
+	defer progressMgr.mu.Unlock()
+	var out []*ProgressReport
+	for k, run := range progressMgr.runs {
+		if run == nil {
+			continue
+		}
+		if run.done { // prune completed runs (mirrors GetReport side effect)
+			delete(progressMgr.runs, k)
+			continue
+		}
+		pr := &ProgressReport{Series: run.series, Address: run.address, Current: run.current, StartedNs: run.start.UnixNano(), Done: run.done, Error: run.err, CacheHit: run.cacheHit}
+		for _, ph := range run.order {
+			p := run.phases[ph]
+			cp := *p
+			pr.Phases = append(pr.Phases, &cp)
+		}
+		pr.DalleDress = run.dress
+		pr.PhaseAverages = map[Phase]time.Duration{}
+		for ph, avg := range progressMgr.metrics.Phase {
+			if avg.Count > 0 {
+				pr.PhaseAverages[ph] = time.Duration(avg.AvgNs)
+			}
+		}
+		progressMgr.computePercentETA(pr, run)
+		out = append(out, pr)
+	}
+	return out
+}
 
 // ForceMetricsSave forces metrics write (for tests).
 func ForceMetricsSave() {

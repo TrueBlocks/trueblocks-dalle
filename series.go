@@ -25,6 +25,7 @@ type Series struct {
 	Orientations []string `json:"orientations"`
 	Gazes        []string `json:"gazes"`
 	Backstyles   []string `json:"backstyles"`
+	ModifiedAt   string   `json:"modifiedAt,omitempty"`
 }
 
 // String returns the JSON representation of the Series.
@@ -34,14 +35,10 @@ func (s *Series) String() string {
 }
 
 // SaveSeries saves the Series to a file with the given filename and last index.
-func (s *Series) SaveSeries(seriesDir, fn string, last int) {
+func (s *Series) SaveSeries(series string, last int) {
 	ss := s
 	ss.Last = last
-	_ = file.EstablishFolder(seriesDir)
-	target := fn
-	if !filepath.IsAbs(target) {
-		target = filepath.Join(seriesDir, filepath.Base(fn))
-	}
+	target := filepath.Join(seriesDir(), series+".json") // creates the folder
 	_ = file.StringToAsciiFile(target, ss.String())
 }
 
@@ -60,12 +57,3 @@ func (s *Series) GetFilter(fieldName string) ([]string, error) {
 	}
 	return field.Interface().([]string), nil
 }
-
-// func (a *App) GetSeries(baseFolder string) []utils.Series {
-// 	folder := filepath.Join(baseFolder)
-// 	if list, err := utils.Listing(folder); err != nil {
-// 		return []utils.Series{utils.Series(err.Error())}
-// 	} else {
-// 		return list
-// 	}
-// }

@@ -23,7 +23,7 @@ contract DalleDressV1 is ERC721, ERC721URIStorage, ERC721Pausable, Ownable, Reen
 
     function _baseURI() internal pure override returns (string memory) {
         // Consider IPFS: "ipfs://<base-hash>/"
-        return "http://192.34.63.136:8080/dalle/simple/";
+        return "http://192.34.63.136:8080/dalle/empty/";
     }
 
     function pause() public onlyOwner {

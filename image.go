@@ -12,11 +12,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/colors"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
 )
+
+// errString returns the error string or "<nil>" safely
+func errString(e error) string {
+	if e == nil {
+		return "<nil>"
+	}
+	return e.Error()
+}
 
 type ImageData struct {
 	EnhancedPrompt string `json:"enhancedPrompt"`
@@ -28,42 +35,66 @@ type ImageData struct {
 	Address        string `json:"-"`
 }
 
+// msSince returns elapsed milliseconds since t.
+func msSince(t time.Time) int64 { return time.Since(t).Milliseconds() }
+
 func RequestImage(outputPath string, imageData *ImageData) error {
 	start := time.Now()
-	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- RequestImage:start", colors.Off)
 	generated := outputPath
 	_ = file.EstablishFolder(generated)
 	annotated := strings.Replace(generated, "/generated", "/annotated", -1)
 	_ = file.EstablishFolder(annotated)
 
-	fn := filepath.Join(generated, fmt.Sprintf("%s.png", imageData.Filename))
-	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- improving the prompt...", colors.Off)
+	isLandscape := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "horizontal")
+	isPortrait := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "vertical")
 
-	size := "1024x1024"
-	if strings.Contains(imageData.EnhancedPrompt, "horizontal") {
-		size = "1792x1024"
-	} else if strings.Contains(imageData.EnhancedPrompt, "vertical") {
-		size = "1024x1792"
-	}
+	model := "dall-e-3"
+	// model := "gpt-image-1"
 
-	quality := "standard"
-	if os.Getenv("DALLE_QUALITY") != "" {
-		quality = os.Getenv("DALLE_QUALITY")
-	}
-
-	url := openaiAPIURL
 	payload := dalleRequest{
-		Prompt:  imageData.EnhancedPrompt,
-		N:       1,
-		Quality: quality,
-		Style:   "vivid",
-		Model:   "dall-e-3",
-		Size:    size,
+		Prompt: imageData.EnhancedPrompt,
+		N:      1,
+		Model:  model,
 	}
+
+	switch model {
+	case "dall-e-3":
+		if isLandscape {
+			payload.Size = "1792x1024"
+		} else if isPortrait {
+			payload.Size = "1024x1792"
+		} else {
+			payload.Size = "1024x1024"
+		}
+		payload.Quality = "hd"
+		payload.Style = "vivid"
+	case "gpt-image-1":
+		if isLandscape {
+			payload.Size = "1536x1024"
+		} else if isPortrait {
+			payload.Size = "1024x1536"
+		} else {
+			payload.Size = "1024x1024"
+		}
+		payload.Quality = "high"
+	default:
+		logger.InfoR("image.request.unknown_model", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "model", model)
+	}
+
+	logger.Info(
+		"image.request.start",
+		"series", imageData.Series,
+		"addr", imageData.Address,
+		"file", imageData.Filename,
+		"model", model,
+		"size", payload.Size,
+		"quality", payload.Quality,
+		"promptLen", len(imageData.EnhancedPrompt),
+	)
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("marshal payload: %w", err)
 	}
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
@@ -71,42 +102,49 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		// No key: create a placeholder empty annotated file and return
 		placeholder := filepath.Join(annotated, fmt.Sprintf("%s.png", imageData.Filename))
 		_ = os.WriteFile(placeholder, []byte{}, 0600)
-		logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- skipped image generation (no OPENAI_API_KEY)", colors.Off)
-		logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- RequestImage:end", time.Since(start).String(), colors.Off)
+		logger.Info("image.request.skip_no_api_key", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "durMs", msSince(start))
 		return nil
 	}
-	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- generating the image...", colors.Off)
 
-	timeOut := 60 * time.Second
-	if v := os.Getenv("TB_DALLE_IMAGE_TIMEOUT"); v != "" {
-		if d, err2 := time.ParseDuration(v); err2 == nil {
-			timeOut = d
-		}
-	}
-	// Transition: image_prep complete, recording wait start
+	var imagePostTimeout = 120 * time.Second
+
 	progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageWait)
-	ctx, cancel := context.WithTimeout(context.Background(), timeOut)
+	ctx, cancel := context.WithTimeout(context.Background(), imagePostTimeout)
 	defer cancel()
+
+	url := openaiAPIURL
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
+	debugCurl("OPENAI IMAGE (RequestImage)", "POST", url, map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": "Bearer " + apiKey,
+	}, payload)
 
 	client := &http.Client{}
 	reqStart := time.Now()
-	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- POSTing image request", colors.Off)
+	logger.Info("image.post.send", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename)
 	resp, err := client.Do(req)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			logger.Info("image.post.timeout", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "timeoutMs", imagePostTimeout.Milliseconds())
+		}
 		return err
 	}
-	defer resp.Body.Close()
-	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- image request responded in "+time.Since(reqStart).String(), colors.Off)
+	postDur := time.Since(reqStart)
+	if resp.StatusCode == http.StatusOK {
+		logger.InfoG("image.post.recv", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", resp.StatusCode, "durMs", postDur.Milliseconds())
+	} else {
+		logger.InfoR("image.post.recv", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", resp.StatusCode, "durMs", postDur.Milliseconds())
+	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
+	body, readErr := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if readErr != nil {
+		return readErr
 	}
 	bodyStr := string(body)
 	body = []byte(bodyStr)
@@ -114,54 +152,109 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	var dalleResp dalleResponse1
 	err = json.Unmarshal(body, &dalleResp)
 	if err != nil {
+		logger.InfoR("image.post.parse_error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())
 		return err
 	}
 
 	if resp.StatusCode != 200 {
+		logger.InfoR("image.post.error_status", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", resp.StatusCode)
 		return fmt.Errorf("error: %s %d %s", resp.Status, resp.StatusCode, string(body))
 	}
 
 	if len(dalleResp.Data) == 0 {
+		logger.InfoR("image.post.empty_data", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename)
 		return fmt.Errorf("no images returned")
 	}
 
 	imageURL := dalleResp.Data[0].Url
-	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.ImageURL = imageURL })
-	progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
+	fn := filepath.Join(generated, fmt.Sprintf("%s.png", imageData.Filename))
 
-	ctx2, cancel2 := context.WithTimeout(context.Background(), timeOut)
+	// TODO: BOGUS - Support for b64 needed for new OpenAi image generate gpt-image-1
+	b64Fallback := false
+	/*
+		if imageURL == "" {
+			b64Data := ""
+			if len(dalleResp.Data) > 0 {
+				b64Data = dalleResp.Data[0].B64Data
+			}
+			if b64Data != "" {
+				decoded, decErr := base64.StdEncoding.DecodeString(b64Data)
+				if decErr == nil {
+					os.Remove(fn)
+					if err := os.WriteFile(fn, decoded, 0o644); err != nil {
+						return fmt.Errorf("write b64 image: %w", err)
+					}
+					// Success: b64 fallback used
+					logger.InfoG("image.post.b64_fallback", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "bytes", len(decoded))
+					progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.GeneratedPath = fn; dd.DownloadMode = "b64" })
+					progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
+					logger.Info("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "b64")
+					b64Fallback = true
+				} else {
+					// decoding failed; treat as missing url
+					b64Data = ""
+				}
+			}
+			if !b64Fallback { // still missing
+				// Log a body snippet (first 200 bytes) to aid debugging
+				snippet := bodyStr
+				if len(snippet) > 200 {
+					snippet = snippet[:200]
+				}
+				// Error: missing both URL and b64
+				logger.InfoR("image.post.missing_url", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "snippet", strings.ReplaceAll(strings.ReplaceAll(snippet, "\n", " "), "\t", " "))
+				return fmt.Errorf("image response missing both url and b64_json")
+			}
+		}
+	*/
+	logger.InfoG("image.post.parsed", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "dataCount", len(dalleResp.Data))
+	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.ImageURL = imageURL })
+	if !b64Fallback {
+		progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.DownloadMode = "url" })
+		progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
+		logger.InfoG("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "url")
+	}
+
+	ctx2, cancel2 := context.WithTimeout(context.Background(), deadline)
 	defer cancel2()
 	imageReq, err := http.NewRequestWithContext(ctx2, "GET", imageURL, nil)
 	if err != nil {
 		return err
 	}
-	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- downloading image", colors.Off)
-	imageResp, err := (&http.Client{}).Do(imageReq)
-	if err != nil {
-		return err
-	}
-	defer imageResp.Body.Close()
+	dlStart := time.Now()
+	if !b64Fallback {
+		logger.Info("image.download.start", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename)
+		imageResp, err := (&http.Client{}).Do(imageReq)
+		if err != nil {
+			logger.InfoR("image.download.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", errString(err))
+			return err
+		}
+		defer imageResp.Body.Close()
 
-	os.Remove(fn)
-	file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %s", fn)
-	}
-	defer file.Close()
+		os.Remove(fn)
+		file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+		if err != nil {
+			return fmt.Errorf("failed to open file: %s", fn)
+		}
+		defer file.Close()
 
-	_, err = ioCopy(file, imageResp.Body)
-	if err != nil {
-		return err
+		written, err := ioCopy(file, imageResp.Body)
+		if err != nil {
+			logger.InfoR("image.download.read_error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())
+			return err
+		}
+		logger.InfoG("image.download.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", imageResp.StatusCode, "durMs", time.Since(dlStart).Milliseconds(), "bytes", written)
 	}
 
 	path, err := annotateFunc(imageData.TersePrompt, fn, "bottom", 0.2)
 	if err != nil {
+		logger.Info("image.annotate.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())
 		return fmt.Errorf("error annotating image: %v", err)
 	}
-	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.AnnotatedPath = path })
+	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.AnnotatedPath = path; dd.GeneratedPath = fn })
 	progressMgr.Transition(imageData.Series, imageData.Address, PhaseAnnotate)
-	logger.Info(colors.Cyan, imageData.Filename, colors.Green, "- image saved as", colors.White+strings.Trim(path, " "), colors.Off)
-	logger.Info(colors.Cyan, imageData.Filename, colors.Yellow, "- RequestImage:end", time.Since(start).String(), colors.Off)
+	logger.InfoG("image.annotate.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "path", strings.TrimSpace(path))
+	logger.InfoG("image.request.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "durMs", msSince(start))
 	if os.Getenv("TB_CMD_LINE") == "true" {
 		utils.System("open " + path)
 	}

@@ -4,21 +4,6 @@ import (
 	"testing"
 )
 
-func TestLoadSeries_NewAndExisting(t *testing.T) {
-	tmpDir := t.TempDir()
-	TestOnlyResetDataDir()
-	ConfigureDataDir(tmpDir)
-	ctx := NewContext()
-
-	series, err := ctx.LoadSeries()
-	if err != nil {
-		t.Fatalf("LoadSeries failed: %v", err)
-	}
-	if series.Suffix != "simple" {
-		t.Errorf("Expected Suffix 'simple', got %q", series.Suffix)
-	}
-}
-
 func TestToLines_EmptyAndFiltered(t *testing.T) {
 	lines, err := readDatabaseCSV("nouns.csv")
 	if err != nil {
@@ -38,8 +23,8 @@ func TestReloadDatabases_Basic(t *testing.T) {
 	// Provide DatabaseNames for the test
 	DatabaseNames = []string{"nouns"}
 
-	if err := ctx.ReloadDatabases(); err != nil {
-		t.Fatalf("ReloadDatabases error: %v", err)
+	if err := ctx.ReloadDatabases("empty"); err != nil {
+		t.Fatalf("error reloading database: %v", err)
 	}
 
 	if len(ctx.Databases) == 0 {

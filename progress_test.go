@@ -29,15 +29,15 @@ func TestProgressSkipImageAndMetrics(t *testing.T) {
 	TestOnlyResetDataDir()
 	ConfigureDataDir(tmp)
 	_ = os.MkdirAll(out, 0o755)
-	writeSeries(t, out, "simple")
+	writeSeries(t, out, "empty")
 	ResetMetricsForTest()
 
 	addr := "0xf503017d7baf7fbc0fff7492b751025c6a78179b"
-	if _, err := GenerateAnnotatedImage("simple", addr, true, time.Second); err != nil {
+	if _, err := GenerateAnnotatedImage("empty", addr, true, time.Second); err != nil {
 		t.Fatalf("generation failed: %v", err)
 	}
 
-	pr := GetProgress("simple", addr)
+	pr := GetProgress("empty", addr)
 	if pr == nil {
 		t.Fatalf("expected progress report")
 	}
@@ -182,8 +182,8 @@ func TestProgressFullRun(t *testing.T) {
 	}()
 
 	// Mock OpenAI generation & image download with small delays to record timings.
-	genDelay := 15 * time.Millisecond
-	dlDelay := 10 * time.Millisecond
+	genDelay := 2 * time.Millisecond
+	dlDelay := 1 * time.Millisecond
 
 	imageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(dlDelay)
