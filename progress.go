@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
 // Phase represents a canonical generation phase.
@@ -181,7 +183,9 @@ func (pm *ProgressManager) Transition(series, addr string, ph Phase) {
 	if next.StartedNs == 0 {
 		next.StartedNs = now
 	}
+	prev := run.current
 	run.current = ph
+	logger.Info("phase.transition", "series", series, "addr", addr, "from", prev, "to", ph)
 }
 
 // Complete finalizes the run.
@@ -207,6 +211,21 @@ func (pm *ProgressManager) Complete(series, addr string) {
 	}
 	run.current = PhaseCompleted
 	run.done = true
+	logger.InfoG("phase.complete", "series", series, "addr", addr)
+
+	var phasesDone int
+	for _, ph := range run.order {
+		pt := run.phases[ph]
+		if pt.EndedNs != 0 || pt.Skipped {
+			phasesDone++
+		}
+	}
+	totalDurMs := int64(0)
+	if run.start.UnixNano() > 0 {
+		totalDurMs = (now - run.start.UnixNano()) / 1_000_000
+	}
+	logger.InfoG("run.summary", "series", series, "addr", addr, "durMs", totalDurMs, "phases", phasesDone, "cacheHit", run.cacheHit, "error", "", "downloadMode", run.dress.DownloadMode)
+
 	if !run.cacheHit {
 		pm.metrics.GenerationRuns++
 		// Persist metrics after a new full generation
@@ -240,6 +259,21 @@ func (pm *ProgressManager) Fail(series, addr string, err error) {
 	if comp.EndedNs == 0 {
 		comp.EndedNs = now
 	}
+	logger.InfoR("phase.fail", "series", series, "addr", addr, "at", run.current, "error", err.Error())
+
+	var phasesDone int
+	for _, ph := range run.order {
+		pt := run.phases[ph]
+		if pt.EndedNs != 0 || pt.Skipped {
+			phasesDone++
+		}
+	}
+	totalDurMs := int64(0)
+	if run.start.UnixNano() > 0 {
+		totalDurMs = (now - run.start.UnixNano()) / 1_000_000
+	}
+	logger.InfoR("run.summary", "series", series, "addr", addr, "durMs", totalDurMs, "phases", phasesDone, "cacheHit", run.cacheHit, "error", run.err, "downloadMode", run.dress.DownloadMode)
+
 	pm.maybeArchiveRunLocked(run)
 }
 
@@ -262,6 +296,7 @@ func (pm *ProgressManager) Skip(series, addr string, ph Phase) {
 	if p.EndedNs == 0 {
 		p.EndedNs = p.StartedNs
 	}
+	logger.Info("phase.skip", "series", series, "addr", addr, "phase", ph)
 }
 
 // MarkCacheHit notes a cache hit.
