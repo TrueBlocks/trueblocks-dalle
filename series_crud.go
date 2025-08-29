@@ -10,11 +10,12 @@ import (
 	"time"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 
 // LoadSeriesModels loads all series JSON files from the series folder beneath the provided dataDir
-func LoadSeriesModels(seriesDir string) ([]*Series, error) {
-	items := []*Series{}
+func LoadSeriesModels(seriesDir string) ([]Series, error) {
+	items := []Series{}
 	entries, err := os.ReadDir(seriesDir)
 	if err != nil {
 		return items, nil
@@ -40,16 +41,21 @@ func LoadSeriesModels(seriesDir string) ([]*Series, error) {
 		if err == nil {
 			s.ModifiedAt = fi.ModTime().UTC().Format(time.RFC3339)
 		}
-		items = append(items, &s)
+		items = append(items, s)
 	}
 	return items, nil
 }
 
 // SortSeries sorts in place based on field in spec (suffix, modifiedAt, last)
-func SortSeries(items []*Series, field string, asc bool) {
-	if len(items) < 2 {
-		return
+func SortSeries(items []Series, sortSpec sdk.SortSpec) error {
+	if len(items) < 2 || len(sortSpec.Fields) == 0 {
+		return nil
 	}
+	if len(sortSpec.Order) == 0 {
+		sortSpec.Order = append(sortSpec.Order, sdk.Asc)
+	}
+	field := sortSpec.Fields[0]
+	asc := sortSpec.Order[0] == sdk.Asc
 	cmp := func(i, j int) bool { return true }
 	switch strings.ToLower(field) {
 	case "suffix":
@@ -67,6 +73,7 @@ func SortSeries(items []*Series, field string, asc bool) {
 		}
 		return !cmp(i, j)
 	})
+	return nil
 }
 
 func DeleteSeries(seriesDir, suffix string) error {

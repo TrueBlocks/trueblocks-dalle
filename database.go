@@ -3,10 +3,12 @@ package dalle
 import (
 	"encoding/json"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 
 // ReloadDatabases reloads databases applying filters from the specified series suffix.
@@ -83,4 +85,32 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 	}
 
 	return ret, nil
+}
+
+// SortDatabases sorts in place based on field in spec
+func SortDatabases(items []Database, sortSpec sdk.SortSpec) error {
+	if len(items) < 2 || len(sortSpec.Fields) == 0 {
+		return nil
+	}
+	if len(sortSpec.Order) == 0 {
+		sortSpec.Order = append(sortSpec.Order, sdk.Asc)
+	}
+	field := sortSpec.Fields[0]
+	asc := sortSpec.Order[0] == sdk.Asc
+	cmp := func(i, j int) bool { return true }
+	switch strings.ToLower(field) {
+	case "id":
+		cmp = func(i, j int) bool { return items[i].ID < items[j].ID }
+	case "name":
+		cmp = func(i, j int) bool { return items[i].Name < items[j].Name }
+	default:
+		cmp = func(i, j int) bool { return items[i].Name < items[j].Name }
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		if asc {
+			return cmp(i, j)
+		}
+		return !cmp(i, j)
+	})
+	return nil
 }
