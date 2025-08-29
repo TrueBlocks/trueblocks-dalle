@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	coreTypes "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/types"
 )
 
 // Series represents a collection of prompt attributes and their values.
@@ -26,6 +27,29 @@ type Series struct {
 	Gazes        []string `json:"gazes"`
 	Backstyles   []string `json:"backstyles"`
 	ModifiedAt   string   `json:"modifiedAt,omitempty"`
+}
+
+func (s *Series) Model(chain, format string, verbose bool, extraOpts map[string]any) coreTypes.Model {
+	return coreTypes.Model{
+		Data: map[string]any{
+			"suffix":       s.Suffix,
+			"last":         s.Last,
+			"modifiedAt":   s.ModifiedAt,
+			"adverbs":      s.Adverbs,
+			"adjectives":   s.Adjectives,
+			"nouns":        s.Nouns,
+			"emotions":     s.Emotions,
+			"occupations":  s.Occupations,
+			"actions":      s.Actions,
+			"artstyles":    s.Artstyles,
+			"litstyles":    s.Litstyles,
+			"colors":       s.Colors,
+			"orientations": s.Orientations,
+			"gazes":        s.Gazes,
+			"backstyles":   s.Backstyles,
+		},
+		Order: []string{"suffix", "last", "modifiedAt", "adverbs", "adjectives", "nouns", "emotions", "occupations", "actions", "artstyles", "litstyles", "colors", "orientations", "gazes", "backstyles"},
+	}
 }
 
 // String returns the JSON representation of the Series.
