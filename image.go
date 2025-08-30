@@ -168,12 +168,12 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		return fmt.Errorf("no images returned")
 	}
 
-	imageURL := dalleResp.Data[0].Url
+	imageUrl := dalleResp.Data[0].Url
 	fn := filepath.Join(generated, fmt.Sprintf("%s.png", imageData.Filename))
 
 	// b64 fallback logic for OpenAI image generate gpt-image-1
 	b64Fallback := false
-	if imageURL == "" {
+	if imageUrl == "" {
 		b64Data := ""
 		if len(dalleResp.Data) > 0 {
 			b64Data = dalleResp.Data[0].B64Data
@@ -208,7 +208,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		}
 	}
 	logger.InfoG("image.post.parsed", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "dataCount", len(dalleResp.Data))
-	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.ImageURL = imageURL })
+	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.ImageURL = imageUrl })
 	if !b64Fallback {
 		progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.DownloadMode = "url" })
 		progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
@@ -218,7 +218,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	dlStart := time.Now()
 	if !b64Fallback {
 		logger.Info("image.download.start", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename)
-		imageResp, err := httpGet(imageURL)
+		imageResp, err := httpGet(imageUrl)
 		if err != nil {
 			logger.InfoR("image.download.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", errString(err))
 			return err

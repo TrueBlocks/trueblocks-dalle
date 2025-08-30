@@ -52,7 +52,7 @@ func (ctx *Context) reportOn(dd *DalleDress, addr, loc, ft, value string) {
 	saveMutex.Lock()
 	defer saveMutex.Unlock()
 	_ = file.EstablishFolder(path)
-	_ = file.StringToAsciiFile(filepath.Join(path, dd.Filename+"."+ft), value)
+	_ = file.StringToAsciiFile(filepath.Join(path, dd.FileName+"."+ft), value)
 }
 
 // MakeDalleDress builds or retrieves a DalleDress for the given address using the context's templates, series, dbs, and cache.
@@ -87,14 +87,14 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 
 	dd := DalleDress{
 		Original:        addressIn,
-		Filename:        fn,
+		FileName:        fn,
 		Seed:            seed,
 		AttribMap:       make(map[string]Attribute),
 		SeedChunks:      []string{},
 		SelectedTokens:  []string{},
 		SelectedRecords: []string{},
 		Attribs:         []Attribute{},
-		RequestedSeries: ctx.Series.Suffix,
+		Series:          ctx.Series.Suffix,
 	}
 
 	// Generate attributes from the seed. We cap the number of attributes to the number of
@@ -134,19 +134,19 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "terse"), "txt", dd.TersePrompt)
 	dd.Prompt, _ = dd.ExecuteTemplate(ctx.promptTemplate, nil)
 	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "prompt"), "txt", dd.Prompt)
-	fnPath := filepath.Join(OutputDir(), ctx.Series.Suffix, "enhanced", dd.Filename+".txt")
+	fnPath := filepath.Join(OutputDir(), ctx.Series.Suffix, "enhanced", dd.FileName+".txt")
 	if !file.FileExists(fnPath) {
-		fnPath = filepath.Join(OutputDir(), ctx.Series.Suffix, "enhanced", dd.Filename+".txt")
+		fnPath = filepath.Join(OutputDir(), ctx.Series.Suffix, "enhanced", dd.FileName+".txt")
 	}
 	dd.EnhancedPrompt = ""
 	if file.FileExists(fnPath) {
 		dd.EnhancedPrompt = file.AsciiFileToString(fnPath)
 	}
 
-	ctx.DalleCache[dd.Filename] = &dd
+	ctx.DalleCache[dd.FileName] = &dd
 	ctx.DalleCache[addressIn] = &dd
-	if dd.RequestedSeries != ctx.Series.Suffix {
-		logger.Error("MakeDalleDress:seriesMismatch", addressIn, "requested", dd.RequestedSeries, "loaded", ctx.Series.Suffix)
+	if dd.Series != ctx.Series.Suffix {
+		logger.Error("MakeDalleDress:seriesMismatch", addressIn, "series", dd.Series, "loaded", ctx.Series.Suffix)
 	}
 	logger.InfoG("dress.build.end", "addr", addressIn, "durMs", time.Since(makeStart).Milliseconds())
 	return &dd, nil
@@ -219,7 +219,7 @@ func (ctx *Context) GenerateImage(addr string) (string, error) {
 			TersePrompt:    dd.TersePrompt,
 			EnhancedPrompt: dd.EnhancedPrompt,
 			SeriesName:     ctx.Series.Suffix,
-			Filename:       dd.Filename,
+			Filename:       dd.FileName,
 			Series:         ctx.Series.Suffix,
 			Address:        addr,
 		}

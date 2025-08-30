@@ -8,7 +8,7 @@ import (
 )
 
 func TestJSONNamingConsistency(t *testing.T) {
-	dd := &DalleDress{Original: "o", Filename: "f.png", Seed: "s", Prompt: "p", DataPrompt: "dp", TitlePrompt: "tp", TersePrompt: "tp2", EnhancedPrompt: "ep", Attribs: []Attribute{}, SeedChunks: []string{"a"}, SelectedTokens: []string{"b"}, SelectedRecords: []string{"c"}, ImageURL: "http://x", GeneratedPath: "/g/f.png", AnnotatedPath: "/a/f.png", IPFSHash: "h", CacheHit: true, Completed: true, RequestedSeries: "series"}
+	dd := &DalleDress{Original: "o", FileName: "f.png", Seed: "s", Prompt: "p", DataPrompt: "dp", TitlePrompt: "tp", TersePrompt: "tp2", EnhancedPrompt: "ep", Attribs: []Attribute{}, SeedChunks: []string{"a"}, SelectedTokens: []string{"b"}, SelectedRecords: []string{"c"}, ImageURL: "http://x", GeneratedPath: "/g/f.png", AnnotatedPath: "/a/f.png", IPFSHash: "h", CacheHit: true, Completed: true, Series: "series"}
 	b, err := json.Marshal(dd)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
@@ -18,7 +18,7 @@ func TestJSONNamingConsistency(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	expected := []string{"annotatedPath", "attributes", "cacheHit", "completed", "dataPrompt", "downloadMode", "enhancedPrompt", "fileName", "generatedPath", "imageUrl", "ipfsHash", "original", "prompt", "requestedSeries", "seed", "seedChunks", "selectedRecords", "selectedTokens", "tersePrompt", "titlePrompt"}
+	expected := []string{"annotatedPath", "attributes", "cacheHit", "completed", "dataPrompt", "downloadMode", "enhancedPrompt", "fileName", "generatedPath", "imageUrl", "ipfsHash", "original", "prompt", "series", "seed", "seedChunks", "selectedRecords", "selectedTokens", "tersePrompt", "titlePrompt"}
 	var got []string
 	for k := range m {
 		got = append(got, k)
@@ -32,7 +32,7 @@ func TestJSONNamingConsistency(t *testing.T) {
 	if _, clash := m["filename"]; clash {
 		t.Fatalf("found 'filename' key; expected 'fileName'")
 	}
-	if _, clash := m["imageURL"]; clash {
-		t.Fatalf("found 'imageURL' key; expected 'imageUrl'")
+	if _, clash := m["imageUrl"]; clash {
+		t.Fatalf("found 'imageUrl' key; expected 'imageUrl'")
 	}
 }

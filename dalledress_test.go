@@ -7,7 +7,7 @@ import (
 )
 
 func TestDalleDress_String(t *testing.T) {
-	d := &DalleDress{Original: "foo", Filename: "bar", Seed: "baz"}
+	d := &DalleDress{Original: "foo", FileName: "bar", Seed: "baz"}
 	json := d.String()
 	if !strings.Contains(json, "foo") || !strings.Contains(json, "bar") || !strings.Contains(json, "baz") {
 		t.Errorf("String() did not include expected fields: %s", json)
@@ -15,8 +15,8 @@ func TestDalleDress_String(t *testing.T) {
 }
 
 func TestDalleDress_ExecuteTemplate(t *testing.T) {
-	tmpl := template.Must(template.New("x").Parse("{{.Original}}-{{.Filename}}"))
-	d := &DalleDress{Original: "foo", Filename: "bar"}
+	tmpl := template.Must(template.New("x").Parse("{{.Original}}-{{.FileName}}"))
+	d := &DalleDress{Original: "foo", FileName: "bar"}
 	out, err := d.ExecuteTemplate(tmpl, nil)
 	if err != nil {
 		t.Fatalf("ExecuteTemplate failed: %v", err)

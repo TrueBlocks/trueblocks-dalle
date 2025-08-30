@@ -14,7 +14,9 @@ import (
 // DalleDress represents a generated prompt and its associated attributes.
 type DalleDress struct {
 	Original        string               `json:"original"`
-	Filename        string               `json:"fileName"`
+	FileName        string               `json:"fileName"`
+	FileSize        int64                `json:"fileSize"`
+	ModifiedAt      int64                `json:"modifiedAt"`
 	Seed            string               `json:"seed"`
 	Prompt          string               `json:"prompt"`
 	DataPrompt      string               `json:"dataPrompt"`
@@ -33,7 +35,7 @@ type DalleDress struct {
 	IPFSHash        string               `json:"ipfsHash"`
 	CacheHit        bool                 `json:"cacheHit"`
 	Completed       bool                 `json:"completed"`
-	RequestedSeries string               `json:"requestedSeries"`
+	Series          string               `json:"series"`
 }
 
 // String returns the JSON representation of the DalleDress.
@@ -235,7 +237,7 @@ func SortDalleDress(items []DalleDress, sortSpec sdk.SortSpec) error {
 	case "original":
 		cmp = func(i, j int) bool { return items[i].Original < items[j].Original }
 	case "filename":
-		cmp = func(i, j int) bool { return items[i].Filename < items[j].Filename }
+		cmp = func(i, j int) bool { return items[i].FileName < items[j].FileName }
 	case "seed":
 		cmp = func(i, j int) bool { return items[i].Seed < items[j].Seed }
 	case "prompt":
@@ -270,8 +272,8 @@ func SortDalleDress(items []DalleDress, sortSpec sdk.SortSpec) error {
 		cmp = func(i, j int) bool { return items[i].CacheHit }
 	case "completed":
 		cmp = func(i, j int) bool { return items[i].Completed }
-	case "requestedseries":
-		cmp = func(i, j int) bool { return items[i].RequestedSeries < items[j].RequestedSeries }
+	case "series":
+		cmp = func(i, j int) bool { return items[i].Series < items[j].Series }
 	default:
 		cmp = func(i, j int) bool { return items[i].Original < items[j].Original }
 	}
