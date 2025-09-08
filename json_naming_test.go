@@ -18,7 +18,7 @@ func TestJSONNamingConsistency(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	expected := []string{"annotatedPath", "attributes", "cacheHit", "completed", "dataPrompt", "downloadMode", "enhancedPrompt", "fileName", "generatedPath", "imageUrl", "ipfsHash", "original", "prompt", "series", "seed", "seedChunks", "selectedRecords", "selectedTokens", "tersePrompt", "titlePrompt"}
+	expected := []string{"annotatedPath", "attributes", "cacheHit", "completed", "dataPrompt", "downloadMode", "enhancedPrompt", "fileName", "fileSize", "generatedPath", "imageUrl", "ipfsHash", "modifiedAt", "original", "prompt", "series", "seed", "seedChunks", "selectedRecords", "selectedTokens", "tersePrompt", "titlePrompt"}
 	var got []string
 	for k := range m {
 		got = append(got, k)
@@ -32,7 +32,7 @@ func TestJSONNamingConsistency(t *testing.T) {
 	if _, clash := m["filename"]; clash {
 		t.Fatalf("found 'filename' key; expected 'fileName'")
 	}
-	if _, clash := m["imageUrl"]; clash {
-		t.Fatalf("found 'imageUrl' key; expected 'imageUrl'")
+	if _, clash := m["imageurl"]; clash {
+		t.Fatalf("found 'imageurl' key; expected 'imageUrl'")
 	}
 }
