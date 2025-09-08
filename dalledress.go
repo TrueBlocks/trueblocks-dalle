@@ -56,6 +56,19 @@ func (dd *DalleDress) ExecuteTemplate(t *template.Template, f func(s string) str
 	return f(buffer.String()), nil
 }
 
+// FromTemplate parses and executes a template string with DalleDress data.
+func (dd *DalleDress) FromTemplate(templateStr string) (string, error) {
+	if dd == nil {
+		return "", fmt.Errorf("DalleDress object is nil")
+	}
+
+	tmpl, err := template.New("custom").Parse(templateStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse template: %w", err)
+	}
+	return dd.ExecuteTemplate(tmpl, nil)
+}
+
 // Adverb returns the adverb attribute, optionally in short form.
 func (dd *DalleDress) Adverb(short bool) string {
 	val := dd.AttribMap["adverb"].Value

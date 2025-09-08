@@ -31,6 +31,42 @@ func TestDalleDress_ExecuteTemplate(t *testing.T) {
 	}
 }
 
+func TestDalleDress_FromTemplate(t *testing.T) {
+	d := &DalleDress{
+		Original: "foo",
+		FileName: "bar",
+		AttribMap: map[string]Attribute{
+			"adverb":    {Value: "quickly,fast"},
+			"adjective": {Value: "beautiful,pretty"},
+			"noun":      {Value: "cat,animal,feline"},
+		},
+	}
+
+	// Test basic template
+	out, err := d.FromTemplate("{{.Original}}-{{.FileName}}")
+	if err != nil {
+		t.Fatalf("FromTemplate failed: %v", err)
+	}
+	if out != "foo-bar" {
+		t.Errorf("FromTemplate result wrong: %s", out)
+	}
+
+	// Test template with attribute methods
+	out2, err2 := d.FromTemplate("{{.Adverb true}} {{.Adjective true}} {{.Noun true}}")
+	if err2 != nil {
+		t.Fatalf("FromTemplate with attributes failed: %v", err2)
+	}
+	if out2 != "quickly beautiful cat" {
+		t.Errorf("FromTemplate attribute result wrong: %s", out2)
+	}
+
+	// Test invalid template
+	_, err3 := d.FromTemplate("{{.InvalidMethod}}")
+	if err3 == nil {
+		t.Error("FromTemplate should have failed with invalid template")
+	}
+}
+
 func TestDalleDress_Adverb(t *testing.T) {
 	d := &DalleDress{AttribMap: map[string]Attribute{"adverb": {Value: "quickly,fast"}}}
 	if d.Adverb(true) != "quickly" {
