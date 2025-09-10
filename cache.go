@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"text/template"
 	"time"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
@@ -38,28 +37,12 @@ type DatabaseCache struct {
 	SourceHash string                   `json:"sourceHash"` // Hash of source data for validation
 }
 
-// TemplateRecord holds a template name and its source string
-type TemplateRecord struct {
-	Name   string `json:"name"`   // Template name (e.g., "prompt")
-	Source string `json:"source"` // Template source string
-}
-
-// TemplateCache holds template sources for compilation
-type TemplateCache struct {
-	Version    string           `json:"version"`    // Template version
-	Timestamp  int64            `json:"timestamp"`  // Cache creation time
-	Templates  []TemplateRecord `json:"templates"`  // Template records
-	Checksum   string           `json:"checksum"`   // SHA256 of template sources
-	SourceHash string           `json:"sourceHash"` // Hash of source templates
-}
-
 // CacheManager handles loading and building binary caches
 type CacheManager struct {
-	mu            sync.RWMutex
-	cacheDir      string
-	dbCache       *DatabaseCache
-	templateCache *TemplateCache
-	loaded        bool
+	mu       sync.RWMutex
+	cacheDir string
+	dbCache  *DatabaseCache
+	loaded   bool
 }
 
 var (
@@ -97,12 +80,6 @@ func (cm *CacheManager) LoadOrBuild() error {
 		// Continue without cache - fallback to embedded resources
 	}
 
-	// Load or build template cache
-	if err := cm.loadOrBuildTemplateCache(); err != nil {
-		logger.Error("Failed to load template cache, using embedded fallback:", err)
-		// Continue without cache - fallback to embedded resources
-	}
-
 	cm.loaded = true
 	return nil
 }
@@ -121,23 +98,6 @@ func (cm *CacheManager) GetDatabase(name string) (DatabaseIndex, error) {
 
 	// Fallback to embedded resources
 	return cm.buildDatabaseIndex(name)
-}
-
-// GetTemplate returns a compiled template, loading from cache or embedded resources
-func (cm *CacheManager) GetTemplate(name string) (*template.Template, error) {
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-
-	// Try cache first
-	if cm.templateCache != nil {
-		if templateBytes, exists := cm.templateCache.Templates[name]; exists {
-			// Deserialize template from GOB
-			return cm.deserializeTemplate(name, templateBytes)
-		}
-	}
-
-	// Fallback to embedded templates
-	return cm.getEmbeddedTemplate(name)
 }
 
 // extractVersionFromEmbedded extracts version from the first CSV in embedded databases
@@ -300,36 +260,6 @@ func (cm *CacheManager) buildDatabaseIndex(dbName string) (DatabaseIndex, error)
 	}, nil
 }
 
-// Placeholder methods for template cache (to be implemented)
-func (cm *CacheManager) loadOrBuildTemplateCache() error {
-	// TODO: Implement template caching
-	logger.Info("Template caching not yet implemented, using embedded templates")
-	return nil
-}
-
-func (cm *CacheManager) getEmbeddedTemplate(name string) (*template.Template, error) {
-	// Return existing global templates for now
-	switch name {
-	case "prompt":
-		return promptTemplate, nil
-	case "data":
-		return dataTemplate, nil
-	case "terse":
-		return terseTemplate, nil
-	case "title":
-		return titleTemplate, nil
-	case "author":
-		return authorTemplate, nil
-	default:
-		return nil, fmt.Errorf("unknown template: %s", name)
-	}
-}
-
-func (cm *CacheManager) deserializeTemplate(name string, data []byte) (*template.Template, error) {
-	// TODO: Implement template deserialization
-	return cm.getEmbeddedTemplate(name)
-}
-
 // saveDatabaseCache saves cache to disk using GOB encoding
 func (cm *CacheManager) saveDatabaseCache(filename string, cache *DatabaseCache) error {
 	file, err := os.Create(filename)
@@ -365,7 +295,6 @@ func (cm *CacheManager) InvalidateCache() error {
 	defer cm.mu.Unlock()
 
 	cm.dbCache = nil
-	cm.templateCache = nil
 	cm.loaded = false
 
 	// Remove all cache files (both versioned and unversioned for cleanup)

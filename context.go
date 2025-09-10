@@ -25,6 +25,13 @@ type Context struct {
 }
 
 func NewContext() *Context {
+	cm := GetCacheManager()
+
+	// Load database cache only
+	if err := cm.LoadOrBuild(); err != nil {
+		logger.Error("Failed to initialize caches:", err)
+	}
+
 	ctx := Context{
 		promptTemplate: promptTemplate,
 		dataTemplate:   dataTemplate,
@@ -35,6 +42,7 @@ func NewContext() *Context {
 		Databases:      make(map[string][]string),
 		DalleCache:     make(map[string]*DalleDress),
 	}
+
 	if err := ctx.ReloadDatabases("empty"); err != nil {
 		logger.Error("error reloading databases:", err)
 	}

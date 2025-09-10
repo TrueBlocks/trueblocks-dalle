@@ -80,6 +80,7 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 
 // loadDatabaseFallback provides fallback to original CSV reading method
 func (ctx *Context) loadDatabaseFallback(db, filter string) error {
+	_ = filter // delint
 	lines, err := readDatabaseCSV(db + ".csv")
 	if err != nil {
 		return err
