@@ -17,6 +17,7 @@ func TestCacheManager_DatabaseCache(t *testing.T) {
 
 	// Reset global state for isolated testing
 	TestOnlyResetDataDir()
+	TestOnlyResetCacheManager()
 	ConfigureDataDir(tmpDir)
 
 	// Get cache manager
@@ -75,6 +76,7 @@ func TestCacheManager_CacheReuse(t *testing.T) {
 
 	// Reset global state
 	TestOnlyResetDataDir()
+	TestOnlyResetCacheManager()
 	ConfigureDataDir(tmpDir)
 
 	// Create cache manager and build cache
@@ -124,6 +126,7 @@ func TestCacheManager_InvalidateCache(t *testing.T) {
 
 	// Reset global state
 	TestOnlyResetDataDir()
+	TestOnlyResetCacheManager()
 	ConfigureDataDir(tmpDir)
 
 	// Create cache
@@ -173,6 +176,7 @@ func TestDatabaseIntegrationWithCache(t *testing.T) {
 
 	// Reset global state
 	TestOnlyResetDataDir()
+	TestOnlyResetCacheManager()
 	ConfigureDataDir(tmpDir)
 
 	// Create context and reload databases (should use cache)

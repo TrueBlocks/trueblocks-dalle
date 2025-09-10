@@ -60,6 +60,12 @@ func GetCacheManager() *CacheManager {
 	return cacheManager
 }
 
+// TestOnlyResetCacheManager resets cache manager singleton for testing isolation
+func TestOnlyResetCacheManager() {
+	cacheManagerOnce = sync.Once{}
+	cacheManager = nil
+}
+
 // LoadOrBuild ensures caches are loaded, building them if necessary
 func (cm *CacheManager) LoadOrBuild() error {
 	cm.mu.Lock()
