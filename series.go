@@ -14,6 +14,7 @@ import (
 type Series struct {
 	Last         int      `json:"last,omitempty"`
 	Suffix       string   `json:"suffix"`
+	Deleted      bool     `json:"deleted,omitempty"`
 	Adverbs      []string `json:"adverbs"`
 	Adjectives   []string `json:"adjectives"`
 	Nouns        []string `json:"nouns"`
@@ -34,6 +35,7 @@ func (s *Series) Model(chain, format string, verbose bool, extraOpts map[string]
 		Data: map[string]any{
 			"suffix":       s.Suffix,
 			"last":         s.Last,
+			"deleted":      s.Deleted,
 			"modifiedAt":   s.ModifiedAt,
 			"adverbs":      s.Adverbs,
 			"adjectives":   s.Adjectives,
@@ -48,7 +50,7 @@ func (s *Series) Model(chain, format string, verbose bool, extraOpts map[string]
 			"gazes":        s.Gazes,
 			"backstyles":   s.Backstyles,
 		},
-		Order: []string{"suffix", "last", "modifiedAt", "adverbs", "adjectives", "nouns", "emotions", "occupations", "actions", "artstyles", "litstyles", "colors", "orientations", "gazes", "backstyles"},
+		Order: []string{"suffix", "last", "deleted", "modifiedAt", "adverbs", "adjectives", "nouns", "emotions", "occupations", "actions", "artstyles", "litstyles", "colors", "orientations", "gazes", "backstyles"},
 	}
 }
 

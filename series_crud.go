@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 
@@ -46,6 +45,38 @@ func LoadSeriesModels(seriesDir string) ([]Series, error) {
 	return items, nil
 }
 
+// LoadActiveSeriesModels loads all non-deleted series JSON files
+func LoadActiveSeriesModels(seriesDir string) ([]Series, error) {
+	allSeries, err := LoadSeriesModels(seriesDir)
+	if err != nil {
+		return nil, err
+	}
+
+	activeSeries := make([]Series, 0, len(allSeries))
+	for _, s := range allSeries {
+		if !s.Deleted {
+			activeSeries = append(activeSeries, s)
+		}
+	}
+	return activeSeries, nil
+}
+
+// LoadDeletedSeriesModels loads all deleted series JSON files
+func LoadDeletedSeriesModels(seriesDir string) ([]Series, error) {
+	allSeries, err := LoadSeriesModels(seriesDir)
+	if err != nil {
+		return nil, err
+	}
+
+	deletedSeries := make([]Series, 0, len(allSeries))
+	for _, s := range allSeries {
+		if s.Deleted {
+			deletedSeries = append(deletedSeries, s)
+		}
+	}
+	return deletedSeries, nil
+}
+
 // SortSeries sorts in place based on field in spec (suffix, modifiedAt, last)
 func SortSeries(items []Series, sortSpec sdk.SortSpec) error {
 	if len(items) < 2 || len(sortSpec.Fields) == 0 {
@@ -76,7 +107,7 @@ func SortSeries(items []Series, sortSpec sdk.SortSpec) error {
 	return nil
 }
 
-func DeleteSeries(seriesDir, suffix string) error {
+func RemoveSeries(seriesDir, suffix string) error {
 	if suffix == "" {
 		return errors.New("empty suffix")
 	}
@@ -84,40 +115,105 @@ func DeleteSeries(seriesDir, suffix string) error {
 	if _, err := os.Stat(fn); err != nil {
 		return err
 	}
-	return os.Remove(fn)
+
+	if err := os.Remove(fn); err != nil {
+		return err
+	}
+
+	// Remove regular output folder if it exists
+	outputPath := filepath.Join(OutputDir(), suffix)
+	if _, err := os.Stat(outputPath); err == nil {
+		if err := os.RemoveAll(outputPath); err != nil {
+			return err
+		}
+	}
+
+	// Also remove .deleted folder if it exists
+	deletedOutputPath := filepath.Join(OutputDir(), suffix+".deleted")
+	if _, err := os.Stat(deletedOutputPath); err == nil {
+		if err := os.RemoveAll(deletedOutputPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func DuplicateSeries(seriesDir, fromSuffix, toSuffix string) (*Series, error) {
-	if fromSuffix == "" || toSuffix == "" {
-		return nil, errors.New("empty suffix")
+func DeleteSeries(seriesDir, suffix string) error {
+	if suffix == "" {
+		return errors.New("empty suffix")
 	}
-	if strings.EqualFold(fromSuffix, toSuffix) {
-		return nil, errors.New("duplicate target equals source")
+
+	fn := filepath.Join(seriesDir, suffix+".json")
+	if _, err := os.Stat(fn); err != nil {
+		return err
 	}
-	fromFile := filepath.Join(seriesDir, fromSuffix+".json")
-	toFile := filepath.Join(seriesDir, toSuffix+".json")
-	if _, err := os.Stat(fromFile); err != nil {
-		return nil, err
-	}
-	if _, err := os.Stat(toFile); err == nil {
-		return nil, errors.New("target exists")
-	}
-	b, err := os.ReadFile(fromFile)
+
+	b, err := os.ReadFile(fn)
 	if err != nil {
-		return nil, err
+		return err
 	}
+
 	var s Series
 	if err := json.Unmarshal(b, &s); err != nil {
-		return nil, err
+		return err
 	}
-	s.Suffix = toSuffix
-	fi, err := os.Stat(fromFile)
-	if err == nil {
-		s.ModifiedAt = fi.ModTime().UTC().Format(time.RFC3339)
+
+	s.Deleted = true
+
+	jsonData := []byte(s.String())
+	if err := os.WriteFile(fn, jsonData, 0o644); err != nil {
+		return err
 	}
-	_ = file.EstablishFolder(seriesDir)
-	if err := os.WriteFile(toFile, []byte(s.String()), 0o644); err != nil {
-		return nil, err
+
+	outputPath := filepath.Join(OutputDir(), suffix)
+	hiddenPath := filepath.Join(OutputDir(), suffix+".deleted")
+
+	if _, err := os.Stat(outputPath); err == nil {
+		if err := os.Rename(outputPath, hiddenPath); err != nil {
+			return err
+		}
 	}
-	return &s, nil
+
+	return nil
+}
+
+func UndeleteSeries(seriesDir, suffix string) error {
+	if suffix == "" {
+		return errors.New("empty suffix")
+	}
+	fn := filepath.Join(seriesDir, suffix+".json")
+	if _, err := os.Stat(fn); err != nil {
+		return err
+	}
+
+	// Load the series
+	b, err := os.ReadFile(fn)
+	if err != nil {
+		return err
+	}
+
+	var s Series
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	// Mark as not deleted
+	s.Deleted = false
+
+	// Save back to file
+	if err := os.WriteFile(fn, []byte(s.String()), 0o644); err != nil {
+		return err
+	}
+
+	outputPath := filepath.Join(OutputDir(), suffix)
+	hiddenPath := filepath.Join(OutputDir(), suffix+".deleted")
+
+	if _, err := os.Stat(hiddenPath); err == nil {
+		if err := os.Rename(hiddenPath, outputPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
