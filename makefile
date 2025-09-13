@@ -9,7 +9,7 @@ update:
 	@go mod tidy
 
 lint:
-	@yarn lint
+	@golangci-lint run
 
 clean:
 	@rm -fR node_modules
