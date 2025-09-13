@@ -1,0 +1,6 @@
+run:
+  timeout: 5m
+linters-settings:
+  gosec:
+    args:
+      - "-conf=.gosec.json"

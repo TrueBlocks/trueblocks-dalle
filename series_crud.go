@@ -28,7 +28,11 @@ func LoadSeriesModels(seriesDir string) ([]Series, error) {
 			continue
 		}
 		full := filepath.Join(seriesDir, name)
-		b, err := os.ReadFile(full)
+		clean := filepath.Clean(full)
+		if !strings.HasPrefix(clean, filepath.Clean(seriesDir)+string(os.PathSeparator)) { // ensure within seriesDir
+			continue
+		}
+		b, err := os.ReadFile(clean) // #nosec G304 path validated
 		if err != nil {
 			continue
 		}
@@ -149,7 +153,11 @@ func DeleteSeries(seriesDir, suffix string) error {
 		return err
 	}
 
-	b, err := os.ReadFile(fn)
+	clean := filepath.Clean(fn)
+	if !strings.HasPrefix(clean, filepath.Clean(seriesDir)+string(os.PathSeparator)) { // defensive
+		return errors.New("invalid series file path")
+	}
+	b, err := os.ReadFile(clean) // #nosec G304 path validated
 	if err != nil {
 		return err
 	}
@@ -162,7 +170,7 @@ func DeleteSeries(seriesDir, suffix string) error {
 	s.Deleted = true
 
 	jsonData := []byte(s.String())
-	if err := os.WriteFile(fn, jsonData, 0o644); err != nil {
+	if err := os.WriteFile(fn, jsonData, 0o600); err != nil {
 		return err
 	}
 
@@ -188,7 +196,11 @@ func UndeleteSeries(seriesDir, suffix string) error {
 	}
 
 	// Load the series
-	b, err := os.ReadFile(fn)
+	clean := filepath.Clean(fn)
+	if !strings.HasPrefix(clean, filepath.Clean(seriesDir)+string(os.PathSeparator)) {
+		return errors.New("invalid series file path")
+	}
+	b, err := os.ReadFile(clean) // #nosec G304
 	if err != nil {
 		return err
 	}
@@ -202,7 +214,7 @@ func UndeleteSeries(seriesDir, suffix string) error {
 	s.Deleted = false
 
 	// Save back to file
-	if err := os.WriteFile(fn, []byte(s.String()), 0o644); err != nil {
+	if err := os.WriteFile(fn, []byte(s.String()), 0o600); err != nil {
 		return err
 	}
 

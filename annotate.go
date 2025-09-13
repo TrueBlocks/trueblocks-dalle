@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,11 +22,20 @@ import (
 // an appropriately colored background and rendered in a text color that
 // ensures good contrast and readability.
 func annotate(text, fileName, location string, annoPct float64) (ret string, err error) {
-	file, err := os.Open(fileName)
+	// Sanitize and restrict the input path to mitigate path traversal (gosec G304)
+	cleanName := filepath.Clean(fileName)
+	if !strings.Contains(cleanName, string(os.PathSeparator)+"generated"+string(os.PathSeparator)) && !strings.HasSuffix(cleanName, string(os.PathSeparator)+"generated"+string(os.PathSeparator)+filepath.Base(cleanName)) {
+		return "", fmt.Errorf("invalid image path: %s", fileName)
+	}
+	file, err := os.Open(cleanName) // #nosec G304 - path validated above
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
@@ -83,11 +93,16 @@ func annotate(text, fileName, location string, annoPct float64) (ret string, err
 
 	// Save the new image.
 	outputPath := strings.Replace(fileName, "generated/", "annotated/", -1)
-	out, err := os.Create(outputPath)
+	// Ensure output path is under annotated/ directory
+	outputPath = filepath.Clean(outputPath)
+	if !strings.Contains(outputPath, string(os.PathSeparator)+"annotated"+string(os.PathSeparator)) {
+		return "", fmt.Errorf("invalid output path: %s", outputPath)
+	}
+	out, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600) // restrictive perms (gosec G306)
 	if err != nil {
 		return "", err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	err = png.Encode(out, gc.Image())
 	if err != nil {
@@ -101,11 +116,12 @@ func annotate(text, fileName, location string, annoPct float64) (ret string, err
 func darkenColor(c color.Color) color.Color {
 	r, g, b, a := c.RGBA()
 	factor := 0.9
+	// r,g,b,a are 16-bit values in 0..65535; scale then shift to 0..255 before uint8 cast to avoid G115 warning
 	return color.RGBA{
-		R: uint8(float64(r) * factor),
-		G: uint8(float64(g) * factor),
-		B: uint8(float64(b) * factor),
-		A: uint8(a),
+		R: uint8((uint32(float64(r)*factor) >> 8) & 0xFF),
+		G: uint8((uint32(float64(g)*factor) >> 8) & 0xFF),
+		B: uint8((uint32(float64(b)*factor) >> 8) & 0xFF),
+		A: uint8((a >> 8) & 0xFF),
 	}
 }
 
@@ -116,9 +132,10 @@ func parseHexColor(s string) (color.Color, error) {
 	if err != nil {
 		return nil, err
 	}
+	// c is at most 24 bits (parsed with bitSize 32). Mask each component before casting to satisfy G115.
 	return color.RGBA{
-		R: uint8(c >> 16),
-		G: uint8(c >> 8 & 0xFF),
+		R: uint8((c >> 16) & 0xFF),
+		G: uint8((c >> 8) & 0xFF),
 		B: uint8(c & 0xFF),
 		A: 0xFF,
 	}, nil
@@ -146,7 +163,8 @@ func findAverageDominantColor(img image.Image) (string, error) {
 		Value int
 	}
 
-	var ss []kv
+	// Preallocate slice capacity (prealloc lint)
+	ss := make([]kv, 0, len(colorFrequency))
 	for k, v := range colorFrequency {
 		ss = append(ss, kv{k, v})
 	}

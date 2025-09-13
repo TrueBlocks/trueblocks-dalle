@@ -268,30 +268,37 @@ func (cm *CacheManager) buildDatabaseIndex(dbName string) (DatabaseIndex, error)
 
 // saveDatabaseCache saves cache to disk using GOB encoding
 func (cm *CacheManager) saveDatabaseCache(filename string, cache *DatabaseCache) error {
-	file, err := os.Create(filename)
+	// Clean path, restrict to cacheDir to satisfy gosec G304
+	filename = filepath.Clean(filename)
+	if !strings.HasPrefix(filename, filepath.Clean(cm.cacheDir)+string(os.PathSeparator)) {
+		return fmt.Errorf("invalid cache path: %s", filename)
+	}
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-
+	defer func() { _ = file.Close() }()
 	encoder := gob.NewEncoder(file)
 	return encoder.Encode(cache)
 }
 
 // loadDatabaseCache loads cache from disk using GOB encoding
 func (cm *CacheManager) loadDatabaseCache(filename string) (*DatabaseCache, error) {
-	file, err := os.Open(filename)
+	filename = filepath.Clean(filename)
+	if !strings.HasPrefix(filename, filepath.Clean(cm.cacheDir)+string(os.PathSeparator)) {
+		return nil, fmt.Errorf("invalid cache path: %s", filename)
+	}
+	file, err := os.Open(filename) // #nosec G304 path validated
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var cache DatabaseCache
 	decoder := gob.NewDecoder(file)
 	if err := decoder.Decode(&cache); err != nil {
 		return nil, err
 	}
-
 	return &cache, nil
 }
 

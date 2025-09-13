@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -114,7 +115,12 @@ func loadMetricsLocked(pm *ProgressManager) {
 		return
 	}
 	path := filepath.Join(metricsDir(), metricsFile)
-	data, err := os.ReadFile(path)
+	cleanPath := filepath.Clean(path)
+	if !strings.HasPrefix(cleanPath, filepath.Clean(metricsDir())+string(os.PathSeparator)) && filepath.Base(cleanPath) != metricsFile { // defensive
+		metricsLoaded = true
+		return
+	}
+	data, err := os.ReadFile(cleanPath) // #nosec G304 path validated
 	if err != nil {
 		metricsLoaded = true
 		return
@@ -133,14 +139,15 @@ func saveMetricsLocked(pm *ProgressManager) {
 	if pm.metrics.Version == "" {
 		pm.metrics.Version = "v1"
 	}
-	_ = os.MkdirAll(metricsDir(), 0o755)
+	// Restrict directory permissions (gosec G301)
+	_ = os.MkdirAll(metricsDir(), 0o750)
 	path := filepath.Join(metricsDir(), metricsFile)
 	b, err := json.MarshalIndent(pm.metrics, "", "  ")
 	if err != nil {
 		return
 	}
 	tmp := path + ".tmp"
-	if err = os.WriteFile(tmp, b, 0o644); err != nil {
+	if err = os.WriteFile(tmp, b, 0o600); err != nil {
 		return
 	}
 	_ = os.Rename(tmp, path)
@@ -364,11 +371,11 @@ func (pm *ProgressManager) maybeArchiveRunLocked(run *progressRun) {
 		}
 	}
 	pm.computePercentETA(pr, run)
-	_ = os.MkdirAll(filepath.Join(metricsDir(), "runs"), 0o755)
+	_ = os.MkdirAll(filepath.Join(metricsDir(), "runs"), 0o750)
 	fn := fmt.Sprintf("%s_%s_%d.json", run.series, run.address, time.Now().Unix())
 	path := filepath.Join(metricsDir(), "runs", fn)
 	if b, err := json.MarshalIndent(pr, "", "  "); err == nil {
-		_ = os.WriteFile(path, b, 0o644)
+		_ = os.WriteFile(path, b, 0o600)
 	}
 }
 
@@ -471,7 +478,7 @@ func GetProgress(series, addr string) *ProgressReport { return progressMgr.GetRe
 func ActiveProgressReports() []*ProgressReport {
 	progressMgr.mu.Lock()
 	defer progressMgr.mu.Unlock()
-	var out []*ProgressReport
+	out := make([]*ProgressReport, 0, len(progressMgr.runs))
 	for k, run := range progressMgr.runs {
 		if run == nil {
 			continue

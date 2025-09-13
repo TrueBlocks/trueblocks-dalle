@@ -33,9 +33,15 @@ func readDatabaseCSV(name string) ([]string, error) {
 		}
 		needle := filepath.Join("databases", name)
 		if hdr.Name == needle {
+			// Limit decompression to 5MB per file to mitigate decompression bomb DoS (gosec G110)
+			const maxDecompressedSize = 5 * 1024 * 1024
 			var buf bytes.Buffer
-			if _, err := io.Copy(&buf, tr); err != nil {
+			lr := &io.LimitedReader{R: tr, N: maxDecompressedSize + 1}
+			if _, err := io.Copy(&buf, lr); err != nil {
 				return nil, err
+			}
+			if lr.N <= 0 { // exceeded limit
+				return nil, errors.New("embedded file too large: potential decompression bomb")
 			}
 			lines := strings.Split(strings.ReplaceAll(buf.String(), "\r\n", "\n"), "\n")
 			if len(lines) > 0 && lines[len(lines)-1] == "" {

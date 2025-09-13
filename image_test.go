@@ -96,20 +96,20 @@ func TestAnnotateFailureLogging(t *testing.T) {
 	os.Setenv("OPENAI_API_KEY", "test-key")
 	os.Setenv("TB_DALLE_NO_ENHANCE", "1")
 
-	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(nil)
+	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{"data":[{"url":"`+srv.URL+`/img.png"}]}`)
+			_, _ = io.WriteString(w, `{"data":[{"url":"`+srv.URL+`/img.png"}]}`)
 			return
 		}
 		if strings.HasSuffix(r.URL.Path, "/img.png") {
 			w.WriteHeader(200)
-			w.Write([]byte("PNGDATA"))
+			_, _ = w.Write([]byte("PNGDATA"))
 			return
 		}
 		w.WriteHeader(404)
-	}))
+	})
 	defer srv.Close()
 	old := openaiAPIURL
 	openaiAPIURL = srv.URL
@@ -153,7 +153,7 @@ func TestFailureOrderingBasic(t *testing.T) {
 	t.Setenv("TB_DALLE_NO_ENHANCE", "1")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		io.WriteString(w, `{"data":[]}`) // empty_data scenario
+		_, _ = io.WriteString(w, `{"data":[]}`) // empty_data scenario
 	}))
 	defer srv.Close()
 	old := openaiAPIURL
@@ -189,15 +189,15 @@ func TestImagePostB64Fallback(t *testing.T) {
 	b64 := base64.StdEncoding.EncodeToString(imgBytes)
 
 	// Server returns b64_json instead of url
-	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(nil)
+	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{"data":[{"b64_json":"`+b64+`"}]}`)
+			_, _ = io.WriteString(w, `{"data":[{"b64_json":"`+b64+`"}]}`)
 			return
 		}
 		w.WriteHeader(404)
-	}))
+	})
 	defer srv.Close()
 	old := openaiAPIURL
 	openaiAPIURL = srv.URL
@@ -247,13 +247,13 @@ func TestLoggingImagePipeline(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{"data":[{"url":"`+srvURLPlaceholder+`/img.png"}]}`)
+			_, _ = io.WriteString(w, `{"data":[{"url":"`+srvURLPlaceholder+`/img.png"}]}`)
 			return
 		}
 		if strings.HasSuffix(r.URL.Path, "/img.png") {
 			w.WriteHeader(200)
 			// Minimal PNG header bytes (not a full valid image but we stub annotate anyway)
-			w.Write([]byte("PNGDATA"))
+			_, _ = w.Write([]byte("PNGDATA"))
 			return
 		}
 		w.WriteHeader(404)
@@ -264,12 +264,12 @@ func TestLoggingImagePipeline(t *testing.T) {
 	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{"data":[{"url":"`+srv.URL+`/img.png"}]}`)
+			_, _ = io.WriteString(w, `{"data":[{"url":"`+srv.URL+`/img.png"}]}`)
 			return
 		}
 		if strings.HasSuffix(r.URL.Path, "/img.png") {
 			w.WriteHeader(200)
-			w.Write([]byte("PNGDATA"))
+			_, _ = w.Write([]byte("PNGDATA"))
 			return
 		}
 		w.WriteHeader(404)
@@ -341,20 +341,20 @@ func TestSuccessOrdering(t *testing.T) {
 	os.Setenv("OPENAI_API_KEY", "test-key")
 	os.Setenv("TB_DALLE_NO_ENHANCE", "1")
 
-	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(nil)
+	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
-			io.WriteString(w, `{"data":[{"url":"`+srv.URL+`/img.png"}]}`)
+			_, _ = io.WriteString(w, `{"data":[{"url":"`+srv.URL+`/img.png"}]}`)
 			return
 		}
 		if strings.HasSuffix(r.URL.Path, "/img.png") {
 			w.WriteHeader(200)
-			w.Write([]byte("PNGDATA"))
+			_, _ = w.Write([]byte("PNGDATA"))
 			return
 		}
 		w.WriteHeader(404)
-	}))
+	})
 	defer srv.Close()
 	old := openaiAPIURL
 	openaiAPIURL = srv.URL

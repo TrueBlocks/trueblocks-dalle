@@ -31,7 +31,7 @@ func TextToSpeech(text string, voice string, series string, address string) (str
 		voice = "alloy"
 	}
 	baseDir := filepath.Join(OutputDir(), series, "audio")
-	_ = os.MkdirAll(baseDir, 0o755)
+	_ = os.MkdirAll(baseDir, 0o750)
 	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
 
@@ -64,18 +64,22 @@ func TextToSpeech(text string, voice string, series string, address string) (str
 				logger.InfoR("speech.retry", "series", series, "addr", address, "attempt", attempt+1, "status", statusStr)
 			}
 			if resp != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close() // ignore close error on retry path (gosec G104 handled)
 			}
 			continue
 		}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	name := "speech.mp3"
 	if address != "" {
 		name = address + ".mp3"
 	}
 	outPath := filepath.Join(baseDir, name)
-	f, err := os.Create(outPath)
+	cleanOut := filepath.Clean(outPath)
+	if !strings.HasPrefix(cleanOut, filepath.Clean(baseDir)+string(os.PathSeparator)) {
+		return "", errors.New("invalid audio output path")
+	}
+	f, err := os.OpenFile(cleanOut, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600) // #nosec G304 path validated
 	if err != nil {
 		return "", err
 	}

@@ -14,7 +14,7 @@ func writeSeriesFile(t *testing.T, dir, suffix string, deleted bool, last int) {
 	t.Helper()
 	s := Series{Suffix: suffix, Deleted: deleted, Last: last}
 	data, _ := json.Marshal(s)
-	if err := os.WriteFile(filepath.Join(dir, suffix+".json"), data, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, suffix+".json"), data, 0o600); err != nil {
 		t.Fatalf("write series file: %v", err)
 	}
 }
@@ -25,9 +25,9 @@ func TestLoadSeriesModelsAndVariants(t *testing.T) {
 	writeSeriesFile(t, tmp, "one", false, 1)
 	writeSeriesFile(t, tmp, "two", true, 2)
 	// invalid extension
-	_ = os.WriteFile(filepath.Join(tmp, "readme.txt"), []byte("ignore"), 0o644)
+	_ = os.WriteFile(filepath.Join(tmp, "readme.txt"), []byte("ignore"), 0o600)
 	// invalid json
-	_ = os.WriteFile(filepath.Join(tmp, "bad.json"), []byte("{"), 0o644)
+	_ = os.WriteFile(filepath.Join(tmp, "bad.json"), []byte("{"), 0o600)
 
 	all, err := LoadSeriesModels(tmp)
 	if err != nil {
@@ -92,10 +92,10 @@ func TestRemoveDeleteUndeleteSeries(t *testing.T) {
 	// output dirs
 	outDir := filepath.Join(OutputDir(), "s1")
 	delDir := filepath.Join(OutputDir(), "s1.deleted")
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
+	if err := os.MkdirAll(outDir, 0o750); err != nil {
 		t.Fatalf("mkdir out: %v", err)
 	}
-	if err := os.MkdirAll(delDir, 0o755); err != nil {
+	if err := os.MkdirAll(delDir, 0o750); err != nil {
 		t.Fatalf("mkdir del: %v", err)
 	}
 	if err := RemoveSeries(seriesDir(), "s1"); err != nil {
@@ -114,7 +114,7 @@ func TestRemoveDeleteUndeleteSeries(t *testing.T) {
 	// Recreate for delete / undelete cycle
 	writeSeriesFile(t, seriesDir(), "s2", false, 0)
 	out2 := filepath.Join(OutputDir(), "s2")
-	if err := os.MkdirAll(out2, 0o755); err != nil {
+	if err := os.MkdirAll(out2, 0o750); err != nil {
 		t.Fatalf("mkdir out2: %v", err)
 	}
 	if err := DeleteSeries(seriesDir(), "s2"); err != nil {

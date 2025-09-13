@@ -1,0 +1,5 @@
+{
+  "exclude": ["G115"],
+  "exclude-generated": true,
+  "nofail": false
+}

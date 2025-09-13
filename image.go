@@ -103,7 +103,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	if apiKey == "" {
 		// No key: create a placeholder empty annotated file and return
 		placeholder := filepath.Join(annotated, fmt.Sprintf("%s.png", imageData.Filename))
-		_ = os.WriteFile(placeholder, []byte{}, 0600)
+		_ = os.WriteFile(placeholder, []byte{}, 0o600)
 		logger.Info("image.request.skip_no_api_key", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "durMs", msSince(start))
 		return nil
 	}
@@ -144,7 +144,9 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	}
 
 	body, readErr := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	if cerr := resp.Body.Close(); cerr != nil && readErr == nil { // capture close error if no prior error (gosec G104)
+		readErr = cerr
+	}
 	if readErr != nil {
 		return readErr
 	}
@@ -181,19 +183,15 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		if b64Data != "" {
 			decoded, decErr := base64.StdEncoding.DecodeString(b64Data)
 			if decErr == nil {
-				os.Remove(fn)
-				if err := os.WriteFile(fn, decoded, 0o644); err != nil {
+				_ = os.Remove(fn)
+				if err := os.WriteFile(fn, decoded, 0o600); err != nil {
 					return fmt.Errorf("write b64 image: %w", err)
 				}
-				// Success: b64 fallback used
 				logger.InfoG("image.post.b64_fallback", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "bytes", len(decoded))
 				progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.GeneratedPath = fn; dd.DownloadMode = "b64" })
 				progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
 				logger.Info("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "b64")
 				b64Fallback = true
-			} else {
-				// decoding failed; treat as missing url
-				b64Data = ""
 			}
 		}
 		if !b64Fallback { // still missing
@@ -225,8 +223,8 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		}
 		defer imageResp.Body.Close()
 
-		os.Remove(fn)
-		file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+		_ = os.Remove(fn)
+		file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 		if err != nil {
 			return fmt.Errorf("failed to open file: %s", fn)
 		}
@@ -250,7 +248,10 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	logger.InfoG("image.annotate.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "path", strings.TrimSpace(path))
 	logger.InfoG("image.request.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "durMs", msSince(start))
 	if os.Getenv("TB_CMD_LINE") == "true" {
-		utils.System("open " + path)
+		// utils.System returns exit code (int); treat non-zero as error condition
+		if code := utils.System("open " + path); code != 0 {
+			logger.InfoR("image.open.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", fmt.Sprintf("open command exited with code %d", code))
+		}
 	}
 	return nil
 }
