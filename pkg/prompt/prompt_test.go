@@ -1,5 +1,4 @@
-// prompt_test.go
-package dalle
+package prompt
 
 import (
 	"bytes"
@@ -11,7 +10,19 @@ import (
 	"testing"
 )
 
-// Use centralized mocks from testing.go
+type mockRoundTripper struct {
+	Resp *http.Response
+	Err  error
+}
+
+func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.Resp, m.Err
+}
+
+type badReader struct{}
+
+func (badReader) Read([]byte) (int, error) { return 0, errors.New("read error") }
+func (badReader) Close() error             { return nil }
 
 func TestEnhancePrompt_Success(t *testing.T) {
 	mockBody := `{"choices":[{"message":{"content":"Enhanced prompt!"}}]}`
@@ -95,35 +106,8 @@ func TestEnhancePrompt_EmptyAPIKey(t *testing.T) {
 			},
 		},
 	}
-	// Should still work, but header will be empty
 	result, err := enhancePromptWithClient("prompt", "author", client, "", json.Marshal)
 	if err != nil || result != "Enhanced!" {
-		t.Errorf("expected success with empty API key, got %v, %s", err, result)
+		t.Errorf("expected 'Enhanced!', got '%v', err: %v", result, err)
 	}
 }
-
-// Use centralized MockDress from testing.go
-
-// func TestTemplates_ParseAndRender(t *testing.T) {
-// 	templates := []struct {
-// 		tmpl *template.Template
-// 		name string
-// 	}{
-// 		{promptTemplate, "promptTemplate"},
-// 		{dataTemplate, "dataTemplate"},
-// 		{terseTemplate, "terseTemplate"},
-// 		{titleTemplate, "titleTemplate"},
-// 		{authorTemplate, "authorTemplate"},
-// 	}
-
-// 	for _, tc := range templates {
-// 		var buf bytes.Buffer
-// 		err := tc.tmpl.Execute(&buf, MockDress{})
-// 		if err != nil {
-// 			t.Errorf("%s failed to render: %v", tc.name, err)
-// 		}
-// 		if buf.Len() == 0 {
-// 			t.Errorf("%s rendered empty buffer", tc.name)
-// 		}
-// 	}
-// }

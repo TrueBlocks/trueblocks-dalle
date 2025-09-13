@@ -8,6 +8,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 
@@ -30,7 +31,7 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 		logger.Error("Failed to load cache manager, using fallback:", err)
 	}
 
-	for _, db := range DatabaseNames {
+	for _, db := range prompt.DatabaseNames {
 		if ctx.Databases[db] != nil {
 			continue
 		}
@@ -74,7 +75,7 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 		}
 		ctx.Databases[db] = lines
 	}
-	logger.InfoG("db.databases.reload", "count", len(DatabaseNames))
+	logger.InfoG("db.databases.reload", "count", len(prompt.DatabaseNames))
 	return nil
 }
 

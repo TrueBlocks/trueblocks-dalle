@@ -1,8 +1,6 @@
-package dalle
+package prompt
 
-import (
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
-)
+import "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
 
 // Attribute represents a data attribute with metadata used for prompt generation.
 type Attribute struct {
@@ -16,6 +14,7 @@ type Attribute struct {
 	Value    string  `json:"value"`
 }
 
+// DatabaseNames lists the databases used to derive attributes from a seed.
 var DatabaseNames = []string{
 	"adverbs",
 	"adjectives",
@@ -51,6 +50,9 @@ var attributeNames = []string{
 	"gaze",
 	"backStyle",
 }
+
+// AttributeNames returns the list of attribute names (for test and compatibility).
+func AttributeNames() []string { return attributeNames }
 
 // NewAttribute constructs an Attribute from database info and a byte string.
 func NewAttribute(dbs map[string][]string, index int, bytes string) Attribute {

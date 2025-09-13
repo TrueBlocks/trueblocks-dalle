@@ -2,6 +2,8 @@ package dalle
 
 import (
 	"testing"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 )
 
 func TestReloadDatabases_Basic(t *testing.T) {
@@ -10,8 +12,8 @@ func TestReloadDatabases_Basic(t *testing.T) {
 	ConfigureDataDir(tmpDir)
 	ctx := NewContext()
 
-	// Provide DatabaseNames for the test
-	DatabaseNames = []string{"nouns"}
+	// Use prompt.DatabaseNames for the test context
+	_ = prompt.DatabaseNames
 
 	if err := ctx.ReloadDatabases("empty"); err != nil {
 		t.Fatalf("error reloading database: %v", err)

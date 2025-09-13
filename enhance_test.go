@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"testing"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 )
 
 // roundTripperFunc allows us to stub http.Client.Transport
@@ -17,7 +19,7 @@ func TestEnhancePromptWithEmptyChoices(t *testing.T) {
 	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewBufferString(`{"choices":[]}`)), Header: make(http.Header)}, nil
 	})}
-	out, err := enhancePromptWithClient(original, "", client, "fake-key", func(v interface{}) ([]byte, error) { return []byte(`{"dummy":true}`), nil })
+	out, err := prompt.EnhancePromptWithClient(original, "", client, "fake-key", func(v interface{}) ([]byte, error) { return []byte(`{"dummy":true}`), nil })
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -31,7 +33,7 @@ func TestEnhancePromptWithNon200(t *testing.T) {
 	client := &http.Client{Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: 500, Body: io.NopCloser(bytes.NewBufferString(`internal error`)), Header: make(http.Header)}, nil
 	})}
-	_, err := enhancePromptWithClient(original, "", client, "fake-key", func(v interface{}) ([]byte, error) { return []byte(`{}`), nil })
+	_, err := prompt.EnhancePromptWithClient(original, "", client, "fake-key", func(v interface{}) ([]byte, error) { return []byte(`{}`), nil })
 	if err == nil {
 		t.Fatal("expected error for non-200 status")
 	}

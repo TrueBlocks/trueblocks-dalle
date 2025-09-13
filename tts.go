@@ -32,7 +32,7 @@ func TextToSpeech(text string, voice string, series string, address string) (str
 	}
 	baseDir := filepath.Join(OutputDir(), series, "audio")
 	_ = os.MkdirAll(baseDir, 0o750)
-	ctx, cancel := context.WithTimeout(context.Background(), deadline)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute) // using fixed timeout; TODO consider exposing from prompt pkg (deadline was internal)
 	defer cancel()
 
 	reqBody := []byte("{\n\t\"model\": \"tts-1\",\n\t\"input\": " + marshalEscaped(text) + ",\n\t\"voice\": \"" + voice + "\"\n}")

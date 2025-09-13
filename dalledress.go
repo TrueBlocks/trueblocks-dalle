@@ -8,34 +8,35 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 
 // DalleDress represents a generated prompt and its associated attributes.
 type DalleDress struct {
-	Original        string               `json:"original"`
-	FileName        string               `json:"fileName"`
-	FileSize        int64                `json:"fileSize"`
-	ModifiedAt      int64                `json:"modifiedAt"`
-	Seed            string               `json:"seed"`
-	Prompt          string               `json:"prompt"`
-	DataPrompt      string               `json:"dataPrompt"`
-	TitlePrompt     string               `json:"titlePrompt"`
-	TersePrompt     string               `json:"tersePrompt"`
-	EnhancedPrompt  string               `json:"enhancedPrompt"`
-	Attribs         []Attribute          `json:"attributes"`
-	AttribMap       map[string]Attribute `json:"-"`
-	SeedChunks      []string             `json:"seedChunks"`
-	SelectedTokens  []string             `json:"selectedTokens"`
-	SelectedRecords []string             `json:"selectedRecords"`
-	ImageURL        string               `json:"imageUrl"`
-	GeneratedPath   string               `json:"generatedPath"`
-	AnnotatedPath   string               `json:"annotatedPath"`
-	DownloadMode    string               `json:"downloadMode"`
-	IPFSHash        string               `json:"ipfsHash"`
-	CacheHit        bool                 `json:"cacheHit"`
-	Completed       bool                 `json:"completed"`
-	Series          string               `json:"series"`
+	Original        string                      `json:"original"`
+	FileName        string                      `json:"fileName"`
+	FileSize        int64                       `json:"fileSize"`
+	ModifiedAt      int64                       `json:"modifiedAt"`
+	Seed            string                      `json:"seed"`
+	Prompt          string                      `json:"prompt"`
+	DataPrompt      string                      `json:"dataPrompt"`
+	TitlePrompt     string                      `json:"titlePrompt"`
+	TersePrompt     string                      `json:"tersePrompt"`
+	EnhancedPrompt  string                      `json:"enhancedPrompt"`
+	Attribs         []prompt.Attribute          `json:"attributes"`
+	AttribMap       map[string]prompt.Attribute `json:"-"`
+	SeedChunks      []string                    `json:"seedChunks"`
+	SelectedTokens  []string                    `json:"selectedTokens"`
+	SelectedRecords []string                    `json:"selectedRecords"`
+	ImageURL        string                      `json:"imageUrl"`
+	GeneratedPath   string                      `json:"generatedPath"`
+	AnnotatedPath   string                      `json:"annotatedPath"`
+	DownloadMode    string                      `json:"downloadMode"`
+	IPFSHash        string                      `json:"ipfsHash"`
+	CacheHit        bool                        `json:"cacheHit"`
+	Completed       bool                        `json:"completed"`
+	Series          string                      `json:"series"`
 }
 
 // String returns the JSON representation of the DalleDress.

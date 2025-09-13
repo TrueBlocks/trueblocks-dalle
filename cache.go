@@ -12,6 +12,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 )
 
 // DatabaseRecord represents a single row from a CSV database
@@ -108,12 +109,12 @@ func (cm *CacheManager) GetDatabase(name string) (DatabaseIndex, error) {
 
 // extractVersionFromEmbedded extracts version from the first CSV in embedded databases
 func (cm *CacheManager) extractVersionFromEmbedded() (string, error) {
-	if len(DatabaseNames) == 0 {
+	if len(prompt.DatabaseNames) == 0 {
 		return "", fmt.Errorf("no database names configured")
 	}
 
 	// Read first CSV to extract version
-	lines, err := readDatabaseCSV(DatabaseNames[0] + ".csv")
+	lines, err := readDatabaseCSV(prompt.DatabaseNames[0] + ".csv")
 	if err != nil {
 		return "", fmt.Errorf("failed to read first database: %w", err)
 	}
@@ -189,7 +190,7 @@ func (cm *CacheManager) buildDatabaseCache() (*DatabaseCache, error) {
 	var version string
 
 	// Process each database
-	for _, dbName := range DatabaseNames {
+	for _, dbName := range prompt.DatabaseNames {
 		idx, err := cm.buildDatabaseIndex(dbName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build index for %s: %w", dbName, err)

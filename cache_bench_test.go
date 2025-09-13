@@ -4,6 +4,8 @@ import (
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 )
 
 func BenchmarkDatabaseLoad_WithoutCache(b *testing.B) {
@@ -27,7 +29,7 @@ func BenchmarkDatabaseLoad_WithoutCache(b *testing.B) {
 
 		// Use fallback method (original CSV parsing)
 		ctx := NewContext()
-		for _, dbName := range DatabaseNames[:3] { // Test subset for speed
+		for _, dbName := range prompt.DatabaseNames[:3] { // Test subset for speed
 			if err := ctx.loadDatabaseFallback(dbName, "empty"); err != nil {
 				b.Fatalf("loadDatabaseFallback failed: %v", err)
 			}
@@ -57,7 +59,7 @@ func BenchmarkDatabaseLoad_WithCache(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// Test cached database loading
-		for _, dbName := range DatabaseNames[:3] { // Test subset for speed
+		for _, dbName := range prompt.DatabaseNames[:3] { // Test subset for speed
 			_, err := cm.GetDatabase(dbName)
 			if err != nil {
 				b.Fatalf("GetDatabase failed: %v", err)
@@ -90,7 +92,7 @@ func BenchmarkFullDatabaseReload_WithoutCache(b *testing.B) {
 
 		// Simulate original behavior (CSV parsing)
 		ctx := NewContext()
-		for _, dbName := range DatabaseNames {
+		for _, dbName := range prompt.DatabaseNames {
 			if err := ctx.loadDatabaseFallback(dbName, "empty"); err != nil {
 				b.Fatalf("loadDatabaseFallback failed: %v", err)
 			}

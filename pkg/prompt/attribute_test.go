@@ -1,4 +1,4 @@
-package dalle
+package prompt
 
 import (
 	"testing"
@@ -41,7 +41,8 @@ func TestNewAttribute_DifferentIndexes(t *testing.T) {
 	for idx, db := range []string{"adverbs", "adjectives", "nouns"} {
 		attr := NewAttribute(dbs, idx, "01")
 		assert.Equal(t, db, attr.Database)
-		assert.Equal(t, attributeNames[idx], attr.Name)
+		assert.Equal(t, DatabaseNames[idx], attr.Database)
+		assert.Equal(t, AttributeNames()[idx], attr.Name)
 		assert.Contains(t, dbs[db], attr.Value)
 	}
 }

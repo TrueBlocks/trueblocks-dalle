@@ -17,6 +17,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 )
 
 // errString returns the error string or "<nil>" safely
@@ -53,7 +54,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	model := "dall-e-3"
 	// model := "gpt-image-1"
 
-	payload := dalleRequest{
+	payload := prompt.Request{
 		Prompt: imageData.EnhancedPrompt,
 		N:      1,
 		Model:  model,
@@ -153,7 +154,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	bodyStr := string(body)
 	body = []byte(bodyStr)
 
-	var dalleResp dalleResponse1
+	var dalleResp prompt.DalleResponse1
 	err = json.Unmarshal(body, &dalleResp)
 	if err != nil {
 		logger.InfoR("image.post.parse_error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())

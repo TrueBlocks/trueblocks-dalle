@@ -1,4 +1,4 @@
-package dalle
+package prompt
 
 import (
 	"bytes"
@@ -9,12 +9,9 @@ import (
 	"net/http"
 	"os"
 	"text/template"
-	"time"
-
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
-// Template strings and compiled templates (moved from prompts.go)
+// Template strings and compiled templates
 const promptTemplateStr = `{{.LitPrompt false}}Here's the prompt:
 
 Draw a {{.Adverb false}} {{.Adjective false}} {{.Noun true}} with human-like
@@ -42,7 +39,7 @@ Adjective:          {{.Adjective true}}
 Noun:               {{.Noun true}}
 Emotion:            {{.Emotion true}}
 Occupation:         {{.Occupation true}}
-Action:       	    {{.Action true}}
+Action:        	    {{.Action true}}
 ArtStyle 1:         {{.ArtStyle true 1}}
 ArtStyle 2:         {{.ArtStyle true 2}}
 {{if .HasLitStyle}}LitStyle:           {{.LitStyle false}}
@@ -77,11 +74,13 @@ const authorTemplateStr = `{{if .HasLitStyle}}You are an award winning author wh
 style called {{.LitStyle true}}. Take on the persona of such an author.
 {{.LitStyle true}} is a genre or literary style that {{.LitStyleDescr}}.{{end}}`
 
-var promptTemplate = template.Must(template.New("prompt").Parse(promptTemplateStr))
-var dataTemplate = template.Must(template.New("data").Parse(dataTemplateStr))
-var terseTemplate = template.Must(template.New("terse").Parse(terseTemplateStr))
-var titleTemplate = template.Must(template.New("title").Parse(titleTemplateStr))
-var authorTemplate = template.Must(template.New("author").Parse(authorTemplateStr))
+var (
+	PromptTemplate = template.Must(template.New("prompt").Parse(promptTemplateStr))
+	DataTemplate   = template.Must(template.New("data").Parse(dataTemplateStr))
+	TerseTemplate  = template.Must(template.New("terse").Parse(terseTemplateStr))
+	TitleTemplate  = template.Must(template.New("title").Parse(titleTemplateStr))
+	AuthorTemplate = template.Must(template.New("author").Parse(authorTemplateStr))
+)
 
 // EnhancePrompt calls the OpenAI API to enhance a prompt using the given author type.
 func EnhancePrompt(prompt, authorType string) (string, error) {
@@ -101,8 +100,8 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 	_ = authorType
 	url := "https://api.openai.com/v1/chat/completions"
 
-	payload := dalleRequest{Model: "gpt-4", Seed: 1337, Tempature: 0.2}
-	payload.Messages = append(payload.Messages, message{Role: "system", Content: prompt})
+	payload := Request{Model: "gpt-4", Seed: 1337, Tempature: 0.2}
+	payload.Messages = append(payload.Messages, Message{Role: "system", Content: prompt})
 	payloadBytes, err := marshal(payload)
 	if err != nil {
 		return "", err
@@ -122,6 +121,7 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 		"Content-Type":  "application/json",
 		"Authorization": "Bearer " + apiKey,
 	}, payload)
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -135,30 +135,31 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 		return "", fmt.Errorf("enhance prompt: status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	logger.InfoG("prompt.enhance.http", "durMs", time.Since(start).Milliseconds(), "status", resp.StatusCode)
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
 
-	type dalleResponse struct {
+	type response struct {
 		Choices []struct {
-			Message message `json:"message"`
+			Message Message `json:"message"`
 		} `json:"choices"`
 	}
-	var response dalleResponse
-	if err := json.Unmarshal(body, &response); err != nil {
+	var r response
+	if err := json.Unmarshal(body, &r); err != nil {
 		return "", err
 	}
-	if len(response.Choices) == 0 {
-		logger.InfoR("prompt.enhance.empty_choices")
+	if len(r.Choices) == 0 {
 		return prompt, nil
 	}
-	content := response.Choices[0].Message.Content
+	content := r.Choices[0].Message.Content
 	if content == "" { // defensive
-		logger.InfoR("prompt.enhance.empty_content")
 		return prompt, nil
 	}
 	return content, nil
+}
+
+// EnhancePromptWithClient is an exported test hook wrapper used by root package tests to avoid breaking changes.
+func EnhancePromptWithClient(prompt, authorType string, client *http.Client, apiKey string, marshal func(v interface{}) ([]byte, error)) (string, error) {
+	return enhancePromptWithClient(prompt, authorType, client, apiKey, marshal)
 }

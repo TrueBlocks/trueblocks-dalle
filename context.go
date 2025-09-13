@@ -9,6 +9,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 )
 
 // Context holds templates, series, dbs, and cache for prompt generation.
@@ -33,11 +34,11 @@ func NewContext() *Context {
 	}
 
 	ctx := Context{
-		promptTemplate: promptTemplate,
-		dataTemplate:   dataTemplate,
-		titleTemplate:  titleTemplate,
-		terseTemplate:  terseTemplate,
-		authorTemplate: authorTemplate,
+		promptTemplate: prompt.PromptTemplate,
+		dataTemplate:   prompt.DataTemplate,
+		titleTemplate:  prompt.TitleTemplate,
+		terseTemplate:  prompt.TerseTemplate,
+		authorTemplate: prompt.AuthorTemplate,
 		Series:         Series{},
 		Databases:      make(map[string][]string),
 		DalleCache:     make(map[string]*DalleDress),
@@ -91,11 +92,11 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 		Original:        addressIn,
 		FileName:        fn,
 		Seed:            seed,
-		AttribMap:       make(map[string]Attribute),
+		AttribMap:       make(map[string]prompt.Attribute),
 		SeedChunks:      []string{},
 		SelectedTokens:  []string{},
 		SelectedRecords: []string{},
-		Attribs:         []Attribute{},
+		Attribs:         []prompt.Attribute{},
 		Series:          ctx.Series.Suffix,
 	}
 
@@ -104,20 +105,18 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 	// index past the seed or database lists. The original logic could overrun both the
 	// seed slicing (i+6) and the database name list when the seed was long enough to
 	// create more than len(DatabaseNames) attributes.
-	maxAttribs := len(DatabaseNames)
+	maxAttribs := len(prompt.DatabaseNames)
 	cnt := 0
-	for i := 0; i+6 <= len(dd.Seed) && cnt < maxAttribs; i += 8 { // ensure we have 6 chars
-		attr := NewAttribute(ctx.Databases, cnt, dd.Seed[i:i+6])
+	for i := 0; i+6 <= len(dd.Seed) && cnt < maxAttribs; i += 8 {
+		attr := prompt.NewAttribute(ctx.Databases, cnt, dd.Seed[i:i+6])
 		dd.Attribs = append(dd.Attribs, attr)
 		dd.AttribMap[attr.Name] = attr
 		dd.SeedChunks = append(dd.SeedChunks, attr.Value)
 		dd.SelectedTokens = append(dd.SelectedTokens, attr.Name)
 		dd.SelectedRecords = append(dd.SelectedRecords, attr.Value)
 		cnt++
-		// Optional overlapping attribute starting 4 chars later (original heuristic) provided
-		// we still remain within bounds and under maxAttribs.
 		if cnt < maxAttribs && i+4+6 <= len(dd.Seed) {
-			attr = NewAttribute(ctx.Databases, cnt, dd.Seed[i+4:i+4+6])
+			attr = prompt.NewAttribute(ctx.Databases, cnt, dd.Seed[i+4:i+4+6])
 			dd.Attribs = append(dd.Attribs, attr)
 			dd.AttribMap[attr.Name] = attr
 			dd.SeedChunks = append(dd.SeedChunks, attr.Value)
@@ -187,7 +186,7 @@ func (ctx *Context) GenerateEnhanced(addr string) (string, error) {
 		return err.Error(), err
 	} else {
 		authorType, _ := dd.ExecuteTemplate(ctx.authorTemplate, nil)
-		if dd.EnhancedPrompt, err = EnhancePrompt(ctx.GetPrompt(addr), authorType); err != nil {
+		if dd.EnhancedPrompt, err = prompt.EnhancePrompt(ctx.GetPrompt(addr), authorType); err != nil {
 			logger.Error("EnhancePrompt error:", err)
 			return "", err
 		}

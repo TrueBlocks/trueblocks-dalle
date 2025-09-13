@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"text/template"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 )
 
 func TestDalleDress_String(t *testing.T) {
@@ -38,7 +40,7 @@ func TestDalleDress_FromTemplate(t *testing.T) {
 	d := &DalleDress{
 		Original: "foo",
 		FileName: "bar",
-		AttribMap: map[string]Attribute{
+		AttribMap: map[string]prompt.Attribute{
 			"adverb":    {Value: "quickly,fast"},
 			"adjective": {Value: "beautiful,pretty"},
 			"noun":      {Value: "cat,animal,feline"},
@@ -71,7 +73,7 @@ func TestDalleDress_FromTemplate(t *testing.T) {
 }
 
 func TestDalleDress_Adverb(t *testing.T) {
-	d := &DalleDress{AttribMap: map[string]Attribute{"adverb": {Value: "quickly,fast"}}}
+	d := &DalleDress{AttribMap: map[string]prompt.Attribute{"adverb": {Value: "quickly,fast"}}}
 	if d.Adverb(true) != "quickly" {
 		t.Error("Adverb(true) wrong")
 	}
@@ -81,18 +83,18 @@ func TestDalleDress_Adverb(t *testing.T) {
 }
 
 func TestDalleDress_HasLitStyle(t *testing.T) {
-	d := &DalleDress{AttribMap: map[string]Attribute{"litStyle": {Value: "none"}}}
+	d := &DalleDress{AttribMap: map[string]prompt.Attribute{"litStyle": {Value: "none"}}}
 	if d.HasLitStyle() {
 		t.Error("HasLitStyle should be false for 'none'")
 	}
-	d.AttribMap["litStyle"] = Attribute{Value: "foo,bar"}
+	d.AttribMap["litStyle"] = prompt.Attribute{Value: "foo,bar"}
 	if !d.HasLitStyle() {
 		t.Error("HasLitStyle should be true for non-none")
 	}
 }
 
 func TestDalleDress_Color(t *testing.T) {
-	d := &DalleDress{AttribMap: map[string]Attribute{"color1": {Value: "red,#ff0000"}}}
+	d := &DalleDress{AttribMap: map[string]prompt.Attribute{"color1": {Value: "red,#ff0000"}}}
 	if d.Color(true, 1) != "#ff0000" {
 		t.Error("Color(true, 1) wrong")
 	}
@@ -102,7 +104,7 @@ func TestDalleDress_Color(t *testing.T) {
 }
 
 func TestJSONNamingConsistency(t *testing.T) {
-	dd := &DalleDress{Original: "o", FileName: "f.png", Seed: "s", Prompt: "p", DataPrompt: "dp", TitlePrompt: "tp", TersePrompt: "tp2", EnhancedPrompt: "ep", Attribs: []Attribute{}, SeedChunks: []string{"a"}, SelectedTokens: []string{"b"}, SelectedRecords: []string{"c"}, ImageURL: "http://x", GeneratedPath: "/g/f.png", AnnotatedPath: "/a/f.png", IPFSHash: "h", CacheHit: true, Completed: true, Series: "series"}
+	dd := &DalleDress{Original: "o", FileName: "f.png", Seed: "s", Prompt: "p", DataPrompt: "dp", TitlePrompt: "tp", TersePrompt: "tp2", EnhancedPrompt: "ep", Attribs: []prompt.Attribute{}, SeedChunks: []string{"a"}, SelectedTokens: []string{"b"}, SelectedRecords: []string{"c"}, ImageURL: "http://x", GeneratedPath: "/g/f.png", AnnotatedPath: "/a/f.png", IPFSHash: "h", CacheHit: true, Completed: true, Series: "series"}
 	b, err := json.Marshal(dd)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)

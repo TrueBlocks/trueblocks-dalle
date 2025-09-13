@@ -1,4 +1,4 @@
-package dalle
+package prompt
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestDalleRequest_String(t *testing.T) {
-	req := &dalleRequest{
+	req := &Request{
 		Input:     "input text",
 		Prompt:    "prompt text",
 		N:         1,
@@ -16,7 +16,7 @@ func TestDalleRequest_String(t *testing.T) {
 		Size:      "1024x1024",
 		Seed:      42,
 		Tempature: 0.5,
-		Messages:  []message{{Role: "system", Content: "hello"}},
+		Messages:  []Message{{Role: "system", Content: "hello"}},
 	}
 	jsonStr := req.String()
 	if len(jsonStr) == 0 {
@@ -33,7 +33,7 @@ func TestDalleRequest_String(t *testing.T) {
 
 func TestDalleResponse1_Unmarshal(t *testing.T) {
 	jsonData := `{"data":[{"url":"http://example.com/image.png"}]}`
-	var resp dalleResponse1
+	var resp DalleResponse1
 	if err := json.Unmarshal([]byte(jsonData), &resp); err != nil {
 		t.Fatalf("Failed to unmarshal dalleResponse1: %v", err)
 	}
