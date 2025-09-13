@@ -116,11 +116,11 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	start := time.Now()
-	debugCurl("OPENAI CHAT (EnhancePrompt)", "POST", url, map[string]string{
-		"Content-Type":  "application/json",
-		"Authorization": "Bearer " + apiKey,
-	}, payload)
+	// start := time.Now()
+	// debugCurl("OPENAI CHAT (EnhancePrompt)", "POST", url, map[string]string{
+	// 	"Content-Type":  "application/json",
+	// 	"Authorization": "Bearer " + apiKey,
+	// }, payload)
 
 	resp, err := client.Do(req)
 	if err != nil {
