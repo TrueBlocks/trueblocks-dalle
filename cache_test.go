@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 func TestCacheManager_DatabaseCache(t *testing.T) {
@@ -16,9 +18,8 @@ func TestCacheManager_DatabaseCache(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Reset global state for isolated testing
-	TestOnlyResetDataDir()
+	storage.TestOnlyResetDataDir(tmpDir)
 	TestOnlyResetCacheManager()
-	ConfigureDataDir(tmpDir)
 
 	// Get cache manager
 	cm := GetCacheManager()
@@ -75,9 +76,8 @@ func TestCacheManager_CacheReuse(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Reset global state
-	TestOnlyResetDataDir()
+	storage.TestOnlyResetDataDir(tmpDir)
 	TestOnlyResetCacheManager()
-	ConfigureDataDir(tmpDir)
 
 	// Create cache manager and build cache
 	cm1 := GetCacheManager()
@@ -125,9 +125,8 @@ func TestCacheManager_InvalidateCache(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Reset global state
-	TestOnlyResetDataDir()
+	storage.TestOnlyResetDataDir(tmpDir)
 	TestOnlyResetCacheManager()
-	ConfigureDataDir(tmpDir)
 
 	// Create cache
 	cm := GetCacheManager()
@@ -175,9 +174,8 @@ func TestDatabaseIntegrationWithCache(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Reset global state
-	TestOnlyResetDataDir()
+	storage.TestOnlyResetDataDir(tmpDir)
 	TestOnlyResetCacheManager()
-	ConfigureDataDir(tmpDir)
 
 	// Create context and reload databases (should use cache)
 	ctx := NewContext()

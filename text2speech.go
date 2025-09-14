@@ -12,6 +12,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 // TextToSpeech converts the given text to speech using OpenAI's audio API and writes it to the provided output directory.
@@ -30,7 +31,7 @@ func TextToSpeech(text string, voice string, series string, address string) (str
 	if voice == "" {
 		voice = "alloy"
 	}
-	baseDir := filepath.Join(OutputDir(), series, "audio")
+	baseDir := filepath.Join(storage.OutputDir(), series, "audio")
 	_ = os.MkdirAll(baseDir, 0o750)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute) // using fixed timeout; TODO consider exposing from prompt pkg (deadline was internal)
 	defer cancel()
@@ -129,7 +130,7 @@ func GenerateSpeech(series, address string, lockTTL time.Duration) (string, erro
 		lockTTL = 2 * time.Minute
 	}
 	key := "speech:" + series + ":" + address
-	audioPath := filepath.Join(OutputDir(), series, "audio", address+".mp3")
+	audioPath := filepath.Join(storage.OutputDir(), series, "audio", address+".mp3")
 	if file.FileExists(audioPath) { // fast path
 		return audioPath, nil
 	}
@@ -166,7 +167,7 @@ func Speak(series, address string) (string, error) {
 	if address == "" {
 		return "", errors.New("address required")
 	}
-	audioPath := filepath.Join(OutputDir(), series, "audio", address+".mp3")
+	audioPath := filepath.Join(storage.OutputDir(), series, "audio", address+".mp3")
 	if !file.FileExists(audioPath) {
 		// Generate (ignore lock TTL customization here; use default 0 which GenerateSpeech adjusts)
 		p, err := GenerateSpeech(series, address, 0)
@@ -187,7 +188,7 @@ func ReadToMe(series, address string) (string, error) {
 	if address == "" {
 		return "", errors.New("address required")
 	}
-	audioPath := filepath.Join(OutputDir(), series, "audio", address+".mp3")
+	audioPath := filepath.Join(storage.OutputDir(), series, "audio", address+".mp3")
 	if !file.FileExists(audioPath) {
 		p, err := GenerateSpeech(series, address, 0)
 		if err != nil {
@@ -212,7 +213,7 @@ func AudioURL(baseURL, series, address string) (string, error) {
 		return "", err
 	}
 	// Derive relative path segment after output dir root
-	rel := strings.TrimPrefix(p, OutputDir()+"/")
+	rel := strings.TrimPrefix(p, storage.OutputDir()+"/")
 	rel = strings.TrimPrefix(rel, "/")
 	if rel == "" {
 		return "", nil

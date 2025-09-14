@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 func TestReloadDatabases_Basic(t *testing.T) {
 	tmpDir := t.TempDir()
-	TestOnlyResetDataDir()
-	ConfigureDataDir(tmpDir)
+	storage.TestOnlyResetDataDir(tmpDir)
 	ctx := NewContext()
 
 	// Use prompt.DatabaseNames for the test context

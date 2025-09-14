@@ -12,6 +12,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/walk"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 // managedContext wraps a dalle Context with bookkeeping for LRU + TTL.
@@ -166,7 +167,7 @@ func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time
 		lockTTL = 5 * time.Minute
 	}
 	key := series + ":" + address
-	annotatedPath := filepath.Join(OutputDir(), series, "annotated", address+".png")
+	annotatedPath := filepath.Join(storage.OutputDir(), series, "annotated", address+".png")
 	// Fast path: if annotated file exists, treat as cache hit (do not acquire new run if another generation not in progress)
 	if file.FileExists(annotatedPath) {
 		// Start a minimal completed progress run if none exists yet
@@ -220,7 +221,7 @@ func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time
 	if skipImage {
 		progressMgr.Transition(series, address, PhaseAnnotate)
 	}
-	out := filepath.Join(OutputDir(), series, "annotated", address+".png")
+	out := filepath.Join(storage.OutputDir(), series, "annotated", address+".png")
 	// Mark completion
 	dd.Completed = true
 	progressMgr.Transition(series, address, PhaseCompleted)
@@ -234,13 +235,13 @@ func ListSeries() []string {
 	list := []string{}
 	vFunc := func(fn string, vP any) (bool, error) {
 		if strings.HasSuffix(fn, ".json") {
-			fn = strings.ReplaceAll(fn, SeriesDir()+"/", "")
+			fn = strings.ReplaceAll(fn, storage.SeriesDir()+"/", "")
 			fn = strings.ReplaceAll(fn, ".json", "")
 			list = append(list, fn)
 		}
 		return true, nil
 	}
-	_ = walk.ForEveryFileInFolder(SeriesDir(), vFunc, nil)
+	_ = walk.ForEveryFileInFolder(storage.SeriesDir(), vFunc, nil)
 	return list
 }
 
@@ -274,7 +275,7 @@ func ContextCount() int {
 
 // Clean removes generated images and data for a given series and address.
 func Clean(series, address string) {
-	outputDir := OutputDir()
+	outputDir := storage.OutputDir()
 	baseDir := filepath.Join(outputDir, series)
 
 	// These are the various paths we wish to remove

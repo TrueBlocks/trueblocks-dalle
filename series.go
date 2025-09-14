@@ -8,6 +8,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	coreTypes "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/types"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 // Series represents a collection of prompt attributes and their values.
@@ -64,7 +65,7 @@ func (s *Series) String() string {
 func (s *Series) SaveSeries(series string, last int) {
 	ss := s
 	ss.Last = last
-	target := filepath.Join(SeriesDir(), series+".json") // creates the folder
+	target := filepath.Join(storage.SeriesDir(), series+".json") // creates the folder
 	_ = file.StringToAsciiFile(target, ss.String())
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 
@@ -127,7 +128,7 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 		logger.Info("db.load.series", "series", filterIn, "normalized", filter)
 	}
 
-	fn := filepath.Join(DataDir(), "series", filter+".json")
+	fn := filepath.Join(storage.DataDir(), "series", filter+".json")
 	str := strings.TrimSpace(file.AsciiFileToString(fn))
 
 	ret := Series{

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 func BenchmarkDatabaseLoad_WithoutCache(b *testing.B) {
@@ -20,8 +21,7 @@ func BenchmarkDatabaseLoad_WithoutCache(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// Reset state each iteration to avoid caching effects
-		TestOnlyResetDataDir()
-		ConfigureDataDir(tmpDir)
+		storage.TestOnlyResetDataDir(tmpDir)
 
 		// Force cache invalidation to simulate cold start
 		cm := GetCacheManager()
@@ -46,8 +46,7 @@ func BenchmarkDatabaseLoad_WithCache(b *testing.B) {
 	defer os.RemoveAll(tmpDir)
 
 	// Reset global state
-	TestOnlyResetDataDir()
-	ConfigureDataDir(tmpDir)
+	storage.TestOnlyResetDataDir(tmpDir)
 
 	// Pre-build cache
 	cm := GetCacheManager()
@@ -81,8 +80,7 @@ func BenchmarkFullDatabaseReload_WithoutCache(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		// Reset state to avoid caching
-		TestOnlyResetDataDir()
-		ConfigureDataDir(tmpDir)
+		storage.TestOnlyResetDataDir(tmpDir)
 
 		// Invalidate any existing cache
 		cm := GetCacheManager()
@@ -109,8 +107,7 @@ func BenchmarkFullDatabaseReload_WithCache(b *testing.B) {
 	defer os.RemoveAll(tmpDir)
 
 	// Reset global state and pre-build cache
-	TestOnlyResetDataDir()
-	ConfigureDataDir(tmpDir)
+	storage.TestOnlyResetDataDir(tmpDir)
 
 	cm := GetCacheManager()
 	if err := cm.LoadOrBuild(); err != nil {
@@ -137,8 +134,7 @@ func BenchmarkCacheManagerLoadOrBuild_ColdStart(b *testing.B) {
 			b.Fatalf("Failed to create temp dir: %v", err)
 		}
 
-		TestOnlyResetDataDir()
-		ConfigureDataDir(tmpDir)
+		storage.TestOnlyResetDataDir(tmpDir)
 
 		// Reset singleton state
 		cacheManagerOnce = sync.Once{}
@@ -165,8 +161,7 @@ func BenchmarkCacheManagerLoadOrBuild_WarmStart(b *testing.B) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	TestOnlyResetDataDir()
-	ConfigureDataDir(tmpDir)
+	storage.TestOnlyResetDataDir(tmpDir)
 
 	// Pre-build cache
 	cm := GetCacheManager()

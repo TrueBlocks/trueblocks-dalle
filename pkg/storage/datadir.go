@@ -1,4 +1,4 @@
-package dalle
+package storage
 
 import (
 	"os"
@@ -14,9 +14,10 @@ var (
 )
 
 // TestOnlyResetDataDir resets internal directory state (intended for tests).
-func TestOnlyResetDataDir() {
+func TestOnlyResetDataDir(flagVal string) {
 	dataDir = ""
 	dataDirOnce = sync.Once{}
+	dataDirOnce.Do(func() { initDataDir(flagVal) })
 }
 
 func initDataDir(flagVal string) {
@@ -58,11 +59,11 @@ func initDataDir(flagVal string) {
 	}
 }
 
-// ConfigureDataDir sets an explicit flag-derived base directory before first use.
-func ConfigureDataDir(flagVal string) { dataDirOnce.Do(func() { initDataDir(flagVal) }) }
-
 // DataDir returns the lazily-initialized base directory.
-func DataDir() string { ConfigureDataDir(""); return dataDir }
+func DataDir() string {
+	dataDirOnce.Do(func() { initDataDir("") })
+	return dataDir
+}
 
 // Dir helpers (pure functions) derived from a base data directory.
 func OutputDir() string { return filepath.Join(DataDir(), "output") }

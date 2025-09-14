@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 
@@ -125,7 +126,7 @@ func RemoveSeries(seriesDir, suffix string) error {
 	}
 
 	// Remove regular output folder if it exists
-	outputPath := filepath.Join(OutputDir(), suffix)
+	outputPath := filepath.Join(storage.OutputDir(), suffix)
 	if _, err := os.Stat(outputPath); err == nil {
 		if err := os.RemoveAll(outputPath); err != nil {
 			return err
@@ -133,7 +134,7 @@ func RemoveSeries(seriesDir, suffix string) error {
 	}
 
 	// Also remove .deleted folder if it exists
-	deletedOutputPath := filepath.Join(OutputDir(), suffix+".deleted")
+	deletedOutputPath := filepath.Join(storage.OutputDir(), suffix+".deleted")
 	if _, err := os.Stat(deletedOutputPath); err == nil {
 		if err := os.RemoveAll(deletedOutputPath); err != nil {
 			return err
@@ -174,8 +175,8 @@ func DeleteSeries(seriesDir, suffix string) error {
 		return err
 	}
 
-	outputPath := filepath.Join(OutputDir(), suffix)
-	hiddenPath := filepath.Join(OutputDir(), suffix+".deleted")
+	outputPath := filepath.Join(storage.OutputDir(), suffix)
+	hiddenPath := filepath.Join(storage.OutputDir(), suffix+".deleted")
 
 	if _, err := os.Stat(outputPath); err == nil {
 		if err := os.Rename(outputPath, hiddenPath); err != nil {
@@ -218,8 +219,8 @@ func UndeleteSeries(seriesDir, suffix string) error {
 		return err
 	}
 
-	outputPath := filepath.Join(OutputDir(), suffix)
-	hiddenPath := filepath.Join(OutputDir(), suffix+".deleted")
+	outputPath := filepath.Join(storage.OutputDir(), suffix)
+	hiddenPath := filepath.Join(storage.OutputDir(), suffix+".deleted")
 
 	if _, err := os.Stat(hiddenPath); err == nil {
 		if err := os.Rename(hiddenPath, outputPath); err != nil {

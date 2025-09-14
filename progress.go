@@ -11,6 +11,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 // Phase represents a canonical generation phase.
@@ -115,9 +116,9 @@ func loadMetricsLocked(pm *ProgressManager) {
 	if metricsLoaded {
 		return
 	}
-	path := filepath.Join(MetricsDir(), metricsFile)
+	path := filepath.Join(storage.MetricsDir(), metricsFile)
 	cleanPath := filepath.Clean(path)
-	if !strings.HasPrefix(cleanPath, filepath.Clean(MetricsDir())+string(os.PathSeparator)) && filepath.Base(cleanPath) != metricsFile { // defensive
+	if !strings.HasPrefix(cleanPath, filepath.Clean(storage.MetricsDir())+string(os.PathSeparator)) && filepath.Base(cleanPath) != metricsFile { // defensive
 		metricsLoaded = true
 		return
 	}
@@ -141,8 +142,8 @@ func saveMetricsLocked(pm *ProgressManager) {
 		pm.metrics.Version = "v1"
 	}
 	// Restrict directory permissions (gosec G301)
-	_ = os.MkdirAll(MetricsDir(), 0o750)
-	path := filepath.Join(MetricsDir(), metricsFile)
+	_ = os.MkdirAll(storage.MetricsDir(), 0o750)
+	path := filepath.Join(storage.MetricsDir(), metricsFile)
 	b, err := json.MarshalIndent(pm.metrics, "", "  ")
 	if err != nil {
 		return
@@ -372,9 +373,9 @@ func (pm *ProgressManager) maybeArchiveRunLocked(run *progressRun) {
 		}
 	}
 	pm.computePercentETA(pr, run)
-	_ = os.MkdirAll(filepath.Join(MetricsDir(), "runs"), 0o750)
+	_ = os.MkdirAll(filepath.Join(storage.MetricsDir(), "runs"), 0o750)
 	fn := fmt.Sprintf("%s_%s_%d.json", run.series, run.address, time.Now().Unix())
-	path := filepath.Join(MetricsDir(), "runs", fn)
+	path := filepath.Join(storage.MetricsDir(), "runs", fn)
 	if b, err := json.MarshalIndent(pr, "", "  "); err == nil {
 		_ = os.WriteFile(path, b, 0o600)
 	}

@@ -1,4 +1,4 @@
-package dalle
+package storage
 
 import (
 	"os"

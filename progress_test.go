@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 func writeSeries(t *testing.T, out string, series string) {
@@ -25,9 +27,9 @@ func TestProgressSkipImageAndMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmp)
+	storage.TestOnlyResetDataDir(tmp)
+
 	out := filepath.Join(tmp, "output")
-	TestOnlyResetDataDir()
-	ConfigureDataDir(tmp)
 	_ = os.MkdirAll(out, 0o755)
 	writeSeries(t, out, "empty")
 	ResetMetricsForTest()
@@ -66,7 +68,7 @@ func TestProgressSkipImageAndMetrics(t *testing.T) {
 		t.Errorf("expected annotate phase present")
 	}
 
-	metricsPath := filepath.Join(MetricsDir(), "progress_phase_stats.json")
+	metricsPath := filepath.Join(storage.MetricsDir(), "progress_phase_stats.json")
 	if _, err = os.Stat(metricsPath); err != nil {
 		t.Fatalf("expected metrics file: %v", err)
 	}
@@ -87,9 +89,9 @@ func TestProgressCacheHit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmp)
+	storage.TestOnlyResetDataDir(tmp)
+
 	out := filepath.Join(tmp, "output")
-	TestOnlyResetDataDir()
-	ConfigureDataDir(tmp)
 	_ = os.MkdirAll(out, 0o755)
 	writeSeries(t, out, "series1")
 	ResetMetricsForTest()
@@ -128,7 +130,7 @@ func TestProgressCacheHit(t *testing.T) {
 	}
 
 	// Inspect metrics file
-	metricsPath := filepath.Join(MetricsDir(), "progress_phase_stats.json")
+	metricsPath := filepath.Join(storage.MetricsDir(), "progress_phase_stats.json")
 	raw, err := os.ReadFile(metricsPath)
 	if err != nil {
 		t.Fatalf("expected metrics file: %v", err)
@@ -160,9 +162,9 @@ func TestProgressFullRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmp)
+	storage.TestOnlyResetDataDir(tmp)
+
 	out := filepath.Join(tmp, "output")
-	TestOnlyResetDataDir()
-	ConfigureDataDir(tmp)
 	_ = os.MkdirAll(out, 0o755)
 	writeSeries(t, out, "srx")
 	ResetMetricsForTest()
@@ -259,7 +261,7 @@ func TestProgressFullRun(t *testing.T) {
 		t.Errorf("expected percent ~100 got %f", pr.Percent)
 	}
 	// Metrics file sanity: at least one generation, cache hits should not exceed generations and run report not marked cacheHit.
-	raw, err := os.ReadFile(filepath.Join(MetricsDir(), "progress_phase_stats.json"))
+	raw, err := os.ReadFile(filepath.Join(storage.MetricsDir(), "progress_phase_stats.json"))
 	if err != nil {
 		t.Fatalf("read metrics: %v", err)
 	}
@@ -286,9 +288,9 @@ func TestProgressArchive(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmp)
+	storage.TestOnlyResetDataDir(tmp)
+
 	out := filepath.Join(tmp, "output")
-	TestOnlyResetDataDir()
-	ConfigureDataDir(tmp)
 	_ = os.MkdirAll(out, 0o755)
 	writeSeries(t, out, "arch")
 	ResetMetricsForTest()
@@ -349,7 +351,7 @@ func TestProgressArchive(t *testing.T) {
 	_ = GetProgress("arch", addr)
 
 	// Check archive directory (now always under MetricsDir())
-	entries, _ := os.ReadDir(filepath.Join(MetricsDir(), "runs"))
+	entries, _ := os.ReadDir(filepath.Join(storage.MetricsDir(), "runs"))
 	found := false
 	for _, e := range entries {
 		if strings.Contains(e.Name(), addr) {

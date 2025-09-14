@@ -13,6 +13,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 // DatabaseRecord represents a single row from a CSV database
@@ -55,7 +56,7 @@ var (
 func GetCacheManager() *CacheManager {
 	cacheManagerOnce.Do(func() {
 		cacheManager = &CacheManager{
-			cacheDir: filepath.Join(DataDir(), "cache"),
+			cacheDir: filepath.Join(storage.DataDir(), "cache"),
 		}
 	})
 	return cacheManager

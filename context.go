@@ -11,6 +11,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/utils"
 )
 
@@ -57,7 +58,7 @@ var saveMutex sync.Mutex
 // reportOn logs and saves generated prompt data for a given address and location.
 func (ctx *Context) reportOn(dd *model.DalleDress, addr, loc, ft, value string) {
 	_ = addr
-	path := filepath.Join(OutputDir(), strings.ToLower(loc))
+	path := filepath.Join(storage.OutputDir(), strings.ToLower(loc))
 
 	saveMutex.Lock()
 	defer saveMutex.Unlock()
@@ -137,9 +138,9 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*model.DalleDress, error) 
 	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "terse"), "txt", dd.TersePrompt)
 	dd.Prompt, _ = dd.ExecuteTemplate(ctx.promptTemplate, nil)
 	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "prompt"), "txt", dd.Prompt)
-	fnPath := filepath.Join(OutputDir(), ctx.Series.Suffix, "enhanced", dd.FileName+".txt")
+	fnPath := filepath.Join(storage.OutputDir(), ctx.Series.Suffix, "enhanced", dd.FileName+".txt")
 	if !file.FileExists(fnPath) {
-		fnPath = filepath.Join(OutputDir(), ctx.Series.Suffix, "enhanced", dd.FileName+".txt")
+		fnPath = filepath.Join(storage.OutputDir(), ctx.Series.Suffix, "enhanced", dd.FileName+".txt")
 	}
 	dd.EnhancedPrompt = ""
 	if file.FileExists(fnPath) {
@@ -222,7 +223,7 @@ func (ctx *Context) GenerateImage(addr string) (string, error) {
 		}
 		// Transition to image_prep prior to network operations if progress run exists
 		progressMgr.Transition(ctx.Series.Suffix, addr, PhaseImagePrep)
-		outputPath := filepath.Join(OutputDir(), imageData.SeriesName, "generated")
+		outputPath := filepath.Join(storage.OutputDir(), imageData.SeriesName, "generated")
 		if err := RequestImage(outputPath, &imageData); err != nil {
 			return err.Error(), err
 		}

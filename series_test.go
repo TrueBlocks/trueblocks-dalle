@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 func TestSeries_String(t *testing.T) {
@@ -108,7 +110,7 @@ func TestSeries_StringAndSaveSeries(t *testing.T) {
 	}
 	// Save with different last value
 	s.SaveSeries("alpha", 42)
-	fn := filepath.Join(SeriesDir(), "alpha.json")
+	fn := filepath.Join(storage.SeriesDir(), "alpha.json")
 	b, err := os.ReadFile(fn)
 	if err != nil {
 		t.Fatalf("reading saved series: %v", err)
