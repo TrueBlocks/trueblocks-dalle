@@ -1,4 +1,4 @@
-package model
+package annotate
 
 import (
 	"fmt"

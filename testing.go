@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/annotate"
 )
 
 var (
 	openFile     = os.OpenFile
-	annotateFunc = model.Annotate
+	annotateFunc = annotate.Annotate
 	httpGet      = http.Get
 	ioCopy       = io.Copy
 )
