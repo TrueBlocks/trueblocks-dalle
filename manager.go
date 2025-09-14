@@ -2,6 +2,7 @@ package dalle
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -269,4 +270,26 @@ func ContextCount() int {
 	contextManager.Lock()
 	defer contextManager.Unlock()
 	return len(contextManager.items)
+}
+
+// Clean removes generated images and data for a given series and address.
+func Clean(series, address string) {
+	outputDir := OutputDir()
+	baseDir := filepath.Join(outputDir, series)
+
+	// These are the various paths we wish to remove
+	paths := []string{
+		filepath.Join(baseDir, "annotated", address+".png"),
+		filepath.Join(baseDir, "selector", address+".json"),
+		filepath.Join(baseDir, "generated", address+".png"),
+		filepath.Join(baseDir, "audio", address+".mp3"),
+	}
+
+	for _, dir := range []string{"data", "title", "terse", "prompt", "enhanced"} {
+		paths = append(paths, filepath.Join(baseDir, dir, address+".txt"))
+	}
+
+	for _, p := range paths {
+		_ = os.Remove(p)
+	}
 }
