@@ -2,7 +2,6 @@ package dalle
 
 import (
 	"os"
-	"sync"
 	"testing"
 
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
@@ -24,7 +23,7 @@ func BenchmarkDatabaseLoad_WithoutCache(b *testing.B) {
 		storage.TestOnlyResetDataDir(tmpDir)
 
 		// Force cache invalidation to simulate cold start
-		cm := GetCacheManager()
+		cm := storage.GetCacheManager()
 		_ = cm.InvalidateCache()
 
 		// Use fallback method (original CSV parsing)
@@ -49,7 +48,7 @@ func BenchmarkDatabaseLoad_WithCache(b *testing.B) {
 	storage.TestOnlyResetDataDir(tmpDir)
 
 	// Pre-build cache
-	cm := GetCacheManager()
+	cm := storage.GetCacheManager()
 	if err := cm.LoadOrBuild(); err != nil {
 		b.Fatalf("Failed to build cache: %v", err)
 	}
@@ -83,7 +82,7 @@ func BenchmarkFullDatabaseReload_WithoutCache(b *testing.B) {
 		storage.TestOnlyResetDataDir(tmpDir)
 
 		// Invalidate any existing cache
-		cm := GetCacheManager()
+		cm := storage.GetCacheManager()
 		_ = cm.InvalidateCache()
 
 		b.StartTimer()
@@ -109,7 +108,7 @@ func BenchmarkFullDatabaseReload_WithCache(b *testing.B) {
 	// Reset global state and pre-build cache
 	storage.TestOnlyResetDataDir(tmpDir)
 
-	cm := GetCacheManager()
+	cm := storage.GetCacheManager()
 	if err := cm.LoadOrBuild(); err != nil {
 		b.Fatalf("Failed to build cache: %v", err)
 	}
@@ -135,15 +134,12 @@ func BenchmarkCacheManagerLoadOrBuild_ColdStart(b *testing.B) {
 		}
 
 		storage.TestOnlyResetDataDir(tmpDir)
-
-		// Reset singleton state
-		cacheManagerOnce = sync.Once{}
-		cacheManager = nil
+		storage.TestOnlyResetCacheManager()
 
 		b.StartTimer()
 
 		// Time cold start (cache build)
-		cm := GetCacheManager()
+		cm := storage.GetCacheManager()
 		if err := cm.LoadOrBuild(); err != nil {
 			b.Fatalf("LoadOrBuild failed: %v", err)
 		}
@@ -164,7 +160,7 @@ func BenchmarkCacheManagerLoadOrBuild_WarmStart(b *testing.B) {
 	storage.TestOnlyResetDataDir(tmpDir)
 
 	// Pre-build cache
-	cm := GetCacheManager()
+	cm := storage.GetCacheManager()
 	if err := cm.LoadOrBuild(); err != nil {
 		b.Fatalf("Failed to build initial cache: %v", err)
 	}
@@ -173,13 +169,11 @@ func BenchmarkCacheManagerLoadOrBuild_WarmStart(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// Reset singleton state but keep cache files on disk
-		cacheManagerOnce = sync.Once{}
-		cacheManager = nil
+		storage.TestOnlyResetCacheManager()
 		b.StartTimer()
 
 		// Time warm start (cache load from disk)
-		cm := GetCacheManager()
+		cm := storage.GetCacheManager()
 		if err := cm.LoadOrBuild(); err != nil {
 			b.Fatalf("LoadOrBuild failed: %v", err)
 		}

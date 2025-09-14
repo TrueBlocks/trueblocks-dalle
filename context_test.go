@@ -1,11 +1,16 @@
 package dalle
 
 import (
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"text/template"
 
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 // --- Test helpers ---
@@ -92,4 +97,71 @@ func TestSave(t *testing.T) {
 	}
 }
 
-// Additional tests for GenerateEnhanced and GenerateImage would require more extensive mocking and are omitted for brevity.
+func TestReloadDatabases_Basic(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage.TestOnlyResetDataDir(tmpDir)
+	ctx := NewContext()
+
+	// Use prompt.DatabaseNames for the test context
+	_ = prompt.DatabaseNames
+
+	if err := ctx.ReloadDatabases("empty"); err != nil {
+		t.Fatalf("error reloading database: %v", err)
+	}
+
+	if len(ctx.Databases) == 0 {
+		t.Error("Databases not loaded")
+	}
+	if got := ctx.Databases["nouns"]; len(got) == 0 {
+		t.Errorf("Database 'nouns' is empty: %v", got)
+	}
+}
+
+func TestToLines_EmptyAndFiltered(t *testing.T) {
+	lines, err := storage.ReadDatabaseCSV("nouns.csv")
+	if err != nil {
+		t.Errorf("Expected nil error, got %v", err)
+	}
+	if len(lines) == 0 {
+		t.Error("Expected at least one line (should append 'none' if empty)")
+	}
+}
+
+func TestDatabaseIntegrationWithCache(t *testing.T) {
+	// Setup isolated test environment
+	tmpDir, err := os.MkdirTemp("", "dalle-db-integration-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Reset global state
+	storage.TestOnlyResetDataDir(tmpDir)
+	storage.TestOnlyResetCacheManager()
+
+	// Create context and reload databases (should use cache)
+	ctx := NewContext()
+	if err := ctx.ReloadDatabases("empty"); err != nil {
+		t.Fatalf("ReloadDatabases failed: %v", err)
+	}
+
+	// Verify databases were loaded
+	if len(ctx.Databases) == 0 {
+		t.Error("Expected databases to be loaded")
+	}
+
+	// Check that cache file was created during database reload
+	cacheFile := filepath.Join(tmpDir, "cache", "databases_v0.1.0.gob")
+	if !file.FileExists(cacheFile) {
+		t.Error("Expected cache file to be created during database reload")
+	}
+
+	// Verify specific database exists
+	if _, exists := ctx.Databases["nouns"]; !exists {
+		t.Error("Expected 'nouns' database to be loaded")
+	}
+
+	if len(ctx.Databases["nouns"]) == 0 {
+		t.Error("Expected 'nouns' database to have records")
+	}
+}

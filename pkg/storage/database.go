@@ -1,4 +1,4 @@
-package dalle
+package storage
 
 import (
 	"archive/tar"
@@ -14,8 +14,8 @@ import (
 //go:embed databases.tar.gz
 var embeddedDbs []byte
 
-// readDatabaseCSV extracts the named CSV file from the embedded .tar.gz and returns its lines.
-func readDatabaseCSV(name string) ([]string, error) {
+// ReadDatabaseCSV extracts the named CSV file from the embedded .tar.gz and returns its lines.
+func ReadDatabaseCSV(name string) ([]string, error) {
 	gzr, err := gzip.NewReader(bytes.NewReader(embeddedDbs))
 	if err != nil {
 		return nil, err

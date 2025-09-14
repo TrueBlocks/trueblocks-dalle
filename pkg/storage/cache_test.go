@@ -1,4 +1,4 @@
-package dalle
+package storage
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
+	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 )
 
 func TestCacheManager_DatabaseCache(t *testing.T) {
@@ -18,7 +18,7 @@ func TestCacheManager_DatabaseCache(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Reset global state for isolated testing
-	storage.TestOnlyResetDataDir(tmpDir)
+	TestOnlyResetDataDir(tmpDir)
 	TestOnlyResetCacheManager()
 
 	// Get cache manager
@@ -31,7 +31,7 @@ func TestCacheManager_DatabaseCache(t *testing.T) {
 
 	// Test that cache was created
 	cacheFile := filepath.Join(tmpDir, "cache", "databases_v0.1.0.gob")
-	if !fileExists(cacheFile) {
+	if !file.FileExists(cacheFile) {
 		t.Error("Expected cache file to be created")
 	}
 
@@ -76,7 +76,7 @@ func TestCacheManager_CacheReuse(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Reset global state
-	storage.TestOnlyResetDataDir(tmpDir)
+	TestOnlyResetDataDir(tmpDir)
 	TestOnlyResetCacheManager()
 
 	// Create cache manager and build cache
@@ -125,7 +125,7 @@ func TestCacheManager_InvalidateCache(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Reset global state
-	storage.TestOnlyResetDataDir(tmpDir)
+	TestOnlyResetDataDir(tmpDir)
 	TestOnlyResetCacheManager()
 
 	// Create cache
@@ -135,7 +135,7 @@ func TestCacheManager_InvalidateCache(t *testing.T) {
 	}
 
 	cacheFile := filepath.Join(tmpDir, "cache", "databases_v0.1.0.gob")
-	if !fileExists(cacheFile) {
+	if !file.FileExists(cacheFile) {
 		t.Fatal("Expected cache file to exist before invalidation")
 	}
 
@@ -145,7 +145,7 @@ func TestCacheManager_InvalidateCache(t *testing.T) {
 	}
 
 	// Verify cache file is removed
-	if fileExists(cacheFile) {
+	if file.FileExists(cacheFile) {
 		t.Error("Expected cache file to be removed after invalidation")
 	}
 
@@ -156,50 +156,5 @@ func TestCacheManager_InvalidateCache(t *testing.T) {
 
 	if cm.loaded {
 		t.Error("Expected loaded flag to be false after invalidation")
-	}
-}
-
-// fileExists is a helper function to check if a file exists
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	return !os.IsNotExist(err)
-}
-
-func TestDatabaseIntegrationWithCache(t *testing.T) {
-	// Setup isolated test environment
-	tmpDir, err := os.MkdirTemp("", "dalle-db-integration-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Reset global state
-	storage.TestOnlyResetDataDir(tmpDir)
-	TestOnlyResetCacheManager()
-
-	// Create context and reload databases (should use cache)
-	ctx := NewContext()
-	if err := ctx.ReloadDatabases("empty"); err != nil {
-		t.Fatalf("ReloadDatabases failed: %v", err)
-	}
-
-	// Verify databases were loaded
-	if len(ctx.Databases) == 0 {
-		t.Error("Expected databases to be loaded")
-	}
-
-	// Check that cache file was created during database reload
-	cacheFile := filepath.Join(tmpDir, "cache", "databases_v0.1.0.gob")
-	if !fileExists(cacheFile) {
-		t.Error("Expected cache file to be created during database reload")
-	}
-
-	// Verify specific database exists
-	if _, exists := ctx.Databases["nouns"]; !exists {
-		t.Error("Expected 'nouns' database to be loaded")
-	}
-
-	if len(ctx.Databases["nouns"]) == 0 {
-		t.Error("Expected 'nouns' database to have records")
 	}
 }

@@ -1,7 +1,8 @@
-package dalle
+package storage
 
 import (
 	"crypto/sha256"
+	_ "embed"
 	"encoding/gob"
 	"fmt"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
 // DatabaseRecord represents a single row from a CSV database
@@ -56,7 +56,7 @@ var (
 func GetCacheManager() *CacheManager {
 	cacheManagerOnce.Do(func() {
 		cacheManager = &CacheManager{
-			cacheDir: filepath.Join(storage.DataDir(), "cache"),
+			cacheDir: filepath.Join(DataDir(), "cache"),
 		}
 	})
 	return cacheManager
@@ -115,7 +115,7 @@ func (cm *CacheManager) extractVersionFromEmbedded() (string, error) {
 	}
 
 	// Read first CSV to extract version
-	lines, err := readDatabaseCSV(prompt.DatabaseNames[0] + ".csv")
+	lines, err := ReadDatabaseCSV(prompt.DatabaseNames[0] + ".csv")
 	if err != nil {
 		return "", fmt.Errorf("failed to read first database: %w", err)
 	}
@@ -211,7 +211,7 @@ func (cm *CacheManager) buildDatabaseCache() (*DatabaseCache, error) {
 
 // buildDatabaseIndex creates an index for a single database
 func (cm *CacheManager) buildDatabaseIndex(dbName string) (DatabaseIndex, error) {
-	lines, err := readDatabaseCSV(dbName + ".csv")
+	lines, err := ReadDatabaseCSV(dbName + ".csv")
 	if err != nil {
 		return DatabaseIndex{}, fmt.Errorf("failed to read %s: %w", dbName, err)
 	}
