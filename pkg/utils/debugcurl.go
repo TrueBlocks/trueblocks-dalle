@@ -1,4 +1,4 @@
-package dalle
+package utils
 
 import (
 	"encoding/json"
@@ -10,11 +10,11 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
-// debugCurl prints a reproducible curl command for an outbound OpenAI request when
+// DebugCurl prints a reproducible curl command for an outbound OpenAI request when
 // TB_DEBUG_CURL is set. Output is sent directly to stdout (no logger decorations)
 // so it can be copy/pasted. Authorization header is redacted unless
 // TB_DEBUG_CURL_REVEAL_KEY is set.
-func debugCurl(label, method, url string, headers map[string]string, body any) {
+func DebugCurl(label, method, url string, headers map[string]string, body any) {
 	if os.Getenv("TB_DEBUG_CURL") == "" {
 		return
 	}
@@ -54,10 +54,10 @@ func debugCurl(label, method, url string, headers map[string]string, body any) {
 	fmt.Fprintf(&b, "# %s\n", label)
 	fmt.Fprintf(&b, "curl -sS -X %s %s \\\n", method, url)
 	for _, k := range keys {
-		fmt.Fprintf(&b, "  -H '%s: %s' \\\n", k, escapeSingleQuotes(h[k]))
+		fmt.Fprintf(&b, "  -H '%s: %s' \\\n", k, EscapeSingleQuotes(h[k]))
 	}
 	if payload != "" {
-		fmt.Fprintf(&b, "  -d '%s'\n", escapeSingleQuotes(payload))
+		fmt.Fprintf(&b, "  -d '%s'\n", EscapeSingleQuotes(payload))
 	} else {
 		// Drop trailing backslash if no body added (remove final two chars: space + backslash + newline rebuild)
 		out := b.String()
@@ -72,7 +72,7 @@ func debugCurl(label, method, url string, headers map[string]string, body any) {
 	logger.Info("CURL", "\n"+out) // also route to logger (decorations temporarily disabled)
 }
 
-func escapeSingleQuotes(s string) string {
+func EscapeSingleQuotes(s string) string {
 	// Within single quotes in POSIX shell, close quote, insert escaped single quote, reopen.
 	return strings.ReplaceAll(s, "'", "'\"'\"'")
 }

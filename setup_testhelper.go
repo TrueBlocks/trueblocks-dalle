@@ -3,7 +3,6 @@ package dalle
 import (
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 )
 
@@ -26,16 +25,10 @@ func SetupTest(t testing.TB, opts SetupTestOptions) {
 	_ = os.Setenv("TB_DALLE_SKIP_IMAGE", "1")
 	t.Cleanup(func() { _ = os.Unsetenv("TB_DALLE_SKIP_IMAGE") })
 	for _, s := range opts.Series {
-		_ = os.WriteFile(filepath.Join(seriesDir(), s+".json"), []byte(`{"suffix":"`+s+`"}`), 0o600)
+		_ = os.WriteFile(filepath.Join(SeriesDir(), s+".json"), []byte(`{"suffix":"`+s+`"}`), 0o600)
 	}
 	_ = os.MkdirAll(OutputDir(), 0o750)
 	if opts.ManagerConfig != nil {
 		ConfigureManager(*opts.ManagerConfig)
 	}
-}
-
-// TestOnlyResetDataDir resets internal directory state so tests can isolate.
-func TestOnlyResetDataDir() {
-	dataDir = ""
-	dataDirOnce = sync.Once{}
 }

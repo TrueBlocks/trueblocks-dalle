@@ -1,4 +1,4 @@
-package dalle
+package utils
 
 import (
 	"testing"
@@ -15,7 +15,7 @@ func TestValidFilename(t *testing.T) {
 		{"file__name", "file_name"},
 	}
 	for _, c := range cases {
-		result := validFilename(c.input)
+		result := ValidFilename(c.input)
 		if result != c.expected {
 			t.Errorf("validFilename(%q) = %q, want %q", c.input, result, c.expected)
 		}
@@ -34,7 +34,7 @@ func TestReverse(t *testing.T) {
 		{"12345", "54321"},
 	}
 	for _, c := range cases {
-		result := reverse(c.input)
+		result := Reverse(c.input)
 		if result != c.expected {
 			t.Errorf("reverse(%q) = %q, want %q", c.input, result, c.expected)
 		}

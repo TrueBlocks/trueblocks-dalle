@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 )
 
 // Phase represents a canonical generation phase.
@@ -52,7 +53,7 @@ type ProgressReport struct {
 	Error         string                  `json:"error"`
 	CacheHit      bool                    `json:"cacheHit"`
 	Phases        []*PhaseTiming          `json:"phases"`
-	DalleDress    *DalleDress             `json:"dalleDress"`
+	DalleDress    *model.DalleDress       `json:"dalleDress"`
 	PhaseAverages map[Phase]time.Duration `json:"phaseAverages"`
 }
 
@@ -86,7 +87,7 @@ type progressRun struct {
 	address  string
 	phases   map[Phase]*PhaseTiming
 	order    []Phase
-	dress    *DalleDress
+	dress    *model.DalleDress
 	start    time.Time
 	current  Phase
 	done     bool
@@ -114,9 +115,9 @@ func loadMetricsLocked(pm *ProgressManager) {
 	if metricsLoaded {
 		return
 	}
-	path := filepath.Join(metricsDir(), metricsFile)
+	path := filepath.Join(MetricsDir(), metricsFile)
 	cleanPath := filepath.Clean(path)
-	if !strings.HasPrefix(cleanPath, filepath.Clean(metricsDir())+string(os.PathSeparator)) && filepath.Base(cleanPath) != metricsFile { // defensive
+	if !strings.HasPrefix(cleanPath, filepath.Clean(MetricsDir())+string(os.PathSeparator)) && filepath.Base(cleanPath) != metricsFile { // defensive
 		metricsLoaded = true
 		return
 	}
@@ -140,8 +141,8 @@ func saveMetricsLocked(pm *ProgressManager) {
 		pm.metrics.Version = "v1"
 	}
 	// Restrict directory permissions (gosec G301)
-	_ = os.MkdirAll(metricsDir(), 0o750)
-	path := filepath.Join(metricsDir(), metricsFile)
+	_ = os.MkdirAll(MetricsDir(), 0o750)
+	path := filepath.Join(MetricsDir(), metricsFile)
 	b, err := json.MarshalIndent(pm.metrics, "", "  ")
 	if err != nil {
 		return
@@ -157,7 +158,7 @@ func saveMetricsLocked(pm *ProgressManager) {
 func key(series, addr string) string { return series + ":" + addr }
 
 // StartRun initializes a run if not present.
-func (pm *ProgressManager) StartRun(series, addr string, dress *DalleDress) {
+func (pm *ProgressManager) StartRun(series, addr string, dress *model.DalleDress) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 	k := key(series, addr)
@@ -371,9 +372,9 @@ func (pm *ProgressManager) maybeArchiveRunLocked(run *progressRun) {
 		}
 	}
 	pm.computePercentETA(pr, run)
-	_ = os.MkdirAll(filepath.Join(metricsDir(), "runs"), 0o750)
+	_ = os.MkdirAll(filepath.Join(MetricsDir(), "runs"), 0o750)
 	fn := fmt.Sprintf("%s_%s_%d.json", run.series, run.address, time.Now().Unix())
-	path := filepath.Join(metricsDir(), "runs", fn)
+	path := filepath.Join(MetricsDir(), "runs", fn)
 	if b, err := json.MarshalIndent(pr, "", "  "); err == nil {
 		_ = os.WriteFile(path, b, 0o600)
 	}
@@ -381,7 +382,7 @@ func (pm *ProgressManager) maybeArchiveRunLocked(run *progressRun) {
 
 // UpdateDress mutates the underlying DalleDress for a run under the manager lock.
 // Use for progress-relevant field changes to reduce race potential when reusing the pointer.
-func (pm *ProgressManager) UpdateDress(series, addr string, fn func(*DalleDress)) {
+func (pm *ProgressManager) UpdateDress(series, addr string, fn func(*model.DalleDress)) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 	if run := pm.runs[key(series, addr)]; run != nil && run.dress != nil {

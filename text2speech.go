@@ -35,7 +35,7 @@ func TextToSpeech(text string, voice string, series string, address string) (str
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute) // using fixed timeout; TODO consider exposing from prompt pkg (deadline was internal)
 	defer cancel()
 
-	reqBody := []byte("{\n\t\"model\": \"tts-1\",\n\t\"input\": " + marshalEscaped(text) + ",\n\t\"voice\": \"" + voice + "\"\n}")
+	reqBody := []byte("{\n\t\"model\": \"tts-1\",\n\t\"input\": " + marshalEscaped(text) + ",\n\t\"voice\": \"" + voice + "\"\n}") // from text2speech.go
 	var resp *http.Response
 	var err error
 	for attempt := 0; ; attempt++ {

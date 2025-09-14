@@ -1,8 +1,5 @@
 package dalle
 
-// Manager and locking utilities migrated from server integration layer so the server
-// can call directly into the dalle module without an adapter facade.
-
 import (
 	"errors"
 	"path/filepath"
@@ -236,13 +233,13 @@ func ListSeries() []string {
 	list := []string{}
 	vFunc := func(fn string, vP any) (bool, error) {
 		if strings.HasSuffix(fn, ".json") {
-			fn = strings.ReplaceAll(fn, seriesDir()+"/", "")
+			fn = strings.ReplaceAll(fn, SeriesDir()+"/", "")
 			fn = strings.ReplaceAll(fn, ".json", "")
 			list = append(list, fn)
 		}
 		return true, nil
 	}
-	_ = walk.ForEveryFileInFolder(seriesDir(), vFunc, nil)
+	_ = walk.ForEveryFileInFolder(SeriesDir(), vFunc, nil)
 	return list
 }
 

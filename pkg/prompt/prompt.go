@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"text/template"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/utils"
 )
 
 // Template strings and compiled templates
@@ -116,11 +118,10 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	// start := time.Now()
-	// debugCurl("OPENAI CHAT (EnhancePrompt)", "POST", url, map[string]string{
-	// 	"Content-Type":  "application/json",
-	// 	"Authorization": "Bearer " + apiKey,
-	// }, payload)
+	utils.DebugCurl("OPENAI CHAT (EnhancePrompt)", "POST", url, map[string]string{
+		"Content-Type":  "application/json",
+		"Authorization": "Bearer " + apiKey,
+	}, payload)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -157,9 +158,4 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 		return prompt, nil
 	}
 	return content, nil
-}
-
-// EnhancePromptWithClient is an exported test hook wrapper used by root package tests to avoid breaking changes.
-func EnhancePromptWithClient(prompt, authorType string, client *http.Client, apiKey string, marshal func(v interface{}) ([]byte, error)) (string, error) {
-	return enhancePromptWithClient(prompt, authorType, client, apiKey, marshal)
 }

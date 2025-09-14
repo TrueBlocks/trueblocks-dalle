@@ -4,6 +4,8 @@ import (
 	"sync"
 	"testing"
 	"text/template"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 )
 
 // --- Test helpers ---
@@ -31,7 +33,7 @@ func minimalContext(t *testing.T) *Context {
 			"gazes":        {"forward,forward"},
 			"backstyles":   {"plain,plain"},
 		},
-		DalleCache: make(map[string]*DalleDress),
+		DalleCache: make(map[string]*model.DalleDress),
 		CacheMutex: sync.Mutex{},
 	}
 }

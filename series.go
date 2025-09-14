@@ -64,7 +64,7 @@ func (s *Series) String() string {
 func (s *Series) SaveSeries(series string, last int) {
 	ss := s
 	ss.Last = last
-	target := filepath.Join(seriesDir(), series+".json") // creates the folder
+	target := filepath.Join(SeriesDir(), series+".json") // creates the folder
 	_ = file.StringToAsciiFile(target, ss.String())
 }
 

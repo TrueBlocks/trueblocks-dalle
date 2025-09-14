@@ -108,7 +108,7 @@ func TestSeries_StringAndSaveSeries(t *testing.T) {
 	}
 	// Save with different last value
 	s.SaveSeries("alpha", 42)
-	fn := filepath.Join(seriesDir(), "alpha.json")
+	fn := filepath.Join(SeriesDir(), "alpha.json")
 	b, err := os.ReadFile(fn)
 	if err != nil {
 		t.Fatalf("reading saved series: %v", err)

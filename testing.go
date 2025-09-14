@@ -6,11 +6,13 @@ import (
 	"io"
 	"net/http"
 	"os"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 )
 
 var (
 	openFile     = os.OpenFile
-	annotateFunc = annotate
+	annotateFunc = model.Annotate
 	httpGet      = http.Get
 	ioCopy       = io.Copy
 )

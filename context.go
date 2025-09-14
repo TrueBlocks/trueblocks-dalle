@@ -9,14 +9,16 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/utils"
 )
 
 // Context holds templates, series, dbs, and cache for prompt generation.
 type Context struct {
 	Series         Series
 	Databases      map[string][]string
-	DalleCache     map[string]*DalleDress
+	DalleCache     map[string]*model.DalleDress
 	CacheMutex     sync.Mutex
 	promptTemplate *template.Template
 	dataTemplate   *template.Template
@@ -41,7 +43,7 @@ func NewContext() *Context {
 		authorTemplate: prompt.AuthorTemplate,
 		Series:         Series{},
 		Databases:      make(map[string][]string),
-		DalleCache:     make(map[string]*DalleDress),
+		DalleCache:     make(map[string]*model.DalleDress),
 	}
 
 	if err := ctx.ReloadDatabases("empty"); err != nil {
@@ -53,7 +55,7 @@ func NewContext() *Context {
 var saveMutex sync.Mutex
 
 // reportOn logs and saves generated prompt data for a given address and location.
-func (ctx *Context) reportOn(dd *DalleDress, addr, loc, ft, value string) {
+func (ctx *Context) reportOn(dd *model.DalleDress, addr, loc, ft, value string) {
 	_ = addr
 	path := filepath.Join(OutputDir(), strings.ToLower(loc))
 
@@ -64,7 +66,7 @@ func (ctx *Context) reportOn(dd *DalleDress, addr, loc, ft, value string) {
 }
 
 // MakeDalleDress builds or retrieves a DalleDress for the given address using the context's templates, series, dbs, and cache.
-func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
+func (ctx *Context) MakeDalleDress(addressIn string) (*model.DalleDress, error) {
 	ctx.CacheMutex.Lock()
 	defer ctx.CacheMutex.Unlock()
 	if ctx.DalleCache[addressIn] != nil {
@@ -75,7 +77,7 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 	// ENS resolution should be handled outside, but you can add it here if needed
 
 	parts := strings.Split(address, ",")
-	seed := parts[0] + reverse(parts[0])
+	seed := parts[0] + utils.Reverse(parts[0])
 	if len(seed) < 66 {
 		return nil, fmt.Errorf("seed length is less than 66")
 	}
@@ -83,12 +85,12 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*DalleDress, error) {
 		seed = seed[2:66]
 	}
 
-	fn := validFilename(address)
+	fn := utils.ValidFilename(address)
 	if ctx.DalleCache[fn] != nil {
 		return ctx.DalleCache[fn], nil
 	}
 
-	dd := DalleDress{
+	dd := model.DalleDress{
 		Original:        addressIn,
 		FileName:        fn,
 		Seed:            seed,

@@ -1,4 +1,4 @@
-package dalle
+package model
 
 type Database struct {
 	ID   string `json:"id"`

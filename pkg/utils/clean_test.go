@@ -1,4 +1,4 @@
-package dalle
+package utils
 
 // Functions to test from clean.go:
 //   - Clean

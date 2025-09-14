@@ -1,9 +1,9 @@
-package dalle
+package utils
 
 import "strings"
 
-// validFilename returns a valid filename from the input string.
-func validFilename(in string) string {
+// ValidFilename returns a valid filename from the input string.
+func ValidFilename(in string) string {
 	invalidChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|"}
 	for _, char := range invalidChars {
 		in = strings.ReplaceAll(in, char, "_")
@@ -13,8 +13,8 @@ func validFilename(in string) string {
 	return in
 }
 
-// reverse returns the reverse of the input string.
-func reverse(s string) string {
+// Reverse returns the reverse of the input string.
+func Reverse(s string) string {
 	runes := []rune(s)
 	n := len(runes)
 	for i := 0; i < n/2; i++ {

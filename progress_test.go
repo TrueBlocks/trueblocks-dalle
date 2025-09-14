@@ -66,7 +66,7 @@ func TestProgressSkipImageAndMetrics(t *testing.T) {
 		t.Errorf("expected annotate phase present")
 	}
 
-	metricsPath := filepath.Join(metricsDir(), "progress_phase_stats.json")
+	metricsPath := filepath.Join(MetricsDir(), "progress_phase_stats.json")
 	if _, err = os.Stat(metricsPath); err != nil {
 		t.Fatalf("expected metrics file: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestProgressCacheHit(t *testing.T) {
 	}
 
 	// Inspect metrics file
-	metricsPath := filepath.Join(metricsDir(), "progress_phase_stats.json")
+	metricsPath := filepath.Join(MetricsDir(), "progress_phase_stats.json")
 	raw, err := os.ReadFile(metricsPath)
 	if err != nil {
 		t.Fatalf("expected metrics file: %v", err)
@@ -259,7 +259,7 @@ func TestProgressFullRun(t *testing.T) {
 		t.Errorf("expected percent ~100 got %f", pr.Percent)
 	}
 	// Metrics file sanity: at least one generation, cache hits should not exceed generations and run report not marked cacheHit.
-	raw, err := os.ReadFile(filepath.Join(metricsDir(), "progress_phase_stats.json"))
+	raw, err := os.ReadFile(filepath.Join(MetricsDir(), "progress_phase_stats.json"))
 	if err != nil {
 		t.Fatalf("read metrics: %v", err)
 	}
@@ -348,8 +348,8 @@ func TestProgressArchive(t *testing.T) {
 	// Force a report fetch to cleanup run state
 	_ = GetProgress("arch", addr)
 
-	// Check archive directory (now always under metricsDir())
-	entries, _ := os.ReadDir(filepath.Join(metricsDir(), "runs"))
+	// Check archive directory (now always under MetricsDir())
+	entries, _ := os.ReadDir(filepath.Join(MetricsDir(), "runs"))
 	found := false
 	for _, e := range entries {
 		if strings.Contains(e.Name(), addr) {

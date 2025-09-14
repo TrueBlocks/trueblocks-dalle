@@ -1,4 +1,4 @@
-package dalle
+package model
 
 import (
 	"fmt"
@@ -17,37 +17,29 @@ import (
 	"github.com/lucasb-eyer/go-colorful"
 )
 
-// annotate reads an image and adds a text annotation to it either at the top
+// Annotate reads an image and adds a text annotation to it either at the top
 // (location == "top") or the bottom (otherwise). The annotation is placed on
 // an appropriately colored background and rendered in a text color that
 // ensures good contrast and readability.
-func annotate(text, fileName, location string, annoPct float64) (ret string, err error) {
-	// Sanitize and restrict the input path to mitigate path traversal (gosec G304)
+func Annotate(text, fileName, location string, annoPct float64) (ret string, err error) {
 	cleanName := filepath.Clean(fileName)
 	if !strings.Contains(cleanName, string(os.PathSeparator)+"generated"+string(os.PathSeparator)) && !strings.HasSuffix(cleanName, string(os.PathSeparator)+"generated"+string(os.PathSeparator)+filepath.Base(cleanName)) {
 		return "", fmt.Errorf("invalid image path: %s", fileName)
 	}
-	file, err := os.Open(cleanName) // #nosec G304 - path validated above
+	file, err := os.Open(cleanName) // #nosec G304 - validated
 	if err != nil {
 		return "", err
 	}
-	defer func() {
-		if cerr := file.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
+	defer file.Close()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
 		return "", err
 	}
-
 	width := img.Bounds().Dx()
 	height := img.Bounds().Dy()
-
 	lenText := len(text)
 	estimatedFontSize := 30. * (float64(width) / float64(lenText*7.))
-
 	textWidth := float64(width) * 0.95
 	lines := math.Ceil(float64(lenText) / (textWidth / estimatedFontSize))
 	marginHeight := float64(height) * 0.025
@@ -85,69 +77,44 @@ func annotate(text, fileName, location string, annoPct float64) (ret string, err
 	}
 	gc.Stroke()
 
-	// Draw the text with adjusted margins.
 	textColor, _ := contrastColor(col)
-
-	gc.SetColor(textColor) // use the contrasting color for the text
+	gc.SetColor(textColor)
 	gc.DrawStringWrapped(text, float64(width)/2, float64(height)+marginHeight*2, 0.5, 0.35, textWidth, 1.5, gg.AlignLeft)
 
-	// Save the new image.
 	outputPath := strings.Replace(fileName, "generated/", "annotated/", -1)
-	// Ensure output path is under annotated/ directory
 	outputPath = filepath.Clean(outputPath)
 	if !strings.Contains(outputPath, string(os.PathSeparator)+"annotated"+string(os.PathSeparator)) {
 		return "", fmt.Errorf("invalid output path: %s", outputPath)
 	}
-	out, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600) // restrictive perms (gosec G306)
+	out, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = out.Close() }()
+	defer out.Close()
 
-	err = png.Encode(out, gc.Image())
-	if err != nil {
+	if err = png.Encode(out, gc.Image()); err != nil {
 		return "", err
 	}
-
 	return outputPath, nil
 }
 
-// darkenColor slightly darkens a given color.
 func darkenColor(c color.Color) color.Color {
 	r, g, b, a := c.RGBA()
 	factor := 0.9
-	// r,g,b,a are 16-bit values in 0..65535; scale then shift to 0..255 before uint8 cast to avoid G115 warning
-	return color.RGBA{
-		R: uint8((uint32(float64(r)*factor) >> 8) & 0xFF),
-		G: uint8((uint32(float64(g)*factor) >> 8) & 0xFF),
-		B: uint8((uint32(float64(b)*factor) >> 8) & 0xFF),
-		A: uint8((a >> 8) & 0xFF),
-	}
+	return color.RGBA{R: uint8((uint32(float64(r)*factor) >> 8) & 0xFF), G: uint8((uint32(float64(g)*factor) >> 8) & 0xFF), B: uint8((uint32(float64(b)*factor) >> 8) & 0xFF), A: uint8((a >> 8) & 0xFF)}
 }
 
-// parseHexColor takes a hexadecimal color string (e.g., "#FFFFFF") and
-// returns an RGBA color with full opacity (alpha value of 255).
 func parseHexColor(s string) (color.Color, error) {
 	c, err := strconv.ParseUint(strings.TrimPrefix(s, "#"), 16, 32)
 	if err != nil {
 		return nil, err
 	}
-	// c is at most 24 bits (parsed with bitSize 32). Mask each component before casting to satisfy G115.
-	return color.RGBA{
-		R: uint8((c >> 16) & 0xFF),
-		G: uint8((c >> 8) & 0xFF),
-		B: uint8(c & 0xFF),
-		A: 0xFF,
-	}, nil
+	return color.RGBA{R: uint8((c >> 16) & 0xFF), G: uint8((c >> 8) & 0xFF), B: uint8(c & 0xFF), A: 0xFF}, nil
 }
 
-// findAverageDominantColor determines the overall dominant color theme of an image by averaging
-// the most prevalent colors. This can be used for generating thumbnails, creating color-based
-// search criteria, or simply for extracting the color theme of an image.
 func findAverageDominantColor(img image.Image) (string, error) {
 	colorFrequency := make(map[colorful.Color]int)
 	bounds := img.Bounds()
-
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			col, ok := colorful.MakeColor(img.At(x, y))
@@ -157,27 +124,19 @@ func findAverageDominantColor(img image.Image) (string, error) {
 			colorFrequency[col]++
 		}
 	}
-
 	type kv struct {
 		Key   colorful.Color
 		Value int
 	}
-
-	// Preallocate slice capacity (prealloc lint)
 	ss := make([]kv, 0, len(colorFrequency))
 	for k, v := range colorFrequency {
 		ss = append(ss, kv{k, v})
 	}
-
-	sort.Slice(ss, func(i, j int) bool {
-		return ss[i].Value > ss[j].Value
-	})
-
+	sort.Slice(ss, func(i, j int) bool { return ss[i].Value > ss[j].Value })
 	topColors := make([]colorful.Color, 0, 3)
 	for i := 0; i < len(ss) && i < 3; i++ {
 		topColors = append(topColors, ss[i].Key)
 	}
-
 	var r, g, b float64
 	for _, col := range topColors {
 		tr, tg, tb := col.RGB255()
@@ -185,27 +144,22 @@ func findAverageDominantColor(img image.Image) (string, error) {
 		g += float64(tg)
 		b += float64(tb)
 	}
-
 	count := float64(len(topColors))
 	avgColor := colorful.Color{R: r / count / 255, G: g / count / 255, B: b / count / 255}
-
 	return avgColor.Hex(), nil
 }
 
-// contrastColor determines a color that contrasts well with the input color, which
-// can be used for text rendering, ensuring readability, or any graphical UI element
-// that requires good contrast against various backgrounds.
 func contrastColor(cIn color.Color) (color.Color, float64) {
 	c, _ := colorful.MakeColor(cIn)
 	_, _, l := c.Hcl()
-	var contrast colorful.Color
 	white := colorful.Color{R: 1, G: 1, B: 1}
 	black := colorful.Color{R: 0, G: 0, B: 0}
+	var contrast colorful.Color
 	if l < 0.5 {
-		contrast = white // c.BlendHcl(white, 0.5)
+		contrast = white
 	} else {
-		contrast = black // c.BlendHcl(black, 0.5)
+		contrast = black
 	}
-	r, g, b := contrast.RGB255()                   // Convert to RGB 0-255 scale
-	return color.RGBA{R: r, G: g, B: b, A: 255}, l // Return as color.RGBA with full opacity
+	r, g, b := contrast.RGB255()
+	return color.RGBA{R: r, G: g, B: b, A: 255}, l
 }

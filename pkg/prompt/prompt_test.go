@@ -111,3 +111,24 @@ func TestEnhancePrompt_EmptyAPIKey(t *testing.T) {
 		t.Errorf("expected 'Enhanced!', got '%v', err: %v", result, err)
 	}
 }
+
+func TestEnhancePromptWithEmptyChoices(t *testing.T) {
+	original := "test prompt"
+	client := &http.Client{Transport: &mockRoundTripper{Resp: &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewBufferString(`{"choices":[]}`)), Header: make(http.Header)}}}
+	out, err := enhancePromptWithClient(original, "", client, "fake-key", json.Marshal)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != original {
+		t.Fatalf("expected fallback to original prompt, got %q", out)
+	}
+}
+
+func TestEnhancePromptWithNon200(t *testing.T) {
+	original := "another prompt"
+	client := &http.Client{Transport: &mockRoundTripper{Resp: &http.Response{StatusCode: 500, Body: io.NopCloser(bytes.NewBufferString(`internal error`)), Header: make(http.Header)}}}
+	_, err := enhancePromptWithClient(original, "", client, "fake-key", json.Marshal)
+	if err == nil {
+		t.Fatal("expected error for non-200 status")
+	}
+}

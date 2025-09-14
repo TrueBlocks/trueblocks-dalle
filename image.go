@@ -16,8 +16,10 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	coreUtils "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/utils"
 )
 
 // errString returns the error string or "<nil>" safely
@@ -51,16 +53,16 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	isLandscape := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "horizontal")
 	isPortrait := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "vertical")
 
-	model := "dall-e-3"
-	// model := "gpt-image-1"
+	modelName := "dall-e-3"
+	// modelName := "gpt-image-1"
 
 	payload := prompt.Request{
 		Prompt: imageData.EnhancedPrompt,
 		N:      1,
-		Model:  model,
+		Model:  modelName,
 	}
 
-	switch model {
+	switch modelName {
 	case "dall-e-3":
 		if isLandscape {
 			payload.Size = "1792x1024"
@@ -81,7 +83,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		}
 		payload.Quality = "high"
 	default:
-		logger.InfoR("image.request.unknown_model", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "model", model)
+		logger.InfoR("image.request.unknown_model", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "model", modelName)
 	}
 
 	logger.Info(
@@ -89,7 +91,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		"series", imageData.Series,
 		"addr", imageData.Address,
 		"file", imageData.Filename,
-		"model", model,
+		"model", modelName,
 		"size", payload.Size,
 		"quality", payload.Quality,
 		"promptLen", len(imageData.EnhancedPrompt),
@@ -122,7 +124,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
-	debugCurl("OPENAI IMAGE (RequestImage)", "POST", url, map[string]string{
+	utils.DebugCurl("OPENAI IMAGE (RequestImage)", "POST", url, map[string]string{
 		"Content-Type":  "application/json",
 		"Authorization": "Bearer " + apiKey,
 	}, payload)
@@ -189,7 +191,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 					return fmt.Errorf("write b64 image: %w", err)
 				}
 				logger.InfoG("image.post.b64_fallback", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "bytes", len(decoded))
-				progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.GeneratedPath = fn; dd.DownloadMode = "b64" })
+				progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *model.DalleDress) { dd.GeneratedPath = fn; dd.DownloadMode = "b64" })
 				progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
 				logger.Info("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "b64")
 				b64Fallback = true
@@ -207,9 +209,9 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		}
 	}
 	logger.InfoG("image.post.parsed", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "dataCount", len(dalleResp.Data))
-	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.ImageURL = imageUrl })
+	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *model.DalleDress) { dd.ImageURL = imageUrl })
 	if !b64Fallback {
-		progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.DownloadMode = "url" })
+		progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *model.DalleDress) { dd.DownloadMode = "url" })
 		progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
 		logger.InfoG("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "url")
 	}
@@ -244,13 +246,13 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		logger.Info("image.annotate.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())
 		return fmt.Errorf("error annotating image: %v", err)
 	}
-	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *DalleDress) { dd.AnnotatedPath = path; dd.GeneratedPath = fn })
+	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *model.DalleDress) { dd.AnnotatedPath = path; dd.GeneratedPath = fn })
 	progressMgr.Transition(imageData.Series, imageData.Address, PhaseAnnotate)
 	logger.InfoG("image.annotate.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "path", strings.TrimSpace(path))
 	logger.InfoG("image.request.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "durMs", msSince(start))
 	if os.Getenv("TB_CMD_LINE") == "true" {
 		// utils.System returns exit code (int); treat non-zero as error condition
-		if code := utils.System("open " + path); code != 0 {
+		if code := coreUtils.System("open " + path); code != 0 {
 			logger.InfoR("image.open.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", fmt.Sprintf("open command exited with code %d", code))
 		}
 	}

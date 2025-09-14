@@ -8,6 +8,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
@@ -148,7 +149,7 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 }
 
 // SortDatabases sorts in place based on field in spec
-func SortDatabases(items []Database, sortSpec sdk.SortSpec) error {
+func SortDatabases(items []model.Database, sortSpec sdk.SortSpec) error {
 	if len(items) < 2 || len(sortSpec.Fields) == 0 {
 		return nil
 	}

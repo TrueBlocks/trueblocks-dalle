@@ -13,6 +13,12 @@ var (
 	dataDir     string
 )
 
+// TestOnlyResetDataDir resets internal directory state (intended for tests).
+func TestOnlyResetDataDir() {
+	dataDir = ""
+	dataDirOnce = sync.Once{}
+}
+
 func initDataDir(flagVal string) {
 	envVal := os.Getenv("TB_DALLE_DATA_DIR")
 	if hasLeadingTilde(flagVal) || hasLeadingTilde(envVal) {
@@ -60,12 +66,12 @@ func DataDir() string { ConfigureDataDir(""); return dataDir }
 
 // Dir helpers (pure functions) derived from a base data directory.
 func OutputDir() string { return filepath.Join(DataDir(), "output") }
-func seriesDir() string {
+func SeriesDir() string {
 	seriesDir := filepath.Join(DataDir(), "series")
 	_ = os.MkdirAll(seriesDir, 0o750)
 	return seriesDir
 }
-func metricsDir() string {
+func MetricsDir() string {
 	metricsDir := filepath.Join(DataDir(), "metrics")
 	_ = os.MkdirAll(metricsDir, 0o750)
 	return metricsDir

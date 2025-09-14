@@ -1,4 +1,4 @@
-package dalle
+package utils
 
 import (
 	"bytes"
@@ -25,7 +25,7 @@ func captureStdout(f func()) string {
 func TestDebugCurlDisabled(t *testing.T) {
 	t.Setenv("TB_DEBUG_CURL", "")
 	out := captureStdout(func() {
-		debugCurl("LABEL", "POST", "https://example.com", map[string]string{"Authorization": "Bearer sk-test"}, map[string]string{"a": "b"})
+		DebugCurl("LABEL", "POST", "https://example.com", map[string]string{"Authorization": "Bearer sk-test"}, map[string]string{"a": "b"})
 	})
 	if out != "" {
 		t.Fatalf("expected no output when disabled, got: %s", out)
@@ -36,7 +36,7 @@ func TestDebugCurlRedactsKey(t *testing.T) {
 	t.Setenv("TB_DEBUG_CURL", "1")
 	t.Setenv("TB_DEBUG_CURL_REVEAL_KEY", "")
 	out := captureStdout(func() {
-		debugCurl("LABEL", "POST", "https://example.com", map[string]string{"Authorization": "Bearer sk-live-abcdef"}, map[string]string{"a": "b"})
+		DebugCurl("LABEL", "POST", "https://example.com", map[string]string{"Authorization": "Bearer sk-live-abcdef"}, map[string]string{"a": "b"})
 	})
 	if !strings.Contains(out, "curl -sS -X POST https://example.com") {
 		t.Fatalf("missing curl line: %s", out)
@@ -54,7 +54,7 @@ func TestDebugCurlRevealKey(t *testing.T) {
 	t.Setenv("TB_DEBUG_CURL_REVEAL_KEY", "1")
 	key := "sk-live-abcdef"
 	out := captureStdout(func() {
-		debugCurl("LABEL", "POST", "https://example.com", map[string]string{"Authorization": "Bearer " + key}, map[string]string{"a": "b"})
+		DebugCurl("LABEL", "POST", "https://example.com", map[string]string{"Authorization": "Bearer " + key}, map[string]string{"a": "b"})
 	})
 	if !strings.Contains(out, key) {
 		t.Fatalf("expected key to be visible when reveal set: %s", out)
@@ -66,7 +66,7 @@ func TestDebugCurlEscaping(t *testing.T) {
 	t.Setenv("TB_DEBUG_CURL_REVEAL_KEY", "")
 	body := map[string]string{"quote": "O'Reilly"}
 	out := captureStdout(func() {
-		debugCurl("LABEL", "POST", "https://example.com", map[string]string{"Authorization": "Bearer sk-x"}, body)
+		DebugCurl("LABEL", "POST", "https://example.com", map[string]string{"Authorization": "Bearer sk-x"}, body)
 	})
 	// Ensure single quote was escaped in output
 	escRe := regexp.MustCompile(`O'"'"'Reilly`)

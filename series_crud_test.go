@@ -88,7 +88,7 @@ func TestSortSeries(t *testing.T) {
 func TestRemoveDeleteUndeleteSeries(t *testing.T) {
 	SetupTest(t, SetupTestOptions{})
 	// Prepare JSON file for suffix
-	writeSeriesFile(t, seriesDir(), "s1", false, 0)
+	writeSeriesFile(t, SeriesDir(), "s1", false, 0)
 	// output dirs
 	outDir := filepath.Join(OutputDir(), "s1")
 	delDir := filepath.Join(OutputDir(), "s1.deleted")
@@ -98,10 +98,10 @@ func TestRemoveDeleteUndeleteSeries(t *testing.T) {
 	if err := os.MkdirAll(delDir, 0o750); err != nil {
 		t.Fatalf("mkdir del: %v", err)
 	}
-	if err := RemoveSeries(seriesDir(), "s1"); err != nil {
+	if err := RemoveSeries(SeriesDir(), "s1"); err != nil {
 		t.Fatalf("RemoveSeries: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(seriesDir(), "s1.json")); !errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filepath.Join(SeriesDir(), "s1.json")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected series file removed")
 	}
 	if _, err := os.Stat(outDir); !errors.Is(err, os.ErrNotExist) {
@@ -112,16 +112,16 @@ func TestRemoveDeleteUndeleteSeries(t *testing.T) {
 	}
 
 	// Recreate for delete / undelete cycle
-	writeSeriesFile(t, seriesDir(), "s2", false, 0)
+	writeSeriesFile(t, SeriesDir(), "s2", false, 0)
 	out2 := filepath.Join(OutputDir(), "s2")
 	if err := os.MkdirAll(out2, 0o750); err != nil {
 		t.Fatalf("mkdir out2: %v", err)
 	}
-	if err := DeleteSeries(seriesDir(), "s2"); err != nil {
+	if err := DeleteSeries(SeriesDir(), "s2"); err != nil {
 		t.Fatalf("DeleteSeries: %v", err)
 	}
 	// JSON should show Deleted true
-	b, _ := os.ReadFile(filepath.Join(seriesDir(), "s2.json"))
+	b, _ := os.ReadFile(filepath.Join(SeriesDir(), "s2.json"))
 	var s Series
 	_ = json.Unmarshal(b, &s)
 	if !s.Deleted {
@@ -134,10 +134,10 @@ func TestRemoveDeleteUndeleteSeries(t *testing.T) {
 		t.Fatalf("expected .deleted dir exists")
 	}
 
-	if err := UndeleteSeries(seriesDir(), "s2"); err != nil {
+	if err := UndeleteSeries(SeriesDir(), "s2"); err != nil {
 		t.Fatalf("UndeleteSeries: %v", err)
 	}
-	b, _ = os.ReadFile(filepath.Join(seriesDir(), "s2.json"))
+	b, _ = os.ReadFile(filepath.Join(SeriesDir(), "s2.json"))
 	// Need a fresh variable because field omitted (omitempty) would not overwrite true value.
 	var s2 Series
 	_ = json.Unmarshal(b, &s2)
