@@ -1,4 +1,4 @@
-package dalle
+package image
 
 import (
 	"bytes"
@@ -17,9 +17,18 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	coreUtils "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/annotate"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/progress"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/utils"
+)
+
+var (
+	openFile     = os.OpenFile
+	annotateFunc = annotate.Annotate
+	httpGet      = http.Get
+	ioCopy       = io.Copy
 )
 
 // errString returns the error string or "<nil>" safely
@@ -43,7 +52,7 @@ type ImageData struct {
 // msSince returns elapsed milliseconds since t.
 func msSince(t time.Time) int64 { return time.Since(t).Milliseconds() }
 
-func RequestImage(outputPath string, imageData *ImageData) error {
+func RequestImage(outputPath string, imageData *ImageData, baseURL string) error {
 	start := time.Now()
 	generated := outputPath
 	_ = file.EstablishFolder(generated)
@@ -113,11 +122,15 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 
 	var imagePostTimeout = 120 * time.Second
 
-	progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageWait)
+	progressMgr := progress.GetProgressManager()
+	progressMgr.Transition(imageData.Series, imageData.Address, progress.PhaseImageWait)
 	ctx, cancel := context.WithTimeout(context.Background(), imagePostTimeout)
 	defer cancel()
 
-	url := openaiAPIURL
+	url := baseURL
+	if url == "" {
+		url = "https://api.openai.com/v1/images/generations"
+	}
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return err
@@ -192,7 +205,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 				}
 				logger.InfoG("image.post.b64_fallback", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "bytes", len(decoded))
 				progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *model.DalleDress) { dd.GeneratedPath = fn; dd.DownloadMode = "b64" })
-				progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
+				progressMgr.Transition(imageData.Series, imageData.Address, progress.PhaseImageDownload)
 				logger.Info("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "b64")
 				b64Fallback = true
 			}
@@ -212,7 +225,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *model.DalleDress) { dd.ImageURL = imageUrl })
 	if !b64Fallback {
 		progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *model.DalleDress) { dd.DownloadMode = "url" })
-		progressMgr.Transition(imageData.Series, imageData.Address, PhaseImageDownload)
+		progressMgr.Transition(imageData.Series, imageData.Address, progress.PhaseImageDownload)
 		logger.InfoG("image.post.mode", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "mode", "url")
 	}
 
@@ -247,7 +260,7 @@ func RequestImage(outputPath string, imageData *ImageData) error {
 		return fmt.Errorf("error annotating image: %v", err)
 	}
 	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *model.DalleDress) { dd.AnnotatedPath = path; dd.GeneratedPath = fn })
-	progressMgr.Transition(imageData.Series, imageData.Address, PhaseAnnotate)
+	progressMgr.Transition(imageData.Series, imageData.Address, progress.PhaseAnnotate)
 	logger.InfoG("image.annotate.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "path", strings.TrimSpace(path))
 	logger.InfoG("image.request.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "durMs", msSince(start))
 	if os.Getenv("TB_CMD_LINE") == "true" {

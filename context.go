@@ -11,6 +11,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/image"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
@@ -202,36 +203,50 @@ func (ctx *Context) GenerateEnhanced(addr string) (string, error) {
 	}
 }
 
-// GenerateImage generates an image for the given address.
-func (ctx *Context) GenerateImage(addr string) (string, error) {
+// GenerateImage generates an image using the DALL-E API.
+func (ctx *Context) GenerateImage(address string) (string, error) {
+	return ctx.GenerateImageWithBaseURL(address, "")
+}
+
+// GenerateImageWithBaseURL generates an image using the DALL-E API with a specific base URL.
+func (ctx *Context) GenerateImageWithBaseURL(address, baseURL string) (string, error) {
+	/* -- OLD CODE
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error(), err
 	} else {
-		suff := ctx.Series.Suffix
-		if ep, eperr := ctx.GenerateEnhanced(addr); eperr != nil {
-			return eperr.Error(), eperr
-		} else {
-			dd.EnhancedPrompt = ep
-		}
-		ctx.reportOn(dd, addr, filepath.Join(suff, "enhanced"), "txt", dd.EnhancedPrompt)
-		_ = ctx.Save(addr)
-		imageData := ImageData{
-			TitlePrompt:    dd.TitlePrompt,
-			TersePrompt:    dd.TersePrompt,
-			EnhancedPrompt: dd.EnhancedPrompt,
-			SeriesName:     ctx.Series.Suffix,
-			Filename:       dd.FileName,
-			Series:         ctx.Series.Suffix,
-			Address:        addr,
-		}
-		// Transition to image_prep prior to network operations if progress run exists
-		progressMgr.Transition(ctx.Series.Suffix, addr, PhaseImagePrep)
-		outputPath := filepath.Join(storage.OutputDir(), imageData.SeriesName, "generated")
-		if err := RequestImage(outputPath, &imageData); err != nil {
-			return err.Error(), err
-		}
-		return dd.EnhancedPrompt, nil
+	suff := ctx.Series.Suffix
+	if ep, eperr := ctx.GenerateEnhanced(addr); eperr != nil {
+		return eperr.Error(), eperr
+	} else {
+		dd.EnhancedPrompt = ep
 	}
+	-- */
+	ctx.CacheMutex.Lock()
+	dd, ok := ctx.DalleCache[address]
+	ctx.CacheMutex.Unlock()
+	if !ok {
+		return "", fmt.Errorf("DalleDress not found in cache for address: %s", address)
+	}
+
+	suff := ctx.Series.Suffix
+	ctx.reportOn(dd, address, filepath.Join(suff, "enhanced"), "txt", dd.EnhancedPrompt)
+	_ = ctx.Save(address)
+	imageData := image.ImageData{
+		EnhancedPrompt: dd.EnhancedPrompt,
+		TersePrompt:    dd.TersePrompt,
+		TitlePrompt:    dd.TitlePrompt,
+		SeriesName:     ctx.Series.Suffix,
+		Filename:       dd.FileName,
+		Series:         ctx.Series.Suffix,
+		Address:        address,
+	}
+
+	generatedPath := filepath.Join(storage.OutputDir(), ctx.Series.Suffix, "generated")
+	if err := image.RequestImage(generatedPath, &imageData, baseURL); err != nil {
+		return "", err
+	}
+
+	return generatedPath, nil
 }
 
 // ReloadDatabases reloads databases applying filters from the specified series suffix.

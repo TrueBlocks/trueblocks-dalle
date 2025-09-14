@@ -12,6 +12,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/walk"
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/progress"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 
@@ -157,6 +158,11 @@ func getContext(series string) (*managedContext, error) {
 // GenerateAnnotatedImage builds (and optionally generates) an annotated image path.
 // The image generation step is skipped if skipImage is true.
 func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time.Duration) (string, error) {
+	return GenerateAnnotatedImageWithBaseURL(series, address, skipImage, lockTTL, "")
+}
+
+// GenerateAnnotatedImageWithBaseURL builds (and optionally generates) an annotated image path with a specific base URL.
+func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, lockTTL time.Duration, baseURL string) (string, error) {
 	start := time.Now()
 	logger.Info("annotated.build.start", "series", series, "addr", address, "skipImage", skipImage)
 	if address == "" {
@@ -171,14 +177,15 @@ func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time
 	// Fast path: if annotated file exists, treat as cache hit (do not acquire new run if another generation not in progress)
 	if file.FileExists(annotatedPath) {
 		// Start a minimal completed progress run if none exists yet
+		progressMgr := progress.GetProgressManager()
 		if progressMgr.GetReport(series, address) == nil { // no active run
 			// We need a DalleDress to attach; attempt to build (cached or new) context
 			if mc, err2 := getContext(series); err2 == nil {
 				if dd, err3 := mc.ctx.MakeDalleDress(address); err3 == nil {
 					progressMgr.StartRun(series, address, dd)
 					progressMgr.MarkCacheHit(series, address)
-					progressMgr.Transition(series, address, PhaseBasePrompts)
-					progressMgr.Transition(series, address, PhaseCompleted)
+					progressMgr.Transition(series, address, progress.PhaseBasePrompts)
+					progressMgr.Transition(series, address, progress.PhaseCompleted)
 					dd.CacheHit = true
 					dd.Completed = true
 					progressMgr.Complete(series, address)
@@ -201,30 +208,31 @@ func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time
 		return "", err
 	}
 	// Start progress tracking (setup already implicitly started when struct created)
+	progressMgr := progress.GetProgressManager()
 	progressMgr.StartRun(series, address, dd)
-	progressMgr.Transition(series, address, PhaseBasePrompts)
+	progressMgr.Transition(series, address, progress.PhaseBasePrompts)
 	if !skipImage {
-		progressMgr.Transition(series, address, PhaseEnhance)
-		if _, err := mc.ctx.GenerateImage(address); err != nil {
+		progressMgr.Transition(series, address, progress.PhaseEnhance)
+		if _, err := mc.ctx.GenerateImageWithBaseURL(address, baseURL); err != nil {
 			progressMgr.Fail(series, address, err)
 			return "", err
 		}
 		// ImagePrep transition happens inside GenerateImage via RequestImage modifications
 	} else {
 		logger.Info("annotated.build.skip_image", "series", series, "addr", address)
-		progressMgr.Skip(series, address, PhaseEnhance)
-		progressMgr.Skip(series, address, PhaseImagePrep)
-		progressMgr.Skip(series, address, PhaseImageWait)
-		progressMgr.Skip(series, address, PhaseImageDownload)
+		progressMgr.Skip(series, address, progress.PhaseEnhance)
+		progressMgr.Skip(series, address, progress.PhaseImagePrep)
+		progressMgr.Skip(series, address, progress.PhaseImageWait)
+		progressMgr.Skip(series, address, progress.PhaseImageDownload)
 	}
 	// Annotation phase managed by RequestImage now; if skipImage we simulate it immediately
 	if skipImage {
-		progressMgr.Transition(series, address, PhaseAnnotate)
+		progressMgr.Transition(series, address, progress.PhaseAnnotate)
 	}
 	out := filepath.Join(storage.OutputDir(), series, "annotated", address+".png")
 	// Mark completion
 	dd.Completed = true
-	progressMgr.Transition(series, address, PhaseCompleted)
+	progressMgr.Transition(series, address, progress.PhaseCompleted)
 	progressMgr.Complete(series, address)
 	logger.InfoG("annotated.build.end", "series", series, "addr", address, "durMs", time.Since(start).Milliseconds())
 	return out, nil

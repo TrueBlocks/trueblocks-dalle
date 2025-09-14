@@ -1,4 +1,4 @@
-package dalle
+package progress
 
 import (
 	"encoding/json"
@@ -106,6 +106,10 @@ type ProgressManager struct {
 
 // global singleton (can be replaced in tests)
 var progressMgr = &ProgressManager{runs: map[string]*progressRun{}, metrics: metricsPersistence{Version: "v1", Phase: map[Phase]*phaseAverage{}}, clock: realClock{}}
+
+func GetProgressManager() *ProgressManager {
+	return progressMgr
+}
 
 const metricsFile = "progress_phase_stats.json"
 const archiveEnv = "TB_DALLE_ARCHIVE_RUNS"

@@ -6,8 +6,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
 )
 
 // DebugCurl prints a reproducible curl command for an outbound OpenAI request when
@@ -20,9 +18,6 @@ func DebugCurl(label, method, url string, headers map[string]string, body any) {
 	}
 
 	// Temporarily toggle off logger decorations for clean curl output (function assumed to toggle state each call)
-	logger.ToggleDecoration()
-	defer logger.ToggleDecoration()
-
 	// Defensive copy & possible redaction
 	h := make(map[string]string, len(headers))
 	for k, v := range headers {
@@ -68,8 +63,7 @@ func DebugCurl(label, method, url string, headers map[string]string, body any) {
 		return
 	}
 	out := b.String()
-	fmt.Print(out)                // raw stdout for copy/paste
-	logger.Info("CURL", "\n"+out) // also route to logger (decorations temporarily disabled)
+	fmt.Print(out) // raw stdout for copy/paste
 }
 
 func EscapeSingleQuotes(s string) string {

@@ -1,4 +1,4 @@
-package dalle
+package image
 
 import (
 	"io"
@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 )
+
+var openaiAPIURL = "https://api.openai.com/v1/images/generations"
 
 func TestRequestImage_Success(t *testing.T) {
 	// Placeholder: Would require refactoring image.go for full dependency injection to test without side effects.
@@ -65,7 +67,6 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 	openaiAPIURL = openaiServer.URL
 	defer func() { openaiAPIURL = oldOpenaiAPIURL }()
 
-	// Patch the OpenAI API endpoint in the function (simulate by replacing the URL in the code if needed)
 	// For this test, we assume the code uses the correct endpoint.
 
 	imgData := &ImageData{
@@ -77,7 +78,7 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 	}
 	// Create a temporary folder for the test
 	outputPath := t.TempDir()
-	err := RequestImage(outputPath, imgData)
+	err := RequestImage(outputPath, imgData, openaiServer.URL)
 	if err != nil {
 		t.Errorf("RequestImage failed: %v", err)
 	}
