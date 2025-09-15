@@ -1,6 +1,7 @@
 .env
 node_modules
 databases
+series
 bin/
 *.exe
 *.test
