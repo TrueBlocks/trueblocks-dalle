@@ -2,7 +2,6 @@ package storage
 
 import (
 	"crypto/sha256"
-	_ "embed"
 	"encoding/gob"
 	"fmt"
 	"os"
