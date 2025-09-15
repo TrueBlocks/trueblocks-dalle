@@ -210,22 +210,18 @@ func (ctx *Context) GenerateImage(address string) (string, error) {
 
 // GenerateImageWithBaseURL generates an image using the DALL-E API with a specific base URL.
 func (ctx *Context) GenerateImageWithBaseURL(address, baseURL string) (string, error) {
-	/* -- OLD CODE
-	if dd, err := ctx.MakeDalleDress(addr); err != nil {
-		return err.Error(), err
-	} else {
-	suff := ctx.Series.Suffix
-	if ep, eperr := ctx.GenerateEnhanced(addr); eperr != nil {
-		return eperr.Error(), eperr
-	} else {
-		dd.EnhancedPrompt = ep
-	}
-	-- */
 	ctx.CacheMutex.Lock()
 	dd, ok := ctx.DalleCache[address]
 	ctx.CacheMutex.Unlock()
 	if !ok {
 		return "", fmt.Errorf("DalleDress not found in cache for address: %s", address)
+	}
+
+	// If the enhanced prompt is empty, generate it.
+	if dd.EnhancedPrompt == "" {
+		if _, err := ctx.GenerateEnhanced(address); err != nil {
+			return "", fmt.Errorf("error generating enhanced prompt: %w", err)
+		}
 	}
 
 	suff := ctx.Series.Suffix
