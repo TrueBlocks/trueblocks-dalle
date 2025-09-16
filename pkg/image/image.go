@@ -153,6 +153,7 @@ func RequestImage(outputPath string, imageData *ImageData, baseURL string) error
 		return err
 	}
 	postDur := time.Since(reqStart)
+
 	if resp.StatusCode == http.StatusOK {
 		logger.InfoG("image.post.recv", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", resp.StatusCode, "durMs", postDur.Milliseconds())
 	} else {
@@ -160,7 +161,7 @@ func RequestImage(outputPath string, imageData *ImageData, baseURL string) error
 	}
 
 	body, readErr := io.ReadAll(resp.Body)
-	if cerr := resp.Body.Close(); cerr != nil && readErr == nil { // capture close error if no prior error (gosec G104)
+	if cerr := resp.Body.Close(); cerr != nil && readErr == nil {
 		readErr = cerr
 	}
 	if readErr != nil {
@@ -169,16 +170,36 @@ func RequestImage(outputPath string, imageData *ImageData, baseURL string) error
 	bodyStr := string(body)
 	body = []byte(bodyStr)
 
+	if resp.StatusCode != http.StatusOK {
+		var openaiErr struct {
+			Error struct {
+				Code    string `json:"code"`
+				Message string `json:"message"`
+				Type    string `json:"type"`
+			} `json:"error"`
+		}
+		code := "OPENAI_ERROR"
+		msg := string(body)
+		if err := json.Unmarshal(body, &openaiErr); err == nil && openaiErr.Error.Code != "" {
+			code = openaiErr.Error.Code
+			msg = openaiErr.Error.Message
+			logger.InfoR("image.post.error_status", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "code", code, "message", msg)
+		} else {
+			logger.InfoR("image.openai_error.unparsed", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "code", code, "raw_body", string(body))
+		}
+		return &prompt.OpenAIAPIError{
+			Message:    fmt.Sprintf("image generation: %s", msg),
+			StatusCode: resp.StatusCode,
+			RequestID:  "unused",
+			Code:       code,
+		}
+	}
+
 	var dalleResp prompt.DalleResponse1
 	err = json.Unmarshal(body, &dalleResp)
 	if err != nil {
 		logger.InfoR("image.post.parse_error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())
 		return err
-	}
-
-	if resp.StatusCode != 200 {
-		logger.InfoR("image.post.error_status", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", resp.StatusCode)
-		return fmt.Errorf("error: %s %d %s", resp.Status, resp.StatusCode, string(body))
 	}
 
 	if len(dalleResp.Data) == 0 {

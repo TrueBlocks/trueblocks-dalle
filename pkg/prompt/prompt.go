@@ -93,8 +93,7 @@ func EnhancePrompt(prompt, authorType string) (string, error) {
 	if apiKey == "" { // no key: skip enhancement silently
 		return prompt, nil
 	}
-	out, err := enhancePromptWithClient(prompt, authorType, &http.Client{}, apiKey, json.Marshal)
-	return out, err
+	return enhancePromptWithClient(prompt, authorType, &http.Client{}, apiKey, json.Marshal)
 }
 
 // enhancePromptWithClient is like EnhancePrompt but allows injecting an HTTP client, API key, and marshal function (for testing).
@@ -133,7 +132,30 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 		if len(bodyBytes) > 512 { // truncate to keep logs readable
 			bodyBytes = bodyBytes[:512]
 		}
-		return "", fmt.Errorf("enhance prompt: status %d: %s", resp.StatusCode, string(bodyBytes))
+		// Try to parse error code from JSON
+		var openaiErr struct {
+			Error struct {
+				Code    string `json:"code"`
+				Message string `json:"message"`
+				Type    string `json:"type"`
+			} `json:"error"`
+		}
+		code := "OPENAI_ERROR"
+		msg := string(bodyBytes)
+		if err := json.Unmarshal(bodyBytes, &openaiErr); err == nil && openaiErr.Error.Code != "" {
+			code = openaiErr.Error.Code
+			msg = openaiErr.Error.Message
+			fmt.Printf("[DEBUG] OpenAI error code parsed: %s, message: %s\n", code, msg)
+		} else {
+			fmt.Printf("[DEBUG] OpenAI error code NOT parsed, fallback code: %s, raw body: %s\n", code, string(bodyBytes))
+		}
+		// Return a proper OpenAIAPIError so metrics and logging can extract the code
+		return "", &OpenAIAPIError{
+			Message:    fmt.Sprintf("enhance prompt: %s", msg),
+			StatusCode: resp.StatusCode,
+			RequestID:  "unused",
+			Code:       code,
+		}
 	}
 
 	body, err := io.ReadAll(resp.Body)
