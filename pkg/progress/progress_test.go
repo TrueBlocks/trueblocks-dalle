@@ -125,11 +125,22 @@ func TestProgressManager_Fail(t *testing.T) {
 	pm.Fail(series, addr, fmt.Errorf("%s", errMsg))
 
 	report := pm.GetReport(series, addr)
-	if !report.Done {
-		t.Error("expected run to be done")
+	if report.Current != PhaseFailed {
+		t.Errorf("expected current phase to be 'failed', got %s", report.Current)
+	}
+	if report.Done {
+		t.Error("expected run to NOT be done yet after first fail report")
 	}
 	if report.Error != errMsg {
 		t.Errorf("expected error message '%s', got '%s'", errMsg, report.Error)
+	}
+
+	report2 := progressMgr.GetReport(series, addr)
+	if report2.Current != PhaseCompleted {
+		t.Errorf("expected current phase to be 'completed' after fail, got %s", report2.Current)
+	}
+	if !report2.Done {
+		t.Error("expected run to be done after second fail report")
 	}
 
 	// After getting a report for a failed run, it should be pruned

@@ -25,12 +25,13 @@ const (
 	PhaseImageWait     Phase = "image_wait"
 	PhaseImageDownload Phase = "image_download"
 	PhaseAnnotate      Phase = "annotate"
+	PhaseFailed        Phase = "failed"
 	PhaseCompleted     Phase = "completed"
 )
 
 // OrderedPhases defines the progression order (including completed terminal for simplicity).
 var OrderedPhases = []Phase{
-	PhaseSetup, PhaseBasePrompts, PhaseEnhance, PhaseImagePrep, PhaseImageWait, PhaseImageDownload, PhaseAnnotate, PhaseCompleted,
+	PhaseSetup, PhaseBasePrompts, PhaseEnhance, PhaseImagePrep, PhaseImageWait, PhaseImageDownload, PhaseAnnotate, PhaseFailed, PhaseCompleted,
 }
 
 // PhaseTiming captures timing and status per phase.
@@ -255,23 +256,16 @@ func (pm *ProgressManager) Fail(series, addr string, err error) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 	run := pm.runs[key(series, addr)]
-	if run == nil || run.done {
+	if run == nil {
 		return
 	}
 	run.err = err.Error()
-	run.done = true
 	now := pm.clock.Now().UnixNano()
 	cur := run.phases[run.current]
 	if cur.StartedNs != 0 && cur.EndedNs == 0 {
 		cur.EndedNs = now
 	}
-	comp := run.phases[PhaseCompleted]
-	if comp.StartedNs == 0 {
-		comp.StartedNs = now
-	}
-	if comp.EndedNs == 0 {
-		comp.EndedNs = now
-	}
+	run.current = PhaseFailed
 	logger.InfoR("phase.fail", "series", series, "addr", addr, "at", run.current, "error", err.Error())
 
 	var phasesDone int
@@ -323,7 +317,6 @@ func (pm *ProgressManager) MarkCacheHit(series, addr string) {
 	if !run.cacheHit {
 		run.cacheHit = true
 		pm.metrics.CacheHits++
-		// Persist immediately so pure cache-hit runs (with no phase averages) still write metrics file
 		saveMetricsLocked(pm)
 	}
 }
@@ -336,7 +329,20 @@ func (pm *ProgressManager) GetReport(series, addr string) *ProgressReport {
 	if run == nil {
 		return nil
 	}
-	pr := &ProgressReport{Series: run.series, Address: run.address, Current: run.current, StartedNs: run.start.UnixNano(), Done: run.done, Error: run.err, CacheHit: run.cacheHit}
+	pr := &ProgressReport{
+		Series:        run.series,
+		Address:       run.address,
+		Current:       run.current,
+		StartedNs:     run.start.UnixNano(),
+		Percent:       0,
+		ETASeconds:    0,
+		Done:          run.done,
+		Error:         run.err,
+		CacheHit:      run.cacheHit,
+		Phases:        []*PhaseTiming{},
+		DalleDress:    run.dress,
+		PhaseAverages: map[Phase]time.Duration{},
+	}
 	for _, ph := range run.order {
 		p := run.phases[ph]
 		cp := *p
@@ -351,6 +357,22 @@ func (pm *ProgressManager) GetReport(series, addr string) *ProgressReport {
 		}
 	}
 	pm.computePercentETA(pr, run)
+
+	// If in PhaseFailed, return failed report, then mark as completed
+	if run.current == PhaseFailed && !run.done {
+		run.done = true
+		now := pm.clock.Now().UnixNano()
+		comp := run.phases[PhaseCompleted]
+		if comp.StartedNs == 0 {
+			comp.StartedNs = now
+		}
+		if comp.EndedNs == 0 {
+			comp.EndedNs = now
+		}
+		run.current = PhaseCompleted
+		logger.InfoG("phase.complete", "series", series, "addr", addr)
+	}
+
 	if run.done {
 		delete(pm.runs, key(series, addr))
 	}
