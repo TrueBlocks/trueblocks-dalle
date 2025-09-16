@@ -135,16 +135,13 @@ func TestProgressManager_Fail(t *testing.T) {
 		t.Errorf("expected error message '%s', got '%s'", errMsg, report.Error)
 	}
 
-	report2 := progressMgr.GetReport(series, addr)
-	if report2.Current != PhaseCompleted {
-		t.Errorf("expected current phase to be 'completed' after fail, got %s", report2.Current)
+	// Second call should return nil because failed run is pruned after first report
+	report2 := pm.GetReport(series, addr)
+	if report2 != nil {
+		t.Error("expected nil report after failed run already reported")
 	}
-	if !report2.Done {
-		t.Error("expected run to be done after second fail report")
-	}
-
-	// After getting a report for a failed run, it should be pruned
+	// Ensure run is pruned
 	if _, exists := pm.runs[key(series, addr)]; exists {
-		t.Error("failed run should be pruned after report")
+		t.Error("failed run should be pruned after first report")
 	}
 }

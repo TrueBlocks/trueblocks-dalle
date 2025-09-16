@@ -358,7 +358,6 @@ func (pm *ProgressManager) GetReport(series, addr string) *ProgressReport {
 	}
 	pm.computePercentETA(pr, run)
 
-	// If in PhaseFailed, return failed report, then mark as completed
 	if run.current == PhaseFailed && !run.done {
 		run.done = true
 		now := pm.clock.Now().UnixNano()
@@ -376,6 +375,7 @@ func (pm *ProgressManager) GetReport(series, addr string) *ProgressReport {
 	if run.done {
 		delete(pm.runs, key(series, addr))
 	}
+
 	return pr
 }
 
