@@ -1,6 +1,6 @@
-# trueblocks-dalle
+# Dalle Go Package
 
-**Trueblocks Dalle** is a Go package for generating, enhancing, and annotating creative prompts and images, powering the TrueBlocks Dalle application. It combines attribute-driven prompt generation, OpenAI integration, and image annotation in a modular, testable, and extensible design.
+**Trueblocks Dalle** is a Go package for generating, enhancing, and annotating creative prompts and images, powering a Dalle application. It combines attribute-driven prompt generation, OpenAI integration, and image annotation in a modular, testable, and extensible design.
 
 ---
 
@@ -22,7 +22,7 @@
 | File/Folder     | Purpose                                     |
 | --------------- | ------------------------------------------- |
 | `attribute.go`  | Attribute struct and constructor            |
-| `dalledress.go` | DalleDress struct and prompt logic          |
+| `dresses.go`    | DalleDress struct and prompt logic          |
 | `series.go`     | Series struct and attribute set management  |
 | `openai.go`     | OpenAI request/response types               |
 | `prompt.go`     | Prompt enhancement with OpenAI              |
@@ -41,14 +41,14 @@
 ### Prerequisites
 
 - Go 1.23+
-- [TrueBlocks Core](https://github.com/TrueBlocks/trueblocks-core)
+- [Core](https://github.com/TrueBlocks/trueblocks-core)
 - [OpenAI API Key](https://platform.openai.com/account/api-keys)
 - [gg](https://github.com/fogleman/gg) and [go-colorful](https://github.com/lucasb-eyer/go-colorful) for image annotation
 
 ### Getting Started
 
 ```bash
-git clone https://github.com/TrueBlocks/trueblocks-dalle.git
+git clone https://github.com/TrueBlocks/trueblocks-dalle/v2.git
 cd trueblocks-dalle
 go mod tidy
 export OPENAI_API_KEY=sk-...yourkey...
@@ -61,7 +61,7 @@ export OPENAI_API_KEY=sk-...yourkey...
 **Basic Prompt Generation:**
 
 ```go
-import "github.com/TrueBlocks/trueblocks-dalle/v2/pkg/dalle"
+import "github.com/TrueBlocks/trueblocks-dalledress/pkg/dalle"
 
 ctx := dalle.NewContext("output")
 dd, err := ctx.MakeDalleDress("0x1234...")
@@ -121,7 +121,7 @@ This project is licensed under the **GNU GPL v3**. See [LICENSE](./LICENSE).
 
 ## 👩‍💻 Credits
 
-- TrueBlocks contributors
+- Contributors
 - Thanks to [gg](https://github.com/fogleman/gg), [go-colorful](https://github.com/lucasb-eyer/go-colorful), and [OpenAI](https://openai.com/).
 
 ---
@@ -136,7 +136,7 @@ This project is licensed under the **GNU GPL v3**. See [LICENSE](./LICENSE).
 
 ---
 
-## 🌈 Why trueblocks-dalle?
+## 🌈 Why Use Dalle Go Package?
 
 - **Modular:** Swap templates, attributes, or models easily.
 - **Transparent:** Open, testable, and well-documented.
