@@ -62,5 +62,5 @@ func (e *OpenAIAPIError) Error() string {
 
 // IsRetryable determines if this error should be retried
 func (e *OpenAIAPIError) IsRetryable() bool {
-	return IsOpenAIRetryableError(fmt.Errorf(e.Message), e.StatusCode)
+	return IsOpenAIRetryableError(fmt.Errorf("%s", e.Message), e.StatusCode)
 }

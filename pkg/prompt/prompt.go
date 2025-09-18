@@ -126,7 +126,7 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		if len(bodyBytes) > 512 { // truncate to keep logs readable

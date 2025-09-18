@@ -14,7 +14,7 @@ func BenchmarkDatabaseLoad_WithoutCache(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	b.ResetTimer()
 
@@ -42,7 +42,7 @@ func BenchmarkDatabaseLoad_WithCache(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Reset global state
 	storage.TestOnlyResetDataDir(tmpDir)
@@ -72,7 +72,7 @@ func BenchmarkFullDatabaseReload_WithoutCache(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	b.ResetTimer()
 
@@ -103,7 +103,7 @@ func BenchmarkFullDatabaseReload_WithCache(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Reset global state and pre-build cache
 	storage.TestOnlyResetDataDir(tmpDir)
@@ -145,7 +145,7 @@ func BenchmarkCacheManagerLoadOrBuild_ColdStart(b *testing.B) {
 		}
 
 		b.StopTimer()
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 	}
 }
 
@@ -155,7 +155,7 @@ func BenchmarkCacheManagerLoadOrBuild_WarmStart(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	storage.TestOnlyResetDataDir(tmpDir)
 

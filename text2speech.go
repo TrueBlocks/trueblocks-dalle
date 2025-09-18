@@ -84,7 +84,7 @@ func TextToSpeech(text string, voice string, series string, address string) (str
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := io.Copy(f, resp.Body); err != nil {
 		return "", err
 	}

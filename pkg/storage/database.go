@@ -20,7 +20,7 @@ func ReadDatabaseCSV(name string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer gzr.Close()
+	defer func() { _ = gzr.Close() }()
 
 	tr := tar.NewReader(gzr)
 	for {

@@ -322,7 +322,7 @@ func (ctx *Context) loadDatabaseFallback(db, filter string) error {
 
 	// Remove version prefixes
 	for i := range lines {
-		lines[i] = strings.Replace(lines[i], "v0.1.0,", "", -1)
+		lines[i] = strings.ReplaceAll(lines[i], "v0.1.0,", "")
 	}
 
 	if len(lines) > 0 {

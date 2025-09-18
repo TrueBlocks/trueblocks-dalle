@@ -3,6 +3,7 @@ package image
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,8 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"encoding/base64"
 
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
 	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
@@ -56,7 +55,7 @@ func RequestImage(outputPath string, imageData *ImageData, baseURL string) error
 	start := time.Now()
 	generated := outputPath
 	_ = file.EstablishFolder(generated)
-	annotated := strings.Replace(generated, "/generated", "/annotated", -1)
+	annotated := strings.ReplaceAll(generated, "/generated", "/annotated")
 	_ = file.EstablishFolder(annotated)
 
 	isLandscape := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "horizontal")
@@ -120,7 +119,7 @@ func RequestImage(outputPath string, imageData *ImageData, baseURL string) error
 		return nil
 	}
 
-	var imagePostTimeout = 120 * time.Second
+	imagePostTimeout := 120 * time.Second
 
 	progressMgr := progress.GetProgressManager()
 	progressMgr.Transition(imageData.Series, imageData.Address, progress.PhaseImageWait)
@@ -258,14 +257,14 @@ func RequestImage(outputPath string, imageData *ImageData, baseURL string) error
 			logger.InfoR("image.download.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", errString(err))
 			return err
 		}
-		defer imageResp.Body.Close()
+		defer func() { _ = imageResp.Body.Close() }()
 
 		_ = os.Remove(fn)
 		file, err := openFile(fn, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 		if err != nil {
 			return fmt.Errorf("failed to open file: %s", fn)
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		written, err := ioCopy(file, imageResp.Body)
 		if err != nil {

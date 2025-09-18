@@ -30,7 +30,7 @@ func Annotate(text, fileName, location string, annoPct float64) (ret string, err
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
@@ -81,7 +81,7 @@ func Annotate(text, fileName, location string, annoPct float64) (ret string, err
 	gc.SetColor(textColor)
 	gc.DrawStringWrapped(text, float64(width)/2, float64(height)+marginHeight*2, 0.5, 0.35, textWidth, 1.5, gg.AlignLeft)
 
-	outputPath := strings.Replace(fileName, "generated/", "annotated/", -1)
+	outputPath := strings.ReplaceAll(fileName, "generated/", "annotated/")
 	outputPath = filepath.Clean(outputPath)
 	if !strings.Contains(outputPath, string(os.PathSeparator)+"annotated"+string(os.PathSeparator)) {
 		return "", fmt.Errorf("invalid output path: %s", outputPath)
@@ -90,7 +90,7 @@ func Annotate(text, fileName, location string, annoPct float64) (ret string, err
 	if err != nil {
 		return "", err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	if err = png.Encode(out, gc.Image()); err != nil {
 		return "", err

@@ -15,7 +15,7 @@ func TestCacheManager_DatabaseCache(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Reset global state for isolated testing
 	TestOnlyResetDataDir(tmpDir)
@@ -73,7 +73,7 @@ func TestCacheManager_CacheReuse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Reset global state
 	TestOnlyResetDataDir(tmpDir)
@@ -122,7 +122,7 @@ func TestCacheManager_InvalidateCache(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Reset global state
 	TestOnlyResetDataDir(tmpDir)
