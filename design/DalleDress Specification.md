@@ -4,8 +4,6 @@ Overall Structure
 
 The application consists of the following main components and their relationships:
 
- 
-
 Hierarchy of the Components
 
 The hierarchy of the components is as follows:
