@@ -28,9 +28,10 @@ var DatabaseNames = []string{
 	"colors",
 	"colors",
 	"colors",
-	"orientations",
+	"viewpoint",
 	"gazes",
 	"backstyles",
+	"composition",
 }
 
 var attributeNames = []string{
@@ -46,9 +47,10 @@ var attributeNames = []string{
 	"color1",
 	"color2",
 	"color3",
-	"orientation",
+	"viewpoint",
 	"gaze",
 	"backStyle",
+	"composition",
 }
 
 // AttributeNames returns the list of attribute names (for test and compatibility).

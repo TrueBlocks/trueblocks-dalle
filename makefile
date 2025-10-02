@@ -11,10 +11,8 @@ update: build-db
 build-db:
 	@echo "Building databases.tar.gz..."
 	@cd pkg/storage && tar -czf databases.tar.gz databases
-	@tar -tzf pkg/storage/databases.tar.gz
 	@echo "Building series.tar.gz..."
 	@cd pkg/storage && tar -czf series.tar.gz series
-	@tar -tzf pkg/storage/series.tar.gz
 
 lint:
 	@golangci-lint run

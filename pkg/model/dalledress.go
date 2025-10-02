@@ -176,8 +176,8 @@ func (dd *DalleDress) Color(short bool, which int) string {
 	return parts[1] + " (" + parts[0] + ")"
 }
 
-func (dd *DalleDress) Orientation(short bool) string {
-	val := dd.AttribMap["orientation"].Value
+func (dd *DalleDress) Viewpoint(short bool) string {
+	val := dd.AttribMap["viewpoint"].Value
 	if short {
 		parts := strings.Split(val, ",")
 		return parts[0]
@@ -186,6 +186,18 @@ func (dd *DalleDress) Orientation(short bool) string {
 	ret = strings.ReplaceAll(ret, "[{ORI}]", strings.ReplaceAll(val, ",", " and "))
 	ret = strings.ReplaceAll(ret, "[{NOUN}]", dd.Noun(true))
 	ret = strings.ReplaceAll(ret, "[{GAZE}]", dd.Gaze(true))
+	return ret
+}
+
+func (dd *DalleDress) Composition(short bool) string {
+	val := dd.AttribMap["composition"].Value
+	if short {
+		parts := strings.Split(val, ",")
+		return parts[0]
+	}
+	ret := `Compose the scene using [{COMP}] and ensure the [{NOUN}] follows this visual structure`
+	ret = strings.ReplaceAll(ret, "[{COMP}]", strings.ReplaceAll(val, ",", " and "))
+	ret = strings.ReplaceAll(ret, "[{NOUN}]", dd.Noun(true))
 	return ret
 }
 

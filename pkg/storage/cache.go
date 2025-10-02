@@ -72,7 +72,9 @@ func (cm *CacheManager) LoadOrBuild() error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
+	logger.InfoG(fmt.Sprintf("DEBUG: LoadOrBuild called, loaded=%t", cm.loaded))
 	if cm.loaded {
+		logger.InfoG("DEBUG: Cache already loaded, skipping")
 		return nil
 	}
 
@@ -139,6 +141,7 @@ func (cm *CacheManager) extractVersionFromEmbedded() (string, error) {
 func (cm *CacheManager) loadOrBuildDatabaseCache() error {
 	// Calculate current embedded data hash
 	embeddedHash := fmt.Sprintf("%x", sha256.Sum256(embeddedDbs))
+	logger.InfoG(fmt.Sprintf("DEBUG: Current embedded hash: %s (size: %d bytes)", embeddedHash[:16], len(embeddedDbs)))
 
 	// Extract version from first database to determine cache filename
 	version, err := cm.extractVersionFromEmbedded()
@@ -146,19 +149,55 @@ func (cm *CacheManager) loadOrBuildDatabaseCache() error {
 		logger.Error("Failed to extract version, using default:", err)
 		version = "v0.1.0"
 	}
+	logger.InfoG(fmt.Sprintf("DEBUG: Extracted version: %s", version))
 
 	// Try to load existing cache with versioned filename
 	cacheFile := filepath.Join(cm.cacheDir, fmt.Sprintf("databases_%s.gob", version))
+	logger.InfoG(fmt.Sprintf("DEBUG: Looking for cache file: %s", cacheFile))
+
 	if file.FileExists(cacheFile) {
+		logger.InfoG("DEBUG: Cache file exists, attempting to load")
 		if cache, err := cm.loadDatabaseCache(cacheFile); err == nil {
-			// Verify cache is still valid
-			if cache.SourceHash == embeddedHash {
+			logger.InfoG(fmt.Sprintf("DEBUG: Loaded cache - stored hash: %s", cache.SourceHash[:16]))
+
+			// Check if database names match (detect schema changes)
+			expectedDBs := make(map[string]bool)
+			for _, name := range prompt.DatabaseNames {
+				expectedDBs[name] = true
+			}
+
+			schemaMismatch := false
+			if len(cache.Databases) != len(expectedDBs) {
+				schemaMismatch = true
+				logger.InfoG(fmt.Sprintf("DEBUG: Database count mismatch - cached: %d, expected: %d", len(cache.Databases), len(expectedDBs)))
+			} else {
+				for cachedDB := range cache.Databases {
+					if !expectedDBs[cachedDB] {
+						schemaMismatch = true
+						logger.InfoG(fmt.Sprintf("DEBUG: Unexpected database in cache: %s", cachedDB))
+						break
+					}
+				}
+			}
+
+			// Verify cache is still valid (both hash and schema)
+			if !schemaMismatch && cache.SourceHash == embeddedHash {
 				cm.dbCache = cache
 				logger.Info("Loaded database cache", "version", cache.Version, "count", len(cache.Databases))
 				return nil
 			}
-			logger.Info("Database cache outdated, rebuilding", "cached", cache.SourceHash[:8], "current", embeddedHash[:8])
+
+			if schemaMismatch {
+				logger.Info("Database schema changed, rebuilding cache", "cached", len(cache.Databases), "expected", len(expectedDBs))
+			} else {
+				logger.Info("Database cache outdated, rebuilding", "cached", cache.SourceHash[:8], "current", embeddedHash[:8])
+			}
+			logger.InfoG(fmt.Sprintf("DEBUG: Full hash comparison - cached: %s, current: %s", cache.SourceHash, embeddedHash))
+		} else {
+			logger.InfoG(fmt.Sprintf("DEBUG: Failed to load cache file: %v", err))
 		}
+	} else {
+		logger.InfoG("DEBUG: Cache file does not exist")
 	}
 
 	// Build new cache
@@ -169,11 +208,14 @@ func (cm *CacheManager) loadOrBuildDatabaseCache() error {
 	}
 
 	cache.SourceHash = embeddedHash
+	logger.InfoG(fmt.Sprintf("DEBUG: Saving cache with hash: %s", embeddedHash[:16]))
 
 	// Save cache to disk with versioned filename
 	if err := cm.saveDatabaseCache(cacheFile, cache); err != nil {
 		logger.Error("Failed to save database cache:", err)
 		// Continue with in-memory cache
+	} else {
+		logger.InfoG(fmt.Sprintf("DEBUG: Successfully saved cache to: %s", cacheFile))
 	}
 
 	cm.dbCache = cache

@@ -26,7 +26,8 @@ Action: {{.Action false}}.
 Artistic style: {{.ArtStyle false 1}}.
 {{if .HasLitStyle}}Literary Style: {{.LitStyle false}}.
 {{end}}Use only the colors {{.Color true 1}} and {{.Color true 2}}.
-{{.Orientation false}}.
+{{.Viewpoint false}}.
+{{.Composition false}}.
 {{.BackStyle false}}.
 
 Emphasize the emotional aspect of the image. Look deeply into and expand upon the
@@ -45,9 +46,10 @@ Action:        	    {{.Action true}}
 ArtStyle 1:         {{.ArtStyle true 1}}
 ArtStyle 2:         {{.ArtStyle true 2}}
 {{if .HasLitStyle}}LitStyle:           {{.LitStyle false}}
-{{end}}Orientation:        {{.Orientation true}}
+{{end}}Viewpoint:          {{.Viewpoint true}}
 Gaze:               {{.Gaze true}}
 BackStyle:          {{.BackStyle true}}
+Composition:        {{.Composition true}}
 Color 1:            {{.Color false 1}}
 Color 2:            {{.Color false 2}}
 Color 3:            {{.Color false 3}}
@@ -64,9 +66,10 @@ Action (full):      {{.Action false}}
 ArtStyle 1 (full):  {{.ArtStyle false 1}}
 ArtStyle 2 (full):  {{.ArtStyle false 2}}
 {{if .HasLitStyle}}LitStyle (full):    {{.LitStyle true}}
-{{end}}Orientation (full): {{.Orientation false}}
+{{end}}Viewpoint (full):   {{.Viewpoint false}}
 Gaze (full):        {{.Gaze false}}
-BackStyle:          {{.BackStyle false}}`
+BackStyle:          {{.BackStyle false}}
+Composition (full): {{.Composition false}}`
 
 const terseTemplateStr = `{{.Adverb false}} {{.Adjective false}} {{.Noun true}} with human-like characteristics feeling {{.Emotion false}}{{.Occupation false}} in the style of {{.ArtStyle true 1}}`
 
