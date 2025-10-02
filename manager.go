@@ -2,6 +2,7 @@ package dalle
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -137,14 +138,27 @@ func rebuildOrder() {
 func getContext(series string) (*managedContext, error) {
 	contextManager.Lock()
 	defer contextManager.Unlock()
+	logger.Info(fmt.Sprintf("getContext: Requested context for series '%s'", series))
+
 	if mc, ok := contextManager.items[series]; ok {
+		logger.Info(fmt.Sprintf("getContext: Found existing context for series '%s'", series))
 		mc.lastUsed = time.Now()
 		bumpOrder(series)
 		return mc, nil
 	}
+
+	logger.Info(fmt.Sprintf("getContext: Creating new context for series '%s'", series))
 	c := NewContext()
 	if s, err := c.loadSeries(series); err == nil {
+		logger.Info(fmt.Sprintf("getContext: Successfully loaded series data for '%s'", series))
 		c.Series = s
+		if err := c.ReloadDatabases(series); err != nil {
+			logger.Error(fmt.Sprintf("getContext: Failed to reload databases with series '%s': %v", series, err))
+		} else {
+			logger.Info(fmt.Sprintf("getContext: Successfully reloaded databases with series '%s' filters", series))
+		}
+	} else {
+		logger.Error(fmt.Sprintf("getContext: Failed to load series data for '%s': %v", series, err))
 	}
 	c.Series.Suffix = series
 
@@ -152,6 +166,7 @@ func getContext(series string) (*managedContext, error) {
 	contextManager.items[series] = mc
 	contextManager.order = append(contextManager.order, series)
 	enforceContextLimits()
+	logger.Info(fmt.Sprintf("getContext: Context created and cached for series '%s'", series))
 	return mc, nil
 }
 
@@ -165,6 +180,8 @@ func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time
 func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, lockTTL time.Duration, baseURL string) (string, error) {
 	start := time.Now()
 	logger.Info("annotated.build.start", "series", series, "addr", address, "skipImage", skipImage)
+	logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Starting generation for series='%s', address='%s', skipImage=%v", series, address, skipImage))
+
 	if address == "" {
 		return "", errors.New("address required")
 	}
@@ -174,8 +191,11 @@ func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, l
 	}
 	key := series + ":" + address
 	annotatedPath := filepath.Join(storage.OutputDir(), series, "annotated", address+".png")
+	logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Target annotated path: %s", annotatedPath))
+
 	// Fast path: if annotated file exists, treat as cache hit (do not acquire new run if another generation not in progress)
 	if file.FileExists(annotatedPath) {
+		logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Found existing annotated image at %s (cache hit)", annotatedPath))
 		// Start a minimal completed progress run if none exists yet
 		progressMgr := progress.GetProgressManager()
 		if progressMgr.GetReport(series, address) == nil { // no active run
@@ -195,18 +215,26 @@ func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, l
 		return annotatedPath, nil
 	}
 	if !acquireLock(key, lockTTL) {
+		logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Could not acquire lock for key '%s', another generation may be in progress", key))
 		// Existing run or completed image (lock held by another or recently): return path
 		return annotatedPath, nil
 	}
+	logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Acquired lock for key '%s', proceeding with generation", key))
+
 	defer releaseLock(key)
 	mc, err := getContext(series)
 	if err != nil {
+		logger.Error(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Failed to get context for series '%s': %v", series, err))
 		return "", err
 	}
+	logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Got context for series '%s', creating DalleDress for address '%s'", series, address))
+
 	dd, err := mc.ctx.MakeDalleDress(address)
 	if err != nil {
+		logger.Error(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Failed to create DalleDress for series '%s', address '%s': %v", series, address, err))
 		return "", err
 	}
+	logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Created DalleDress for address '%s' - Prompt: '%s', EnhancedPrompt: '%s', Series: '%s'", address, dd.Prompt, dd.EnhancedPrompt, dd.Series))
 	// Start progress tracking (setup already implicitly started when struct created)
 	progressMgr := progress.GetProgressManager()
 	progressMgr.StartRun(series, address, dd)
@@ -240,16 +268,29 @@ func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, l
 
 // ListSeries returns the list of existing series (json files) beneath output Dir/series.
 func ListSeries() []string {
+	seriesDir := storage.SeriesDir()
+	logger.Info(fmt.Sprintf("ListSeries: Scanning directory: %s", seriesDir))
+
 	list := []string{}
 	vFunc := func(fn string, vP any) (bool, error) {
+		logger.Info(fmt.Sprintf("ListSeries: Found file: %s", fn))
 		if strings.HasSuffix(fn, ".json") {
+			original := fn
 			fn = strings.ReplaceAll(fn, storage.SeriesDir()+"/", "")
 			fn = strings.ReplaceAll(fn, ".json", "")
+			logger.Info(fmt.Sprintf("ListSeries: Adding series '%s' (from file: %s)", fn, original))
 			list = append(list, fn)
+		} else {
+			logger.Info(fmt.Sprintf("ListSeries: Skipping non-JSON file: %s", fn))
 		}
 		return true, nil
 	}
-	_ = walk.ForEveryFileInFolder(storage.SeriesDir(), vFunc, nil)
+	err := walk.ForEveryFileInFolder(storage.SeriesDir(), vFunc, nil)
+	if err != nil {
+		logger.Warn(fmt.Sprintf("ListSeries: Error walking directory %s: %v", seriesDir, err))
+	}
+
+	logger.Info(fmt.Sprintf("ListSeries: Completed scan, found %d series: %v", len(list), list))
 	return list
 }
 

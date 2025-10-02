@@ -290,8 +290,12 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 
 		// Apply series filters if configured
 		fn := strings.ToUpper(db[:1]) + db[1:]
+		logger.Info(fmt.Sprintf("ReloadDatabases: Checking for series filter for database '%s' -> field name '%s'", db, fn))
+
 		if seriesFilter, ferr := ctx.Series.GetFilter(fn); ferr == nil && len(seriesFilter) > 0 {
+			logger.Info(fmt.Sprintf("ReloadDatabases: Found series filter for '%s' with %d items: %v", fn, len(seriesFilter), seriesFilter))
 			filtered := make([]string, 0, len(lines))
+			originalCount := len(lines)
 			for _, line := range lines {
 				for _, f := range seriesFilter {
 					if strings.Contains(line, f) {
@@ -301,12 +305,21 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 				}
 			}
 			lines = filtered
+			logger.Info(fmt.Sprintf("ReloadDatabases: Filtered database '%s' from %d items to %d items using series filter", db, originalCount, len(lines)))
+		} else {
+			if ferr != nil {
+				logger.Info(fmt.Sprintf("ReloadDatabases: No series filter for database '%s' (field '%s'): %v", db, fn, ferr))
+			} else {
+				logger.Info(fmt.Sprintf("ReloadDatabases: Series filter for database '%s' (field '%s') is empty, using all %d items", db, fn, len(lines)))
+			}
 		}
 
 		if len(lines) == 0 {
+			logger.Warn(fmt.Sprintf("ReloadDatabases: Database '%s' has no items after filtering, adding 'none' placeholder", db))
 			lines = append(lines, "none")
 		}
 		ctx.Databases[db] = lines
+		logger.Info(fmt.Sprintf("ReloadDatabases: Database '%s' loaded with %d final items", db, len(lines)))
 	}
 	logger.InfoG("db.databases.reload", "count", len(prompt.DatabaseNames))
 	return nil
@@ -360,6 +373,7 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 	}
 
 	fn := filepath.Join(storage.DataDir(), "series", filter+".json")
+	logger.Info(fmt.Sprintf("loadSeries: Attempting to load series file: %s", fn))
 	str := strings.TrimSpace(file.AsciiFileToString(fn))
 
 	ret := Series{
@@ -367,15 +381,19 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 	}
 
 	if !file.FileExists(fn) || len(str) == 0 {
-		logger.Info("no series found, creating a new file", fn)
+		logger.Info(fmt.Sprintf("loadSeries: No series file found at %s, creating new default series", fn))
 		ret.SaveSeries(filter, 0)
 		return ret, nil
 	}
 
+	logger.Info(fmt.Sprintf("loadSeries: Found series file, content length: %d bytes", len(str)))
 	if err := json.Unmarshal([]byte(str), &ret); err != nil {
-		logger.Error("could not unmarshal series:", err)
+		logger.Error(fmt.Sprintf("loadSeries: Could not unmarshal series from %s: %v", fn, err))
 		return ret, err
 	}
+
+	logger.Info(fmt.Sprintf("loadSeries: Successfully loaded series '%s' with %d adverbs, %d adjectives, %d nouns, %d emotions, %d occupations, %d actions, %d artstyles, %d litstyles, %d colors, %d viewpoints, %d gazes, %d backstyles, %d composition items",
+		ret.Suffix, len(ret.Adverbs), len(ret.Adjectives), len(ret.Nouns), len(ret.Emotions), len(ret.Occupations), len(ret.Actions), len(ret.Artstyles), len(ret.Litstyles), len(ret.Colors), len(ret.Viewpoints), len(ret.Gazes), len(ret.Backstyles), len(ret.Composition)))
 
 	return ret, nil
 }
