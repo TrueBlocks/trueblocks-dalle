@@ -18,7 +18,7 @@ import (
 // TextToSpeech converts the given text to speech using OpenAI's audio API and writes it to the provided output directory.
 // It returns the full path of the written mp3 file. If the OPENAI_API_KEY is missing, it returns an empty string and no error.
 func TextToSpeech(text string, voice string, series string, address string) (string, error) {
-	series = strings.ToLower(series)
+	series = strings.ReplaceAll(strings.ToLower(series), " DO NOT PUT TEXT IN THE IMAGE. ", "")
 	address = strings.ToLower(address)
 	if text == "" {
 		return "", errors.New("empty text")

@@ -95,7 +95,7 @@ func TestSeries_Model(t *testing.T) {
 		t.Fatalf("model data mismatch: %#v", m.Data)
 	}
 	// Order should contain known keys in order (spot check first / last)
-	if len(m.Order) == 0 || m.Order[0] != "suffix" || m.Order[len(m.Order)-1] != "backstyles" {
+	if len(m.Order) == 0 || m.Order[0] != "suffix" || m.Order[len(m.Order)-1] != "compositions" {
 		t.Fatalf("unexpected order: %v", m.Order)
 	}
 }
