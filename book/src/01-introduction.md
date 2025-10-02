@@ -1,56 +1,75 @@
 # Introduction
 
-`trueblocks-dalle` is a Go library that deterministically turns an input *address-like string* (typically an Ethereum address or any hex-ish token) into a structured set of semantic attributes, synthesizes multiple layers of natural-language prompts, optionally enhances those prompts through OpenAI Chat, generates an image through OpenAI's image API, annotates the image with a terse caption, tracks detailed generation progress, and (optionally) produces an mp3 narration of the enhanced prompt.
+`trueblocks-dalle` is a Go library (module `github.com/TrueBlocks/trueblocks-dalle/v2`) that deterministically generates AI art by converting seed strings (typically Ethereum addresses) into structured semantic attributes, building layered natural-language prompts, optionally enhancing those prompts through OpenAI Chat, generating images through OpenAI's DALL·E API, annotating images with captions, and providing optional text-to-speech narration.
 
-This is **not** a generic wrapper around OpenAI. It is a *prompt orchestration and artifact pipeline* with the following properties (all derived from code, not prior documentation):
+This is **not** a generic wrapper around OpenAI. It is a *deterministic prompt orchestration and artifact pipeline* designed for reproducible creative output.
 
 ## Core Properties
 
-- Deterministic attribute derivation from a seed derived out of the provided string (`Context.MakeDalleDress`).
-- Attribute selection is driven by slicing a reversible seed and mapping 6‑hex-byte windows into indexed rows across a fixed set of *logical databases* (`prompt.DatabaseNames`).
-- Layered prompt templates: data, title, terse, full, and optional enhancement (templates in `pkg/prompt/prompt.go`).
-- Optional enhancement via OpenAI Chat (`EnhancePrompt`) gated by `OPENAI_API_KEY` and bypassable by `TB_DALLE_NO_ENHANCE=1`.
-- Image generation through OpenAI Images API (`image.RequestImage`) with orientation/size heuristics and fallback to base64 decoding.
-- On-the-fly PNG annotation with dynamic background and contrast-aware text rendering (`annotate.Annotate`).
-- Persistent output tree (under a resolved `DataDir()/output`) storing per-series artifacts: prompts, generated PNG, annotated PNG, JSON selector, audio, etc.
-- Series concept (`Series` struct) providing optional *filter lists* restricting which database rows are eligible per attribute class.
-- LRU + TTL managed contexts so a large number of series can be used without unbounded memory growth (`manager.go`).
-- Fine-grained generation progress tracking with phase timing, ETA estimation, exponential moving averages, and optional archival of runs (`pkg/progress`).
-- Text‑to‑speech prompt audio via OpenAI TTS (`tts-1`) if an API key is present (`TextToSpeech`).
+- **Deterministic Attribute Derivation**: Seeds are sliced into 6-hex-byte windows that map to indexed rows across curated databases (adjectives, nouns, emotions, art styles, etc.)
+- **Layered Prompt System**: Multiple template formats including data, title, terse, full prompt, and optional enhancement via OpenAI Chat
+- **Series-Based Filtering**: Optional JSON-backed filter lists that constrain which database entries are available for each attribute type
+- **Context Management**: LRU + TTL cache of loaded contexts to handle multiple series without unbounded memory growth
+- **Complete Artifact Pipeline**: Persistent output directory structure storing prompts, images (generated and annotated), JSON metadata, and optional audio
+- **Progress Tracking**: Fine-grained phase tracking with ETA estimation, exponential moving averages, and optional run archival
+- **Image Annotation**: Dynamic palette-based background generation with contrast-aware text rendering
+- **Text-to-Speech**: Optional prompt narration via OpenAI TTS
 
-## Philosophy
+## Architecture Overview
 
-The library treats a user-provided seed as *structured entropy* for art generation. Rather than letting randomness float everywhere, it deterministically selects slices that reproducibly map into curated lists (adverbs, emotions, art styles, colors, etc.). This produces a stable yet rich space of visual identities.
+The library is organized into several key packages:
 
-Everything stored on disk becomes verifiable artifacts: the raw prompts, the enhanced prompt (if produced), the annotated image, and a JSON serialization of the `DalleDress` (the internal prompt state object). This encourages introspection, auditing, caching, and reproducibility.
+| Package | Purpose |
+|---------|---------|
+| **Root package** | Public API, context management, series CRUD, main generation orchestration |
+| `pkg/model` | Core data structures (`DalleDress`, attributes, types) |
+| `pkg/prompt` | Template definitions, attribute derivation, OpenAI enhancement |
+| `pkg/image` | Image generation, download, processing coordination |
+| `pkg/annotate` | Image annotation with dynamic backgrounds and text |
+| `pkg/progress` | Phase-based progress tracking with metrics |
+| `pkg/storage` | Data directory management, database caching, file operations |
+| `pkg/utils` | Utility functions for various operations |
 
-## High-Level Flow
+## Generation Flow
 
-1. Resolve or create a `Context` (through the manager for a given series).
-2. Construct (or retrieve from cache) a `DalleDress` for an address: slice seed → build attributes → materialize prompt templates → read any previously enhanced prompt.
-3. If enhancement needed: call OpenAI Chat to rewrite the prompt; store enhanced result.
-4. Generate image: POST to OpenAI image endpoint; download or decode base64; write `generated/<file>.png`.
-5. Annotate: re-open image, compute palette-based background, render terse caption; write to `annotated/<file>.png`.
-6. Update progress phases throughout; record metrics; optionally produce audio mp3.
+1. **Context Resolution**: Get or create a cached `Context` for the specified series
+2. **Attribute Derivation**: Slice the seed string and map chunks to database entries, respecting series filters
+3. **Prompt Construction**: Execute multiple templates (data, title, terse, full) using selected attributes
+4. **Optional Enhancement**: Use OpenAI Chat to rewrite the prompt (if enabled and API key present)
+5. **Image Generation**: POST to OpenAI Images API, handle download or base64 decoding
+6. **Image Annotation**: Add terse caption with palette-based background and contrast-safe text
+7. **Artifact Persistence**: Save all outputs (prompts, images, JSON, optional audio) to organized directory structure
+8. **Progress Updates**: Track timing through all phases for metrics and ETA calculation
 
 ## Key Data Structures
 
-- `Context`: Holds templates, in-memory database slices, per-address `DalleDress` cache.
-- `DalleDress`: Complete snapshot of prompt generation state, including selected attribute values and output paths.
-- `Series`: JSON-backed filter and metadata object scoping generation (adjectives, nouns, gazes, etc. can be narrowed).
-- `Attribute`: A single semantic unit (e.g. emotion) derived from a seed slice and database index.
-- `ProgressReport`: Real-time view of generation phases and timing.
+- **`Context`**: Contains templates, database slices, in-memory `DalleDress` cache, and series configuration
+- **`DalleDress`**: Complete snapshot of generation state including all prompts, paths, attributes, and metadata
+- **`Series`**: JSON-backed configuration with attribute filters and metadata
+- **`Attribute`**: Individual semantic unit derived from seed slice and database lookup
+- **`ProgressReport`**: Real-time generation phase tracking with percentages and ETA
+
+## Determinism & Reproducibility
+
+Given the same seed string and series configuration, the library produces identical results through the image generation step. The only non-deterministic component is optional prompt enhancement via OpenAI Chat, which can be disabled with `TB_DALLE_NO_ENHANCE=1`.
+
+All artifacts are persisted with predictable file paths, enabling caching, auditing, and external processing.
 
 ## When to Use
 
-Use `trueblocks-dalle` when you need reproducible, inspectable AI image generation pipelines rooted in deterministic seeds, with transparent intermediate artifacts and minimal imperative orchestration code.
+- Need reproducible AI image generation from deterministic seeds
+- Want structured attribute-driven prompt construction
+- Require complete artifact trails for auditing or caching
+- Building applications that generate visual identities from addresses or tokens
+- Need progress tracking for long-running generation processes
 
 ## When Not to Use
 
-- If you need streaming multi-image batches per prompt (current code generates exactly one per request).
-- If you require offline model execution (the included generation path depends on OpenAI unless you stub `RequestImage`).
-- If you need arbitrary prompt mutation outside the existing templates (you can extend, but that’s extra work).
+- Need batch generation of multiple images per prompt
+- Require offline execution (depends on OpenAI APIs unless stubbed)
+- Want completely free-form prompt construction outside the template system
+- Need real-time streaming generation
 
-## Next
+## Next Steps
 
-Jump to the [Quick Start](02-quick-start.md) or dive into the [Architecture](03-architecture.md) if you prefer a systems overview first.
+Jump to the [Quick Start](02-quick-start.md) for immediate usage examples, or continue to [Architecture Overview](03-architecture.md) for deeper system understanding.

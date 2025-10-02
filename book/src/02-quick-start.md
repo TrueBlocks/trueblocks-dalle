@@ -1,81 +1,193 @@
 # Quick Start
 
-This walkthrough exercises the full pipeline with minimal code and shows where artifacts land on disk.
+This walkthrough shows how to use the main public API functions with minimal code and explains where artifacts are stored.
 
-## 0. Environment
+## Prerequisites
 
-(Optional) choose a data directory. If unset a platform default is chosen.
+### Environment Setup
 
-```sh
-set -x TB_DALLE_DATA_DIR /absolute/path/to/dalle-data   # fish shell
+Set your OpenAI API key (required for image generation, enhancement, and text-to-speech):
+
+```bash
+export OPENAI_API_KEY="sk-..."
 ```
 
-Set your OpenAI key (required for image, enhancement, speech):
+Optionally configure a custom data directory (defaults to platform-specific location):
 
-```sh
-set -x OPENAI_API_KEY sk-...                            # fish
+```bash
+export TB_DALLE_DATA_DIR="/path/to/your/dalle-data"
 ```
 
-Optionally disable enhancement for faster runs:
+Optional: disable prompt enhancement for faster/deterministic runs:
 
-```sh
-set -x TB_DALLE_NO_ENHANCE 1
+```bash
+export TB_DALLE_NO_ENHANCE=1
 ```
 
-## 1. Install
+### Installation
 
-```sh
+```bash
 go get github.com/TrueBlocks/trueblocks-dalle/v2@latest
 ```
 
-## 2. Minimal Program
+## Basic Usage
+
+### Simple Image Generation
 
 ```go
 package main
 
 import (
     "fmt"
+    "log"
+    "time"
+    
     dalle "github.com/TrueBlocks/trueblocks-dalle/v2"
 )
 
 func main() {
-    series  := "demo"
-    address := "0x1234abcd5678ef901234abcd5678ef901234abcd" // any sufficiently long seed-like string
-
-    out, err := dalle.GenerateAnnotatedImage(series, address, false, 0)
-    if err != nil { panic(err) }
-    fmt.Println("Annotated image:", out)
-
-    if audio, err := dalle.GenerateSpeech(series, address, 0); err == nil && audio != "" {
-        fmt.Println("Speech mp3:", audio)
+    series := "demo"
+    address := "0x1234abcd5678ef901234abcd5678ef901234abcd"
+    
+    // Generate annotated image (full pipeline)
+    imagePath, err := dalle.GenerateAnnotatedImage(series, address, false, 5*time.Minute)
+    if err != nil {
+        log.Fatal(err)
     }
-
-    if pr := dalle.GetProgress(series, address); pr != nil {
-        fmt.Printf("Phase: %s cacheHit=%v done=%v\n", pr.Current, pr.CacheHit, pr.Done)
+    fmt.Printf("Generated annotated image: %s\n", imagePath)
+    
+    // Optional: Generate speech narration
+    audioPath, err := dalle.GenerateSpeech(series, address, 5*time.Minute)
+    if err != nil {
+        log.Printf("Speech generation failed: %v", err)
+    } else if audioPath != "" {
+        fmt.Printf("Generated speech: %s\n", audioPath)
     }
 }
 ```
 
-Run it with:
+### Progress Tracking
 
-```sh
-go run main.go
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+    
+    dalle "github.com/TrueBlocks/trueblocks-dalle/v2"
+)
+
+func main() {
+    series := "demo"
+    address := "0xabcdef1234567890abcdef1234567890abcdef12"
+    
+    // Start generation in a goroutine
+    go func() {
+        _, err := dalle.GenerateAnnotatedImage(series, address, false, 5*time.Minute)
+        if err != nil {
+            fmt.Printf("Generation failed: %v\n", err)
+        }
+    }()
+    
+    // Monitor progress
+    for {
+        progress := dalle.GetProgress(series, address)
+        if progress == nil {
+            fmt.Println("No active progress")
+            break
+        }
+        
+        fmt.Printf("Phase: %s, Progress: %.1f%%, ETA: %ds\n", 
+            progress.Current, progress.Percent, progress.ETASeconds)
+            
+        if progress.Done {
+            fmt.Println("Generation completed!")
+            break
+        }
+        
+        time.Sleep(1 * time.Second)
+    }
+}
 ```
 
-## 3. Output Layout
+### Series Management
 
-`$TB_DALLE_DATA_DIR/output/<series>/`:
+```go
+package main
 
-- `generated/<address>.png` raw image
-- `annotated/<address>.png` captioned image
-- `prompt/` `terse/` `title/` `data/` `enhanced/` text artifacts
-- `selector/<address>.json` serialized `DalleDress`
-- `audio/<address>.mp3` (if TTS ran)
+import (
+    "fmt"
+    
+    dalle "github.com/TrueBlocks/trueblocks-dalle/v2"
+)
 
-## 4. Re-running
+func main() {
+    // List all available series
+    series := dalle.ListSeries()
+    fmt.Printf("Available series: %v\n", series)
+    
+    // Clean up artifacts for a specific series/address
+    dalle.Clean("demo", "0x1234...")
+    
+    // Get context count (for monitoring cache usage)
+    count := dalle.ContextCount()
+    fmt.Printf("Cached contexts: %d\n", count)
+}
+```
 
-Re-running the same series+address returns immediately (cache hit) once the annotated PNG exists.
+## Generated Artifacts
 
-## 5. Next
+Running the examples above creates the following directory structure under your data directory:
 
-Proceed to [Architecture](03-architecture.md) for a deeper exploration.
+```
+$TB_DALLE_DATA_DIR/
+└── output/
+    └── <series>/
+        ├── data/
+        │   └── <address>.txt          # Raw attribute data
+        ├── title/
+        │   └── <address>.txt          # Human-readable title
+        ├── terse/
+        │   └── <address>.txt          # Short caption
+        ├── prompt/
+        │   └── <address>.txt          # Full structured prompt
+        ├── enhanced/
+        │   └── <address>.txt          # OpenAI-enhanced prompt (if enabled)
+        ├── generated/
+        │   └── <address>.png          # Raw generated image
+        ├── annotated/
+        │   └── <address>.png          # Image with caption overlay
+        ├── selector/
+        │   └── <address>.json         # Complete DalleDress metadata
+        └── audio/
+            └── <address>.mp3          # Text-to-speech audio (if generated)
+```
+
+## Caching Behavior
+
+- **Cache hits**: If an annotated image already exists, `GenerateAnnotatedImage` returns immediately
+- **Incremental generation**: Individual artifacts are cached, so partial runs can resume
+- **Context caching**: Series configurations are cached in memory with LRU eviction
+
+## Error Handling
+
+```go
+imagePath, err := dalle.GenerateAnnotatedImage(series, address, false, 5*time.Minute)
+if err != nil {
+    switch {
+    case strings.Contains(err.Error(), "API key"):
+        log.Fatal("OpenAI API key required")
+    case strings.Contains(err.Error(), "address required"):
+        log.Fatal("Valid address string required")
+    default:
+        log.Fatalf("Generation failed: %v", err)
+    }
+}
+```
+
+## Next Steps
+
+- [Architecture Overview](03-architecture.md) - Understand the system design
+- [API Reference](12-api-reference.md) - Complete function documentation
+- [Series & Attributes](05-series-attributes.md) - Learn about customization

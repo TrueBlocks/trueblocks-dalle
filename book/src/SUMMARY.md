@@ -6,25 +6,31 @@ Authoritative, code-first documentation for the `trueblocks-dalle` Go package. T
 - [Introduction](01-introduction.md)
 - [Quick Start](02-quick-start.md)
 
-## Architecture & Concepts
-- [Architecture](03-architecture.md)
-- [Context & Manager](04-context-manager.md)
-- [Series & Attribute Databases](05-series-attributes.md)
-- [Prompt Generation Pipeline](06-prompt-pipeline.md)
-- [Image Request & Annotation](07-image-annotation.md)
-- [Progress Tracking](08-progress.md)
-- [Text-to-Speech](09-text2speech.md)
+## Core Architecture
+- [Architecture Overview](03-architecture.md)
+- [Context Management & Caching](04-context-manager.md)
+- [Series & Attribute Systems](05-series-attributes.md)
 
-## API & Usage
-- [Public API Reference](10-api-reference.md)
-- [Advanced Usage & Extensibility](11-advanced.md)
+## Generation Pipeline
+- [Prompt Generation & Templates](06-prompt-pipeline.md)
+- [Image Generation & Processing](07-image-annotation.md)
+- [Progress Tracking & Metrics](08-progress.md)
+- [Text-to-Speech Integration](09-text2speech.md)
 
-## Project Engineering
-- [Testing & Contributing](12-testing-contributing.md)
-- [FAQ](13-faq.md)
-- [References](14-references.md)
+## Storage & Data Management
+- [Storage Architecture & Data Directories](10-storage.md)
+- [Database Caching & Management](11-database-cache.md)
+
+## API Reference & Usage
+- [Public API Reference](12-api-reference.md)
+- [Advanced Usage & Extensibility](13-advanced.md)
+
+## Development & Maintenance
+- [Testing & Contributing](14-testing-contributing.md)
+- [FAQ & Troubleshooting](15-faq.md)
 
 ## Appendices
-- [Changelog / Design Notes](15-design-notes.md)
+- [Environment Variables & Configuration](16-configuration.md)
+- [Design Notes & Architecture Decisions](17-design-notes.md)
 
-> Sections are generated from code inspection. If something drifts, prefer updating code comments + tests, then regenerate docs.
+> All sections are generated from code inspection. The source code is the single source of truth.
