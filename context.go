@@ -392,8 +392,8 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 		return ret, err
 	}
 
-	logger.Info(fmt.Sprintf("loadSeries: Successfully loaded series '%s' with %d adverbs, %d adjectives, %d nouns, %d emotions, %d occupations, %d actions, %d artstyles, %d litstyles, %d colors, %d viewpoints, %d gazes, %d backstyles, %d composition items",
-		ret.Suffix, len(ret.Adverbs), len(ret.Adjectives), len(ret.Nouns), len(ret.Emotions), len(ret.Occupations), len(ret.Actions), len(ret.Artstyles), len(ret.Litstyles), len(ret.Colors), len(ret.Viewpoints), len(ret.Gazes), len(ret.Backstyles), len(ret.Composition)))
+	logger.Info(fmt.Sprintf("loadSeries: Successfully loaded series '%s' with %d adverbs, %d adjectives, %d nouns, %d emotions, %d occupations, %d actions, %d artstyles, %d litstyles, %d colors, %d viewpoints, %d gazes, %d backstyles, %d compositions items",
+		ret.Suffix, len(ret.Adverbs), len(ret.Adjectives), len(ret.Nouns), len(ret.Emotions), len(ret.Occupations), len(ret.Actions), len(ret.Artstyles), len(ret.Litstyles), len(ret.Colors), len(ret.Viewpoints), len(ret.Gazes), len(ret.Backstyles), len(ret.Compositions)))
 
 	return ret, nil
 }

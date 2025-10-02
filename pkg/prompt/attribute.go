@@ -28,10 +28,10 @@ var DatabaseNames = []string{
 	"colors",
 	"colors",
 	"colors",
-	"viewpoint",
+	"viewpoints",
 	"gazes",
 	"backstyles",
-	"composition",
+	"compositions",
 }
 
 var attributeNames = []string{

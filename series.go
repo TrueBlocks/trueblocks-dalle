@@ -13,49 +13,49 @@ import (
 
 // Series represents a collection of prompt attributes and their values.
 type Series struct {
-	Last        int      `json:"last,omitempty"`
-	Suffix      string   `json:"suffix"`
-	Purpose     string   `json:"purpose,omitempty"`
-	Deleted     bool     `json:"deleted,omitempty"`
-	Adverbs     []string `json:"adverbs"`
-	Adjectives  []string `json:"adjectives"`
-	Nouns       []string `json:"nouns"`
-	Emotions    []string `json:"emotions"`
-	Occupations []string `json:"occupations"`
-	Actions     []string `json:"actions"`
-	Artstyles   []string `json:"artstyles"`
-	Litstyles   []string `json:"litstyles"`
-	Colors      []string `json:"colors"`
-	Viewpoints  []string `json:"viewpoints"`
-	Gazes       []string `json:"gazes"`
-	Backstyles  []string `json:"backstyles"`
-	Composition []string `json:"composition"`
-	ModifiedAt  string   `json:"modifiedAt,omitempty"`
+	Last         int      `json:"last,omitempty"`
+	Suffix       string   `json:"suffix"`
+	Purpose      string   `json:"purpose,omitempty"`
+	Deleted      bool     `json:"deleted,omitempty"`
+	Adverbs      []string `json:"adverbs"`
+	Adjectives   []string `json:"adjectives"`
+	Nouns        []string `json:"nouns"`
+	Emotions     []string `json:"emotions"`
+	Occupations  []string `json:"occupations"`
+	Actions      []string `json:"actions"`
+	Artstyles    []string `json:"artstyles"`
+	Litstyles    []string `json:"litstyles"`
+	Colors       []string `json:"colors"`
+	Viewpoints   []string `json:"viewpoints"`
+	Gazes        []string `json:"gazes"`
+	Backstyles   []string `json:"backstyles"`
+	Compositions []string `json:"compositions"`
+	ModifiedAt   string   `json:"modifiedAt,omitempty"`
 }
 
 func (s *Series) Model(chain, format string, verbose bool, extraOpts map[string]any) coreTypes.Model {
 	return coreTypes.Model{
 		Data: map[string]any{
-			"suffix":      s.Suffix,
-			"purpose":     s.Purpose,
-			"last":        s.Last,
-			"deleted":     s.Deleted,
-			"modifiedAt":  s.ModifiedAt,
-			"adverbs":     s.Adverbs,
-			"adjectives":  s.Adjectives,
-			"nouns":       s.Nouns,
-			"emotions":    s.Emotions,
-			"occupations": s.Occupations,
-			"actions":     s.Actions,
-			"artstyles":   s.Artstyles,
-			"litstyles":   s.Litstyles,
-			"colors":      s.Colors,
-			"viewpoints":  s.Viewpoints,
-			"gazes":       s.Gazes,
-			"backstyles":  s.Backstyles,
-			"composition": s.Composition,
+			"suffix":       s.Suffix,
+			"purpose":      s.Purpose,
+			"last":         s.Last,
+			"deleted":      s.Deleted,
+			"modifiedAt":   s.ModifiedAt,
+			"adverbs":      s.Adverbs,
+			"adjectives":   s.Adjectives,
+			"nouns":        s.Nouns,
+			"emotions":     s.Emotions,
+			"occupations":  s.Occupations,
+			"actions":      s.Actions,
+			"artstyles":    s.Artstyles,
+			"litstyles":    s.Litstyles,
+			"colors":       s.Colors,
+			"viewpoints":   s.Viewpoints,
+			"gazes":        s.Gazes,
+			"backstyles":   s.Backstyles,
+			"compositions": s.Compositions,
 		},
-		Order: []string{"suffix", "purpose", "last", "deleted", "modifiedAt", "adverbs", "adjectives", "nouns", "emotions", "occupations", "actions", "artstyles", "litstyles", "colors", "viewpoints", "gazes", "backstyles", "composition"},
+		Order: []string{"suffix", "purpose", "last", "deleted", "modifiedAt", "adverbs", "adjectives", "nouns", "emotions", "occupations", "actions", "artstyles", "litstyles", "colors", "viewpoints", "gazes", "backstyles", "compositions"},
 	}
 }
 
