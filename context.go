@@ -373,7 +373,6 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 	}
 
 	fn := filepath.Join(storage.DataDir(), "series", filter+".json")
-	logger.Info(fmt.Sprintf("loadSeries: Attempting to load series file: %s", fn))
 	str := strings.TrimSpace(file.AsciiFileToString(fn))
 
 	ret := Series{
@@ -381,19 +380,15 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 	}
 
 	if !file.FileExists(fn) || len(str) == 0 {
-		logger.Info(fmt.Sprintf("loadSeries: No series file found at %s, creating new default series", fn))
+		logger.Info("no series found, creating a new file", fn)
 		ret.SaveSeries(filter, 0)
 		return ret, nil
 	}
 
-	logger.Info(fmt.Sprintf("loadSeries: Found series file, content length: %d bytes", len(str)))
 	if err := json.Unmarshal([]byte(str), &ret); err != nil {
-		logger.Error(fmt.Sprintf("loadSeries: Could not unmarshal series from %s: %v", fn, err))
+		logger.Error("could not unmarshal series:", err)
 		return ret, err
 	}
-
-	logger.Info(fmt.Sprintf("loadSeries: Successfully loaded series '%s' with %d adverbs, %d adjectives, %d nouns, %d emotions, %d occupations, %d actions, %d artstyles, %d litstyles, %d colors, %d viewpoints, %d gazes, %d backstyles, %d compositions items",
-		ret.Suffix, len(ret.Adverbs), len(ret.Adjectives), len(ret.Nouns), len(ret.Emotions), len(ret.Occupations), len(ret.Actions), len(ret.Artstyles), len(ret.Litstyles), len(ret.Colors), len(ret.Viewpoints), len(ret.Gazes), len(ret.Backstyles), len(ret.Compositions)))
 
 	return ret, nil
 }

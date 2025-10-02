@@ -215,26 +215,20 @@ func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, l
 		return annotatedPath, nil
 	}
 	if !acquireLock(key, lockTTL) {
-		logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Could not acquire lock for key '%s', another generation may be in progress", key))
 		// Existing run or completed image (lock held by another or recently): return path
 		return annotatedPath, nil
 	}
-	logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Acquired lock for key '%s', proceeding with generation", key))
 
 	defer releaseLock(key)
 	mc, err := getContext(series)
 	if err != nil {
-		logger.Error(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Failed to get context for series '%s': %v", series, err))
 		return "", err
 	}
-	logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Got context for series '%s', creating DalleDress for address '%s'", series, address))
 
 	dd, err := mc.ctx.MakeDalleDress(address)
 	if err != nil {
-		logger.Error(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Failed to create DalleDress for series '%s', address '%s': %v", series, address, err))
 		return "", err
 	}
-	logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Created DalleDress for address '%s' - Prompt: '%s', EnhancedPrompt: '%s', Series: '%s'", address, dd.Prompt, dd.EnhancedPrompt, dd.Series))
 	// Start progress tracking (setup already implicitly started when struct created)
 	progressMgr := progress.GetProgressManager()
 	progressMgr.StartRun(series, address, dd)
@@ -268,29 +262,16 @@ func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, l
 
 // ListSeries returns the list of existing series (json files) beneath output Dir/series.
 func ListSeries() []string {
-	seriesDir := storage.SeriesDir()
-	logger.Info(fmt.Sprintf("ListSeries: Scanning directory: %s", seriesDir))
-
 	list := []string{}
 	vFunc := func(fn string, vP any) (bool, error) {
-		logger.Info(fmt.Sprintf("ListSeries: Found file: %s", fn))
 		if strings.HasSuffix(fn, ".json") {
-			original := fn
 			fn = strings.ReplaceAll(fn, storage.SeriesDir()+"/", "")
 			fn = strings.ReplaceAll(fn, ".json", "")
-			logger.Info(fmt.Sprintf("ListSeries: Adding series '%s' (from file: %s)", fn, original))
 			list = append(list, fn)
-		} else {
-			logger.Info(fmt.Sprintf("ListSeries: Skipping non-JSON file: %s", fn))
 		}
 		return true, nil
 	}
-	err := walk.ForEveryFileInFolder(storage.SeriesDir(), vFunc, nil)
-	if err != nil {
-		logger.Warn(fmt.Sprintf("ListSeries: Error walking directory %s: %v", seriesDir, err))
-	}
-
-	logger.Info(fmt.Sprintf("ListSeries: Completed scan, found %d series: %v", len(list), list))
+	_ = walk.ForEveryFileInFolder(storage.SeriesDir(), vFunc, nil)
 	return list
 }
 
