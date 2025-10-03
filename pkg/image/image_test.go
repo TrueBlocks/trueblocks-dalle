@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 )
 
 var openaiAPIURL = "https://api.openai.com/v1/images/generations"
@@ -78,7 +80,9 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 	}
 	// Create a temporary folder for the test
 	outputPath := t.TempDir()
-	err := RequestImage(outputPath, imgData, openaiServer.URL)
+	config := prompt.DefaultAiConfiguration()
+	config.ImageURL = openaiServer.URL // Use test server URL
+	err := RequestImage(outputPath, imgData, config)
 	if err != nil {
 		t.Errorf("RequestImage failed: %v", err)
 	}

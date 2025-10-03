@@ -138,24 +138,16 @@ func rebuildOrder() {
 func getContext(series string) (*managedContext, error) {
 	contextManager.Lock()
 	defer contextManager.Unlock()
-	logger.Info(fmt.Sprintf("getContext: Requested context for series '%s'", series))
-
 	if mc, ok := contextManager.items[series]; ok {
-		logger.Info(fmt.Sprintf("getContext: Found existing context for series '%s'", series))
 		mc.lastUsed = time.Now()
 		bumpOrder(series)
 		return mc, nil
 	}
-
-	logger.Info(fmt.Sprintf("getContext: Creating new context for series '%s'", series))
 	c := NewContext()
 	if s, err := c.loadSeries(series); err == nil {
-		logger.Info(fmt.Sprintf("getContext: Successfully loaded series data for '%s'", series))
 		c.Series = s
 		if err := c.ReloadDatabases(series); err != nil {
 			logger.Error(fmt.Sprintf("getContext: Failed to reload databases with series '%s': %v", series, err))
-		} else {
-			logger.Info(fmt.Sprintf("getContext: Successfully reloaded databases with series '%s' filters", series))
 		}
 	} else {
 		logger.Error(fmt.Sprintf("getContext: Failed to load series data for '%s': %v", series, err))
@@ -166,7 +158,6 @@ func getContext(series string) (*managedContext, error) {
 	contextManager.items[series] = mc
 	contextManager.order = append(contextManager.order, series)
 	enforceContextLimits()
-	logger.Info(fmt.Sprintf("getContext: Context created and cached for series '%s'", series))
 	return mc, nil
 }
 
@@ -180,8 +171,6 @@ func GenerateAnnotatedImage(series, address string, skipImage bool, lockTTL time
 func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, lockTTL time.Duration, baseURL string) (string, error) {
 	start := time.Now()
 	logger.Info("annotated.build.start", "series", series, "addr", address, "skipImage", skipImage)
-	logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Starting generation for series='%s', address='%s', skipImage=%v", series, address, skipImage))
-
 	if address == "" {
 		return "", errors.New("address required")
 	}
@@ -191,11 +180,8 @@ func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, l
 	}
 	key := series + ":" + address
 	annotatedPath := filepath.Join(storage.OutputDir(), series, "annotated", address+".png")
-	logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Target annotated path: %s", annotatedPath))
-
 	// Fast path: if annotated file exists, treat as cache hit (do not acquire new run if another generation not in progress)
 	if file.FileExists(annotatedPath) {
-		logger.Info(fmt.Sprintf("GenerateAnnotatedImageWithBaseURL: Found existing annotated image at %s (cache hit)", annotatedPath))
 		// Start a minimal completed progress run if none exists yet
 		progressMgr := progress.GetProgressManager()
 		if progressMgr.GetReport(series, address) == nil { // no active run

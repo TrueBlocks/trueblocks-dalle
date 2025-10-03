@@ -9,9 +9,46 @@ import (
 	"net/http"
 	"os"
 	"text/template"
+	"time"
 
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/utils"
 )
+
+// AiConfiguration holds configuration for both prompt enhancement and image generation
+type AiConfiguration struct {
+	// Prompt Enhancement Configuration
+	EnhancementModel       string        `json:"enhancement_model"`
+	EnhancementSeed        int           `json:"enhancement_seed"`
+	EnhancementTemperature float64       `json:"enhancement_temperature"`
+	EnhancementURL         string        `json:"enhancement_url"`
+	EnhancementTimeout     time.Duration `json:"enhancement_timeout"`
+
+	// Image Generation Configuration
+	ImageModel   string        `json:"image_model"`
+	ImageQuality string        `json:"image_quality"`
+	ImageStyle   string        `json:"image_style"`
+	ImageURL     string        `json:"image_url"`
+	ImageTimeout time.Duration `json:"image_timeout"`
+}
+
+// DefaultAiConfiguration returns the default AI configuration
+func DefaultAiConfiguration() AiConfiguration {
+	return AiConfiguration{
+		// Enhancement defaults
+		EnhancementModel:       utils.GetEnvString("TB_DALLE_ENHANCEMENT_MODEL", "gpt-4"),
+		EnhancementSeed:        utils.GetEnvInt("TB_DALLE_ENHANCEMENT_SEED", 1337),
+		EnhancementTemperature: utils.GetEnvFloat("TB_DALLE_ENHANCEMENT_TEMPERATURE", 0.2),
+		EnhancementURL:         utils.GetEnvString("TB_DALLE_ENHANCEMENT_URL", "https://api.openai.com/v1/chat/completions"),
+		EnhancementTimeout:     utils.GetEnvDuration("TB_DALLE_ENHANCEMENT_TIMEOUT", 60*time.Second),
+
+		// Image generation defaults
+		ImageModel:   utils.GetEnvString("TB_DALLE_IMAGE_MODEL", "dall-e-3"),
+		ImageQuality: utils.GetEnvString("TB_DALLE_IMAGE_QUALITY", "hd"),
+		ImageStyle:   utils.GetEnvString("TB_DALLE_IMAGE_STYLE", "vivid"),
+		ImageURL:     utils.GetEnvString("TB_DALLE_IMAGE_URL", "https://api.openai.com/v1/images/generations"),
+		ImageTimeout: utils.GetEnvDuration("TB_DALLE_IMAGE_TIMEOUT", 300*time.Second),
+	}
+}
 
 // Template strings and compiled templates
 const promptTemplateStr = `{{.LitPrompt false}}Here's the prompt:
@@ -96,31 +133,40 @@ func EnhancePrompt(prompt, authorType string) (string, error) {
 	if apiKey == "" { // no key: skip enhancement silently
 		return prompt, nil
 	}
-	return enhancePromptWithClient(prompt, authorType, &http.Client{}, apiKey, json.Marshal)
+	config := DefaultAiConfiguration()
+	return enhancePromptWithClient(prompt, authorType, &http.Client{}, apiKey, config, json.Marshal)
 }
 
-// enhancePromptWithClient is like EnhancePrompt but allows injecting an HTTP client, API key, and marshal function (for testing).
-func enhancePromptWithClient(prompt, authorType string, client *http.Client, apiKey string, marshal func(v interface{}) ([]byte, error)) (string, error) {
-	_ = authorType
-	url := "https://api.openai.com/v1/chat/completions"
+// enhancePromptWithClient is like EnhancePrompt but allows injecting an HTTP client, API key, config, and marshal function (for testing).
+func enhancePromptWithClient(prompt, authorType string, client *http.Client, apiKey string, config AiConfiguration, marshal func(v interface{}) ([]byte, error)) (string, error) {
+	// If no author context provided, skip enhancement and return original prompt
+	if authorType == "" {
+		return prompt, nil
+	}
 
-	payload := Request{Model: "gpt-4", Seed: 1337, Tempature: 0.2}
-	payload.Messages = append(payload.Messages, Message{Role: "system", Content: prompt})
+	payload := Request{
+		Model:       config.EnhancementModel,
+		Seed:        config.EnhancementSeed,
+		Temperature: config.EnhancementTemperature,
+	}
+
+	payload.Messages = append(payload.Messages, Message{Role: "system", Content: authorType})
+	payload.Messages = append(payload.Messages, Message{Role: "user", Content: prompt})
 	payloadBytes, err := marshal(payload)
 	if err != nil {
 		return "", err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), deadline)
+	ctx, cancel := context.WithTimeout(context.Background(), config.EnhancementTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
+	req, err := http.NewRequestWithContext(ctx, "POST", config.EnhancementURL, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	utils.DebugCurl("OPENAI CHAT (EnhancePrompt)", "POST", url, map[string]string{
+	utils.DebugCurl("OPENAI CHAT (EnhancePrompt)", "POST", config.EnhancementURL, map[string]string{
 		"Content-Type":  "application/json",
 		"Authorization": "Bearer " + apiKey,
 	}, payload)

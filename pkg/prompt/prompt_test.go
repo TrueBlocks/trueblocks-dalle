@@ -35,7 +35,7 @@ func TestEnhancePrompt_Success(t *testing.T) {
 			},
 		},
 	}
-	result, err := enhancePromptWithClient("prompt", "author", client, "test-key", json.Marshal)
+	result, err := enhancePromptWithClient("prompt", "author", client, "test-key", DefaultAiConfiguration(), json.Marshal)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -47,7 +47,7 @@ func TestEnhancePrompt_Success(t *testing.T) {
 func TestEnhancePrompt_JSONMarshalError(t *testing.T) {
 	client := &http.Client{}
 	badMarshal := func(v interface{}) ([]byte, error) { return nil, errors.New("marshal error") }
-	_, err := enhancePromptWithClient("prompt", "author", client, "key", badMarshal)
+	_, err := enhancePromptWithClient("prompt", "author", client, "key", DefaultAiConfiguration(), badMarshal)
 	if err == nil || err.Error() != "marshal error" {
 		t.Errorf("expected marshal error, got %v", err)
 	}
@@ -57,7 +57,7 @@ func TestEnhancePrompt_HTTPError(t *testing.T) {
 	client := &http.Client{
 		Transport: &mockRoundTripper{Err: errors.New("network error")},
 	}
-	_, err := enhancePromptWithClient("prompt", "author", client, "key", json.Marshal)
+	_, err := enhancePromptWithClient("prompt", "author", client, "key", DefaultAiConfiguration(), json.Marshal)
 	if err == nil || !strings.Contains(err.Error(), "network error") {
 		t.Errorf("expected error containing 'network error', got %v", err)
 	}
@@ -74,7 +74,7 @@ func TestEnhancePrompt_BodyReadError(t *testing.T) {
 			},
 		},
 	}
-	_, err := enhancePromptWithClient("prompt", "author", client, "key", json.Marshal)
+	_, err := enhancePromptWithClient("prompt", "author", client, "key", DefaultAiConfiguration(), json.Marshal)
 	if err == nil || err.Error() != "read error" {
 		t.Errorf("expected read error, got %v", err)
 	}
@@ -90,7 +90,7 @@ func TestEnhancePrompt_UnmarshalError(t *testing.T) {
 			},
 		},
 	}
-	_, err := enhancePromptWithClient("prompt", "author", client, "key", json.Marshal)
+	_, err := enhancePromptWithClient("prompt", "author", client, "key", DefaultAiConfiguration(), json.Marshal)
 	if err == nil {
 		t.Errorf("expected unmarshal error, got nil")
 	}
@@ -106,7 +106,7 @@ func TestEnhancePrompt_EmptyAPIKey(t *testing.T) {
 			},
 		},
 	}
-	result, err := enhancePromptWithClient("prompt", "author", client, "", json.Marshal)
+	result, err := enhancePromptWithClient("prompt", "author", client, "", DefaultAiConfiguration(), json.Marshal)
 	if err != nil || result != "Enhanced!" {
 		t.Errorf("expected 'Enhanced!', got '%v', err: %v", result, err)
 	}
@@ -115,7 +115,7 @@ func TestEnhancePrompt_EmptyAPIKey(t *testing.T) {
 func TestEnhancePromptWithEmptyChoices(t *testing.T) {
 	original := "test prompt"
 	client := &http.Client{Transport: &mockRoundTripper{Resp: &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewBufferString(`{"choices":[]}`)), Header: make(http.Header)}}}
-	out, err := enhancePromptWithClient(original, "", client, "fake-key", json.Marshal)
+	out, err := enhancePromptWithClient(original, "", client, "fake-key", DefaultAiConfiguration(), json.Marshal)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestEnhancePromptWithEmptyChoices(t *testing.T) {
 func TestEnhancePromptWithNon200(t *testing.T) {
 	original := "another prompt"
 	client := &http.Client{Transport: &mockRoundTripper{Resp: &http.Response{StatusCode: 500, Body: io.NopCloser(bytes.NewBufferString(`internal error`)), Header: make(http.Header)}}}
-	_, err := enhancePromptWithClient(original, "", client, "fake-key", json.Marshal)
+	_, err := enhancePromptWithClient(original, "some author context", client, "fake-key", DefaultAiConfiguration(), json.Marshal)
 	if err == nil {
 		t.Fatal("expected error for non-200 status")
 	}

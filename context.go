@@ -238,7 +238,9 @@ func (ctx *Context) GenerateImageWithBaseURL(address, baseURL string) (string, e
 	}
 
 	generatedPath := filepath.Join(storage.OutputDir(), ctx.Series.Suffix, "generated")
-	if err := image.RequestImage(generatedPath, &imageData, baseURL); err != nil {
+	config := prompt.DefaultAiConfiguration()
+	config.ImageURL = baseURL // Override with any custom base URL
+	if err := image.RequestImage(generatedPath, &imageData, config); err != nil {
 		return "", err
 	}
 
@@ -290,12 +292,8 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 
 		// Apply series filters if configured
 		fn := strings.ToUpper(db[:1]) + db[1:]
-		logger.Info(fmt.Sprintf("ReloadDatabases: Checking for series filter for database '%s' -> field name '%s'", db, fn))
-
 		if seriesFilter, ferr := ctx.Series.GetFilter(fn); ferr == nil && len(seriesFilter) > 0 {
-			logger.Info(fmt.Sprintf("ReloadDatabases: Found series filter for '%s' with %d items: %v", fn, len(seriesFilter), seriesFilter))
 			filtered := make([]string, 0, len(lines))
-			originalCount := len(lines)
 			for _, line := range lines {
 				for _, f := range seriesFilter {
 					if strings.Contains(line, f) {
@@ -305,12 +303,9 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 				}
 			}
 			lines = filtered
-			logger.Info(fmt.Sprintf("ReloadDatabases: Filtered database '%s' from %d items to %d items using series filter", db, originalCount, len(lines)))
 		} else {
 			if ferr != nil {
 				logger.Info(fmt.Sprintf("ReloadDatabases: No series filter for database '%s' (field '%s'): %v", db, fn, ferr))
-			} else {
-				logger.Info(fmt.Sprintf("ReloadDatabases: Series filter for database '%s' (field '%s') is empty, using all %d items", db, fn, len(lines)))
 			}
 		}
 
@@ -319,7 +314,6 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 			lines = append(lines, "none")
 		}
 		ctx.Databases[db] = lines
-		logger.Info(fmt.Sprintf("ReloadDatabases: Database '%s' loaded with %d final items", db, len(lines)))
 	}
 	logger.InfoG("db.databases.reload", "count", len(prompt.DatabaseNames))
 	return nil

@@ -51,7 +51,7 @@ type ImageData struct {
 // msSince returns elapsed milliseconds since t.
 func msSince(t time.Time) int64 { return time.Since(t).Milliseconds() }
 
-func RequestImage(outputPath string, imageData *ImageData, baseURL string) error {
+func RequestImage(outputPath string, imageData *ImageData, config prompt.AiConfiguration) error {
 	start := time.Now()
 	generated := outputPath
 	_ = file.EstablishFolder(generated)
@@ -61,8 +61,7 @@ func RequestImage(outputPath string, imageData *ImageData, baseURL string) error
 	isLandscape := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "horizontal")
 	isPortrait := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "vertical")
 
-	modelName := "dall-e-3"
-	// modelName := "gpt-image-1"
+	modelName := config.ImageModel
 
 	payload := prompt.Request{
 		Prompt: imageData.EnhancedPrompt,
@@ -79,7 +78,7 @@ func RequestImage(outputPath string, imageData *ImageData, baseURL string) error
 		} else {
 			payload.Size = "1024x1024"
 		}
-		payload.Quality = "hd"
+		payload.Quality = config.ImageQuality
 		payload.Style = "vivid"
 	case "gpt-image-1":
 		if isLandscape {
@@ -119,14 +118,14 @@ func RequestImage(outputPath string, imageData *ImageData, baseURL string) error
 		return nil
 	}
 
-	imagePostTimeout := 120 * time.Second
+	imagePostTimeout := config.ImageTimeout
 
 	progressMgr := progress.GetProgressManager()
 	progressMgr.Transition(imageData.Series, imageData.Address, progress.PhaseImageWait)
 	ctx, cancel := context.WithTimeout(context.Background(), imagePostTimeout)
 	defer cancel()
 
-	url := baseURL
+	url := config.ImageURL
 	if url == "" {
 		url = "https://api.openai.com/v1/images/generations"
 	}

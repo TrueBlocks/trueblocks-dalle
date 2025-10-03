@@ -7,16 +7,16 @@ import (
 
 func TestDalleRequest_String(t *testing.T) {
 	req := &Request{
-		Input:     "input text",
-		Prompt:    "prompt text",
-		N:         1,
-		Quality:   "standard",
-		Model:     "gpt-4",
-		Style:     "vivid",
-		Size:      "1024x1024",
-		Seed:      42,
-		Tempature: 0.5,
-		Messages:  []Message{{Role: "system", Content: "hello"}},
+		Input:       "input text",
+		Prompt:      "prompt text",
+		N:           1,
+		Quality:     "standard",
+		Model:       "gpt-4",
+		Style:       "vivid",
+		Size:        "1024x1024",
+		Seed:        42,
+		Temperature: 0.5,
+		Messages:    []Message{{Role: "system", Content: "hello"}},
 	}
 	jsonStr := req.String()
 	if len(jsonStr) == 0 {
