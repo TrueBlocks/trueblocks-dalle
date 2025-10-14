@@ -39,13 +39,14 @@ func errString(e error) string {
 }
 
 type ImageData struct {
-	EnhancedPrompt string `json:"enhancedPrompt"`
-	TersePrompt    string `json:"tersePrompt"`
-	TitlePrompt    string `json:"titlePrompt"`
-	SeriesName     string `json:"seriesName"`
-	Filename       string `json:"filename"`
-	Series         string `json:"-"`
-	Address        string `json:"-"`
+	EnhancedPrompt  string `json:"enhancedPrompt"`
+	TechnicalPrompt string `json:"technicalPrompt"`
+	TersePrompt     string `json:"tersePrompt"`
+	TitlePrompt     string `json:"titlePrompt"`
+	SeriesName      string `json:"seriesName"`
+	Filename        string `json:"filename"`
+	Series          string `json:"-"`
+	Address         string `json:"-"`
 }
 
 // msSince returns elapsed milliseconds since t.
@@ -58,13 +59,17 @@ func RequestImage(outputPath string, imageData *ImageData, config prompt.AiConfi
 	annotated := strings.ReplaceAll(generated, "/generated", "/annotated")
 	_ = file.EstablishFolder(annotated)
 
+	// Combine technical prompt (system instructions) with enhanced prompt (creative content)
+	// Technical specifications come first, then the literary-enhanced content
+	finalPrompt := imageData.TechnicalPrompt + "\n\n" + imageData.EnhancedPrompt
+
 	isLandscape := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "horizontal")
 	isPortrait := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "vertical")
 
 	modelName := config.ImageModel
 
 	payload := prompt.Request{
-		Prompt: imageData.EnhancedPrompt,
+		Prompt: finalPrompt,
 		N:      1,
 		Model:  modelName,
 	}
@@ -101,7 +106,7 @@ func RequestImage(outputPath string, imageData *ImageData, config prompt.AiConfi
 		"model", modelName,
 		"size", payload.Size,
 		"quality", payload.Quality,
-		"promptLen", len(imageData.EnhancedPrompt),
+		"promptLen", len(finalPrompt),
 	)
 
 	payloadBytes, err := json.Marshal(payload)

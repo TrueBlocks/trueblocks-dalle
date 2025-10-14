@@ -187,18 +187,18 @@ func (ctx *Context) Save(addr string) bool {
 	}
 }
 
-// GenerateEnhanced generates an enhanced prompt for the given address.
+// GenerateEnhanced generates a literarily-enhanced prompt for the given address (Stage 1).
 func (ctx *Context) GenerateEnhanced(addr string) (string, error) {
 	if dd, err := ctx.MakeDalleDress(addr); err != nil {
 		return err.Error(), err
 	} else {
+		// Stage 1: Literary Enhancement
 		authorType, _ := dd.ExecuteTemplate(ctx.authorTemplate, nil)
-		if dd.EnhancedPrompt, err = prompt.EnhancePrompt(ctx.GetPrompt(addr), authorType); err != nil {
-			logger.Error("EnhancePrompt error:", err)
+		basePrompt := ctx.GetPrompt(addr)
+		if dd.EnhancedPrompt, err = prompt.EnhanceLiteraryContent(basePrompt, authorType); err != nil {
+			logger.Error("EnhanceLiteraryContent error:", err)
 			return "", err
 		}
-		msg := " DO NOT PUT TEXT IN THE IMAGE. "
-		dd.EnhancedPrompt = msg + dd.EnhancedPrompt + msg
 		return dd.EnhancedPrompt, nil
 	}
 }
@@ -224,17 +224,23 @@ func (ctx *Context) GenerateImageWithBaseURL(address, baseURL string) (string, e
 		}
 	}
 
+	// Stage 2: Generate technical specifications (keep separate from enhanced prompt)
+	technicalContext, _ := dd.ExecuteTemplate(prompt.TechnicalTemplate, nil)
+	finalCombinedPrompt := technicalContext + "\n\n" + dd.EnhancedPrompt
+
 	suff := ctx.Series.Suffix
 	ctx.reportOn(dd, address, filepath.Join(suff, "enhanced"), "txt", dd.EnhancedPrompt)
+	ctx.reportOn(dd, address, filepath.Join(suff, "technical"), "txt", finalCombinedPrompt)
 	_ = ctx.Save(address)
 	imageData := image.ImageData{
-		EnhancedPrompt: dd.EnhancedPrompt,
-		TersePrompt:    dd.TersePrompt,
-		TitlePrompt:    dd.TitlePrompt,
-		SeriesName:     ctx.Series.Suffix,
-		Filename:       dd.FileName,
-		Series:         ctx.Series.Suffix,
-		Address:        address,
+		EnhancedPrompt:  dd.EnhancedPrompt, // Literary-enhanced content
+		TechnicalPrompt: technicalContext,  // Technical specifications
+		TersePrompt:     dd.TersePrompt,
+		TitlePrompt:     dd.TitlePrompt,
+		SeriesName:      ctx.Series.Suffix,
+		Filename:        dd.FileName,
+		Series:          ctx.Series.Suffix,
+		Address:         address,
 	}
 
 	generatedPath := filepath.Join(storage.OutputDir(), ctx.Series.Suffix, "generated")

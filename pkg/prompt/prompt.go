@@ -116,12 +116,29 @@ const authorTemplateStr = `{{if .HasLitStyle}}You are an award winning author wh
 style called {{.LitStyle true}}. Take on the persona of such an author.
 {{.LitStyle true}} is a genre or literary style that {{.LitStyleDescr}}.{{end}}`
 
+const technicalTemplateStr = `Technical Specifications:
+- Artistic style: {{.ArtStyle false 1}}{{if ne (.ArtStyle true 1) (.ArtStyle true 2)}} with {{.ArtStyle false 2}} influences{{end}}
+- Color palette: Use {{.Color true 1}} and {{.Color true 2}}
+- Composition style: {{.Composition false}}
+- Background approach: {{.BackStyle false}}
+- Camera/viewpoint: {{.Viewpoint false}}
+- Subject gaze direction: {{.Gaze false}}
+
+Quality Standards:
+- Give the central figure distinct human-like characteristics
+- Maintain emotional authenticity and depth, particularly focusing on {{.Emotion false}}
+- Focus on connotative meanings and cultural associations
+- Create compelling visual narrative
+
+DO NOT PUT TEXT IN THE IMAGE.`
+
 var (
-	PromptTemplate = template.Must(template.New("prompt").Parse(promptTemplateStr))
-	DataTemplate   = template.Must(template.New("data").Parse(dataTemplateStr))
-	TerseTemplate  = template.Must(template.New("terse").Parse(terseTemplateStr))
-	TitleTemplate  = template.Must(template.New("title").Parse(titleTemplateStr))
-	AuthorTemplate = template.Must(template.New("author").Parse(authorTemplateStr))
+	PromptTemplate    = template.Must(template.New("prompt").Parse(promptTemplateStr))
+	DataTemplate      = template.Must(template.New("data").Parse(dataTemplateStr))
+	TerseTemplate     = template.Must(template.New("terse").Parse(terseTemplateStr))
+	TitleTemplate     = template.Must(template.New("title").Parse(titleTemplateStr))
+	AuthorTemplate    = template.Must(template.New("author").Parse(authorTemplateStr))
+	TechnicalTemplate = template.Must(template.New("technical").Parse(technicalTemplateStr))
 )
 
 // EnhancePrompt calls the OpenAI API to enhance a prompt using the given author type.
@@ -227,6 +244,108 @@ func enhancePromptWithClient(prompt, authorType string, client *http.Client, api
 	content := r.Choices[0].Message.Content
 	if content == "" { // defensive
 		return prompt, nil
+	}
+	return content, nil
+}
+
+// EnhanceLiteraryContent performs Stage 1 enhancement focused on literary and creative content
+func EnhanceLiteraryContent(basePrompt, authorContext string) (string, error) {
+	if os.Getenv("TB_DALLE_NO_ENHANCE") == "1" {
+		return basePrompt, nil
+	}
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		return basePrompt, nil
+	}
+	config := DefaultAiConfiguration()
+	return enhanceLiteraryContentWithClient(basePrompt, authorContext, &http.Client{}, apiKey, config, json.Marshal)
+}
+
+// enhanceLiteraryContentWithClient performs Stage 1 literary enhancement with dependency injection for testing
+func enhanceLiteraryContentWithClient(basePrompt, authorContext string, client *http.Client, apiKey string, config AiConfiguration, marshal func(v interface{}) ([]byte, error)) (string, error) {
+	// If no author context provided, skip enhancement and return original prompt
+	if authorContext == "" {
+		return basePrompt, nil
+	}
+
+	systemPrompt := authorContext + "\n\nEnhance the following art generation prompt while maintaining this literary perspective. Make it more vivid and evocative while preserving all key attributes. Focus on emotional depth and narrative richness."
+
+	payload := Request{
+		Model:       config.EnhancementModel,
+		Seed:        config.EnhancementSeed,
+		Temperature: config.EnhancementTemperature,
+	}
+
+	payload.Messages = append(payload.Messages, Message{Role: "system", Content: systemPrompt})
+	payload.Messages = append(payload.Messages, Message{Role: "user", Content: basePrompt})
+
+	payloadBytes, err := marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), config.EnhancementTimeout)
+	defer cancel()
+
+	url := config.EnhancementURL
+	if url == "" {
+		url = "https://api.openai.com/v1/chat/completions"
+	}
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != 200 {
+		var openaiErr struct {
+			Error struct {
+				Message string `json:"message"`
+				Code    string `json:"code"`
+			} `json:"error"`
+		}
+		msg := string(body)
+		code := "OPENAI_ERROR"
+		if err := json.Unmarshal(body, &openaiErr); err == nil && openaiErr.Error.Code != "" {
+			code = openaiErr.Error.Code
+			msg = openaiErr.Error.Message
+		}
+		return "", &OpenAIAPIError{
+			StatusCode: resp.StatusCode,
+			Code:       code,
+			Message:    msg,
+		}
+	}
+
+	type response struct {
+		Choices []struct {
+			Message Message `json:"message"`
+		} `json:"choices"`
+	}
+	var r response
+	if err := json.Unmarshal(body, &r); err != nil {
+		return "", err
+	}
+	if len(r.Choices) == 0 {
+		return basePrompt, nil
+	}
+	content := r.Choices[0].Message.Content
+	if content == "" {
+		return basePrompt, nil
 	}
 	return content, nil
 }

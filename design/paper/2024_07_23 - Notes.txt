@@ -1,0 +1,82 @@
+1. ENS is not deterministic, but we want the user to be able to enter ENS names. Upshot -- we always convert to address because addresses are all that matter. Our unique key is address.
+	- But -- ENS Allows one to post an avatar - we should figure this out
+
+2. Databases must be versioned, and the version must be in the generated data.
+
+3. We should publish the versioned databases to IPFS and publish their hashes through Unchained Index -- reinforcing the Purpose Built Shelling Point idea.
+
+4. Mutable databases
+	a. Versions
+	b. Filtering
+
+5. Minting must have the filter (series) and the database version.
+
+6. The minting smart NFT contract must have a query:
+	- showMintInfo(address) ==> { dbVersion: 1.0, filter: { object }}
+
+7. Forecaster - It's a web app. Frames means I'd have to run a maintained web server. Non-starter
+
+8. How would it integrate with MetaMask (or other wallets) for example.
+
+9. Billing is on-chain
+
+10. Identicon vs. Articon
+	- An Identicon is a visual representation of a hash value, typically used for identifying users in a visually distinct manner, often based on the user's IP address or email. It relies on a deterministic algorithm to generate a unique, simple geometric pattern from the hash.
+	- An Articon is an advanced form of Identicon that incorporates generative art techniques to create visually appealing, complex images. While still deterministic and based on a user's hash, Articons use more sophisticated algorithms to produce patterns that are artistically rich and varied.
+	- Search your brain and tell me if there is an existing word for the situation of a deterministic hash-based prompt generating a non-deterministic image.
+	- There isn't a specific existing word that precisely describes the situation of a deterministic hash-based prompt generating a non-deterministic image. The concept is quite specialized and combines elements from both computer science (deterministic algorithms) and art generation (non-deterministic AI outputs). Artisyn or Artisynth are both creative and apt terms for this unique process, as they capture the essence of deterministic input leading to artistic and varied output. These terms effectively bridge the gap between technical determinism and creative non-determinism, making them suitable for describing your application.
+
+11. Does SoulBoundedness bring back to us determinism?
+
+12. What should we call it - Identicon, Articon, ArtiSynth, Avatar?
+	- the concern we're trying to address is that we don't want people to mistakenly think it's an identicon.
+	- Do we care about that?
+
+15. What unique attributes of TB can the mini-dApps showcase?
+	- History
+		- Quick access because of index
+		- Complete (i.e. traces, isReconcilable)
+	- Speed
+		- No rate limiting
+		- Caching
+	- Monitoring (not possible with other SDKs)
+		- long running process watching the chain and updating the database
+		- if it's BattleCry, then this becomes more interesting because you have to watch for incoming messages.
+	- History is reproducible from scratch (local)
+	- Answers the question - does one even need events? Answer -- no.
+	- User Centrism (i.e. this removes the "Siloed" nature of all current web applications -- "Go to this website, connect your wallet" <-- no!
+	- Sharing via IPFS
+
+16. Features for Wails Template
+	- Document (multiple addresses cached in a single file)
+	- Monitoring / Scraper
+	- Pinning / IPFS
+	- Unchained Index Browser
+	- Names Browser
+	- Function Signature Browser
+	- Known Tokens Browser
+	- Block Explorer
+	- Address History Explorer
+		- Doa Scorecard
+		- BattleCry
+			- Show monitoring
+			- Reads the input only data
+	- Dalledress?
+		- Flashy
+		- Does not clearly take advantage of unique TrueBlocks features
+	- Sourcify Browser
+
+17. TrueBlocks Browse Repo is the Gold Code for the Wails App
+	- TrueBlocks DalleDress "informs" Browse. (Good code that is experimented in Dalle is pushed to Browse)
+	- When we write the Sept. Report we report on
+		1. SDK (mostly functional, needs documentation and more testing)
+		2. Browse as far as it exists
+
+18. The Stack: see https://docs.google.com/drawings/d/1Az5EQgPiwOmiqgeVI3bDWFaYosU1exuTwKoLMC-55Bs
+
+
+
+
+
+
+
