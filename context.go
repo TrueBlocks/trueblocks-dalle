@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"text/template"
@@ -16,7 +15,6 @@ import (
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/utils"
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 
 // Context holds templates, series, dbs, and cache for prompt generation.
@@ -391,32 +389,4 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 	}
 
 	return ret, nil
-}
-
-// SortDatabases sorts in place based on field in spec
-func SortDatabases(items []model.Database, sortSpec sdk.SortSpec) error {
-	if len(items) < 2 || len(sortSpec.Fields) == 0 {
-		return nil
-	}
-	if len(sortSpec.Order) == 0 {
-		sortSpec.Order = append(sortSpec.Order, sdk.Asc)
-	}
-	field := sortSpec.Fields[0]
-	asc := sortSpec.Order[0] == sdk.Asc
-	cmp := func(i, j int) bool { return true }
-	switch strings.ToLower(field) {
-	case "id":
-		cmp = func(i, j int) bool { return items[i].ID < items[j].ID }
-	case "name":
-		cmp = func(i, j int) bool { return items[i].Name < items[j].Name }
-	default:
-		cmp = func(i, j int) bool { return items[i].Name < items[j].Name }
-	}
-	sort.SliceStable(items, func(i, j int) bool {
-		if asc {
-			return cmp(i, j)
-		}
-		return !cmp(i, j)
-	})
-	return nil
 }

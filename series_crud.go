@@ -5,12 +5,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
 )
 
 // LoadSeriesModels loads all series JSON files from the series folder beneath the provided dataDir
@@ -80,36 +78,6 @@ func LoadDeletedSeriesModels(seriesDir string) ([]Series, error) {
 		}
 	}
 	return deletedSeries, nil
-}
-
-// SortSeries sorts in place based on field in spec (suffix, modifiedAt, last)
-func SortSeries(items []Series, sortSpec sdk.SortSpec) error {
-	if len(items) < 2 || len(sortSpec.Fields) == 0 {
-		return nil
-	}
-	if len(sortSpec.Order) == 0 {
-		sortSpec.Order = append(sortSpec.Order, sdk.Asc)
-	}
-	field := sortSpec.Fields[0]
-	asc := sortSpec.Order[0] == sdk.Asc
-	cmp := func(i, j int) bool { return true }
-	switch strings.ToLower(field) {
-	case "suffix":
-		cmp = func(i, j int) bool { return strings.Compare(items[i].Suffix, items[j].Suffix) < 0 }
-	case "modifiedat":
-		cmp = func(i, j int) bool { return items[i].ModifiedAt < items[j].ModifiedAt }
-	case "last":
-		cmp = func(i, j int) bool { return items[i].Last < items[j].Last }
-	default:
-		cmp = func(i, j int) bool { return strings.Compare(items[i].Suffix, items[j].Suffix) < 0 }
-	}
-	sort.SliceStable(items, func(i, j int) bool {
-		if asc {
-			return cmp(i, j)
-		}
-		return !cmp(i, j)
-	})
-	return nil
 }
 
 func RemoveSeries(seriesDir, suffix string) error {
