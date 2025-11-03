@@ -1,6 +1,6 @@
 package prompt
 
-import "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/base"
+import "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/base"
 
 // Attribute represents a data attribute with metadata used for prompt generation.
 type Attribute struct {

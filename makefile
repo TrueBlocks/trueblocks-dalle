@@ -4,8 +4,8 @@ test:
 	@export $(grep -v '^#' ../.env | xargs) >/dev/null && go test ./...
 
 update: build-db
-	@go get "github.com/TrueBlocks/trueblocks-sdk/v5@latest"
-	@go get github.com/TrueBlocks/trueblocks-core/src/apps/chifra@latest
+	@go get "github.com/TrueBlocks/trueblocks-sdk/v6@latest"
+	@go get github.com/TrueBlocks/trueblocks-chifra/v6@latest
 	@go mod tidy
 
 build-db:

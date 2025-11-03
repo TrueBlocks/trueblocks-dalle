@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
-	coreUtils "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
+	coreUtils "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/annotate"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/progress"

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	coreTypes "github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/types"
+	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
+	coreTypes "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/types"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
 )
 

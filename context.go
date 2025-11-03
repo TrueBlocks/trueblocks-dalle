@@ -8,8 +8,8 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/logger"
+	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
+	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/image"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"

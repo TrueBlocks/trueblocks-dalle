@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-core/src/apps/chifra/pkg/file"
+	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 )
 
 func TestCacheManager_DatabaseCache(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v6"
 )
 
 func writeSeriesFile(t *testing.T, dir, suffix string, deleted bool, last int) {

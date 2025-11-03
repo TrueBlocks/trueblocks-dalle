@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v5"
+	sdk "github.com/TrueBlocks/trueblocks-sdk/v6"
 )
 
 // SortDalleDress sorts in place based on field in spec
