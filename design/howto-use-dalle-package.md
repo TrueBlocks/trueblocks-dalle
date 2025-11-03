@@ -76,7 +76,7 @@ While the `dalle` package *updates* the progress state, it does not know how you
 Your application is responsible for polling for progress and displaying it. You can do this by using the `progress` sub-package.
 
 ```go
-import "github.com/TrueBlocks/trueblocks-dalle/v2/pkg/progress"
+import "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/progress"
 
 // After starting a generation job...
 
@@ -124,13 +124,13 @@ To use the `dalle` package in a new Go application:
 1.  **Add the dependency**: Make sure your `go.mod` file correctly references the `trueblocks-dalle` package. You may need a `replace` directive if you are developing locally.
 
     ```
-    replace github.com/TrueBlocks/trueblocks-dalle/v2 => ../path/to/your/dalle/submodule
+    replace github.com/TrueBlocks/trueblocks-dalle/v6 => ../path/to/your/dalle/submodule
     ```
 
 2.  **Configure the Manager (Optional)**: You can override the default context cache settings if needed.
 
     ```go
-    import dalle "github.com/TrueBlocks/trueblocks-dalle/v2"
+    import dalle "github.com/TrueBlocks/trueblocks-dalle/v6"
 
     func main() {
         opts := dalle.ManagerOptions{

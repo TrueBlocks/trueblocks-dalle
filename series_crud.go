@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
 
 // LoadSeriesModels loads all series JSON files from the series folder beneath the provided dataDir

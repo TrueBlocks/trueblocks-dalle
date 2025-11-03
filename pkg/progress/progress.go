@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
 
 // Phase represents a canonical generation phase.

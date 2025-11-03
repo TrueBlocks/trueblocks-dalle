@@ -1,6 +1,6 @@
 # Introduction
 
-`trueblocks-dalle` is a Go library (module `github.com/TrueBlocks/trueblocks-dalle/v2`) that deterministically generates AI art by converting seed strings (typically Ethereum addresses) into structured semantic attributes, building layered natural-language prompts, optionally enhancing those prompts through OpenAI Chat, generating images through OpenAI's DALL·E API, annotating images with captions, and providing optional text-to-speech narration.
+`trueblocks-dalle` is a Go library (module `github.com/TrueBlocks/trueblocks-dalle/v6`) that deterministically generates AI art by converting seed strings (typically Ethereum addresses) into structured semantic attributes, building layered natural-language prompts, optionally enhancing those prompts through OpenAI Chat, generating images through OpenAI's DALL·E API, annotating images with captions, and providing optional text-to-speech narration.
 
 This is **not** a generic wrapper around OpenAI. It is a *deterministic prompt orchestration and artifact pipeline* designed for reproducible creative output.
 

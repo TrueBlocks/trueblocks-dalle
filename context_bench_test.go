@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
 
 func BenchmarkDatabaseLoad_WithoutCache(b *testing.B) {

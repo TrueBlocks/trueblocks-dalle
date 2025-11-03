@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/model"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
 	sdk "github.com/TrueBlocks/trueblocks-sdk/v6"
 )
 

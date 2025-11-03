@@ -8,7 +8,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 	coreTypes "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/types"
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
 
 // Series represents a collection of prompt attributes and their values.

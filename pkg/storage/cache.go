@@ -12,7 +12,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 )
 
 // DatabaseRecord represents a single row from a CSV database

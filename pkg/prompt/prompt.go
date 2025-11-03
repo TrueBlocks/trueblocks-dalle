@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/utils"
 )
 
 // AiConfiguration holds configuration for both prompt enhancement and image generation

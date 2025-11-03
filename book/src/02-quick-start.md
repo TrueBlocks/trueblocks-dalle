@@ -27,7 +27,7 @@ export TB_DALLE_NO_ENHANCE=1
 ### Installation
 
 ```bash
-go get github.com/TrueBlocks/trueblocks-dalle/v2@latest
+go get github.com/TrueBlocks/trueblocks-dalle/v6@latest
 ```
 
 ## Basic Usage
@@ -42,7 +42,7 @@ import (
     "log"
     "time"
     
-    dalle "github.com/TrueBlocks/trueblocks-dalle/v2"
+    dalle "github.com/TrueBlocks/trueblocks-dalle/v6"
 )
 
 func main() {
@@ -75,7 +75,7 @@ import (
     "fmt"
     "time"
     
-    dalle "github.com/TrueBlocks/trueblocks-dalle/v2"
+    dalle "github.com/TrueBlocks/trueblocks-dalle/v6"
 )
 
 func main() {
@@ -119,7 +119,7 @@ package main
 import (
     "fmt"
     
-    dalle "github.com/TrueBlocks/trueblocks-dalle/v2"
+    dalle "github.com/TrueBlocks/trueblocks-dalle/v6"
 )
 
 func main() {

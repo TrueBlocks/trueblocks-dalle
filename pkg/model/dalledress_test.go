@@ -8,7 +8,7 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 )
 
 func TestDalleDress_String(t *testing.T) {

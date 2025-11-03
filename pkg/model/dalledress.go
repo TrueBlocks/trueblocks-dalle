@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/prompt"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 )
 
 // DalleDress represents a generated prompt and its associated attributes.

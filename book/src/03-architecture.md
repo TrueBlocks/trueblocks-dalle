@@ -15,7 +15,7 @@ Image Creation → Annotation → Artifact Persistence → Optional TTS
 
 The codebase is organized into a clear package hierarchy:
 
-### Root Package (`github.com/TrueBlocks/trueblocks-dalle/v2`)
+### Root Package (`github.com/TrueBlocks/trueblocks-dalle/v6`)
 
 | File | Responsibility |
 |------|----------------|

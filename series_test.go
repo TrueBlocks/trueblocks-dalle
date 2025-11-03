@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-dalle/v2/pkg/storage"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
 
 func TestSeries_String(t *testing.T) {

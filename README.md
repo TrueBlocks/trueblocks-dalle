@@ -48,7 +48,7 @@
 ### Getting Started
 
 ```bash
-git clone https://github.com/TrueBlocks/trueblocks-dalle/v2.git
+git clone https://github.com/TrueBlocks/trueblocks-dalle/v6.git
 cd trueblocks-dalle
 go mod tidy
 export OPENAI_API_KEY=sk-...yourkey...
