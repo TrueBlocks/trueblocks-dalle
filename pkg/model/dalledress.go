@@ -13,6 +13,7 @@ import (
 // DalleDress represents a generated prompt and its associated attributes.
 type DalleDress struct {
 	Original        string                      `json:"original"`
+	OriginalName    string                      `json:"originalName"`
 	FileName        string                      `json:"fileName"`
 	FileSize        int64                       `json:"fileSize"`
 	ModifiedAt      int64                       `json:"modifiedAt"`
