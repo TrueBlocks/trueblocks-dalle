@@ -6,7 +6,7 @@ go 1.25.1
 require (
 	git.sr.ht/~sbinet/gg v0.7.0
 	github.com/TrueBlocks/trueblocks-chifra/v6 v6.5.1-0.20251118031743-69a8c974ca33
-	github.com/TrueBlocks/trueblocks-sdk/v6 v6.5.0
+	github.com/TrueBlocks/trueblocks-sdk/v6 v6.5.1
 	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/stretchr/testify v1.11.1
 )
@@ -20,7 +20,6 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bykof/gostradamus v1.1.2 // indirect
 	github.com/consensys/gnark-crypto v0.18.1 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/crackcomm/go-gitignore v0.0.0-20241020182519-7843d2ba8fdf // indirect
 	github.com/crate-crypto/go-eth-kzg v1.4.0 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240724233137-53bbb0ceb27a // indirect
