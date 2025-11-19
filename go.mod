@@ -20,6 +20,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bykof/gostradamus v1.1.2 // indirect
 	github.com/consensys/gnark-crypto v0.18.1 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/crackcomm/go-gitignore v0.0.0-20241020182519-7843d2ba8fdf // indirect
 	github.com/crate-crypto/go-eth-kzg v1.4.0 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240724233137-53bbb0ceb27a // indirect
