@@ -97,7 +97,7 @@ func TestJSONNamingConsistency(t *testing.T) {
 	if err := json.Unmarshal(b, &m); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	expected := []string{"annotatedPath", "attributes", "cacheHit", "completed", "dataPrompt", "downloadMode", "enhancedPrompt", "fileName", "fileSize", "generatedPath", "imageUrl", "ipfsHash", "modifiedAt", "original", "prompt", "series", "seed", "seedChunks", "selectedRecords", "selectedTokens", "tersePrompt", "titlePrompt"}
+	expected := []string{"annotatedPath", "attributes", "cacheHit", "completed", "dataPrompt", "downloadMode", "enhancedPrompt", "fileName", "fileSize", "generatedPath", "imageUrl", "ipfsHash", "modifiedAt", "original", "originalName", "prompt", "series", "seed", "seedChunks", "selectedRecords", "selectedTokens", "tersePrompt", "titlePrompt"}
 	var got []string
 	for k := range m {
 		got = append(got, k)
