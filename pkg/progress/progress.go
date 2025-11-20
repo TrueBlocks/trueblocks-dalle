@@ -266,6 +266,7 @@ func (pm *ProgressManager) Fail(series, addr string, err error) {
 		cur.EndedNs = now
 	}
 	run.current = PhaseFailed
+	run.done = true
 	logger.InfoR("phase.fail", "series", series, "addr", addr, "at", run.current, "error", err.Error())
 
 	var phasesDone int

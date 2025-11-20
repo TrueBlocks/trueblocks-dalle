@@ -1,19 +1,25 @@
 # Architecture Overview
 
-This chapter provides a comprehensive walkthrough of the `trueblocks-dalle` architecture, directly reflecting the actual implementation structure and responsibilities.
+The `trueblocks-dalle` library generates AI art deterministically from seed strings (like Ethereum addresses).
 
-## System Overview
+## How It Works
 
 The library implements a deterministic AI art generation pipeline that converts seed strings into structured semantic attributes, builds layered prompts, generates images via OpenAI APIs, and produces complete artifact sets with progress tracking.
 
 ```
-Input Seed → Context Resolution → Attribute Selection → Prompt Generation → 
-Image Creation → Annotation → Artifact Persistence → Optional TTS
+Seed String → Select Attributes → Build Prompts → Generate Image → Add Caption → Save FilesImage Creation → Annotation → Artifact Persistence → Optional TTS
 ```
 
-## Package Architecture
+## Key Concepts
 
-The codebase is organized into a clear package hierarchy:
+- **Deterministic**: Same seed always produces same output
+- **Attribute-Driven**: Seed chunks map to curated word lists (adjectives, styles, etc.)
+- **Template-Based**: Multiple prompt formats for different purposes  
+- **Complete Pipeline**: Handles everything from prompt to final annotated image
+
+## Package Structure
+
+The library is organized into focused packages:
 
 ### Root Package (`github.com/TrueBlocks/trueblocks-dalle/v6`)
 

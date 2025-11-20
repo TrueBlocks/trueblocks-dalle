@@ -61,9 +61,9 @@ export OPENAI_API_KEY=sk-...yourkey...
 **Basic Prompt Generation:**
 
 ```go
-import "github.com/TrueBlocks/trueblocks-dalledress/pkg/dalle"
+import dalle "github.com/TrueBlocks/trueblocks-dalle/v6"
 
-ctx := dalle.NewContext("output")
+ctx := dalle.NewContext()
 dd, err := ctx.MakeDalleDress("0x1234...")
 if err != nil { panic(err) }
 fmt.Println(dd.Prompt)
