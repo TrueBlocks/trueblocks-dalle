@@ -5,7 +5,7 @@ go 1.25.1
 
 require (
 	git.sr.ht/~sbinet/gg v0.7.0
-	github.com/TrueBlocks/trueblocks-chifra/v6 v6.5.1-0.20251118031743-69a8c974ca33
+	github.com/TrueBlocks/trueblocks-chifra/v6 v6.5.1-0.20251121153833-19c9b4bcd4a9
 	github.com/TrueBlocks/trueblocks-sdk/v6 v6.5.1
 	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/stretchr/testify v1.11.1
