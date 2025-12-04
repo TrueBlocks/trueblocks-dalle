@@ -1,5 +1,7 @@
 package model
 
+import sdk "github.com/TrueBlocks/trueblocks-sdk/v6"
+
 type Database struct {
 	ID           string   `json:"id"`
 	Name         string   `json:"name"`
@@ -14,15 +16,21 @@ type Database struct {
 	CacheHit     bool     `json:"cacheHit"`     // Whether loaded from cache
 }
 
-type DatabaseRecord struct {
+type Item struct {
 	ID           string `json:"id"`
 	DatabaseName string `json:"databaseName"` // Which database this record belongs to
-	Index        uint64 `json:"index"`        // Record index/position
+	Index        uint64 `json:"index"`        // Item index/position
 	Value        string `json:"value"`        // The actual record value
-	Weight       uint64 `json:"weight"`       // Record weight/frequency
+	Weight       uint64 `json:"weight"`       // Item weight/frequency
 }
 
 type Generator struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+func SortItems(items []Item, sortSpec sdk.SortSpec) error {
+	_ = items
+	_ = sortSpec
+	return nil
 }
