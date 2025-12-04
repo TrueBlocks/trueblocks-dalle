@@ -9,10 +9,64 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 )
 
 //go:embed databases.tar.gz
 var embeddedDbs []byte
+
+// TODO: Can't we get these values from the .tar.gz file directly?
+
+// GetAvailableDatabases returns the list of all available database names.
+// This is the canonical source for database names used throughout the system.
+func GetAvailableDatabases() []string {
+	// Use prompt.DatabaseNames as the single source of truth
+	// Note: This list may contain duplicates (e.g., "artstyles" appears twice)
+	// Callers should deduplicate if needed for display purposes
+	seen := make(map[string]bool)
+	unique := make([]string, 0, len(prompt.DatabaseNames))
+	for _, name := range prompt.DatabaseNames {
+		if !seen[name] {
+			seen[name] = true
+			unique = append(unique, name)
+		}
+	}
+	return unique
+}
+
+// FormatDatabaseName converts internal database name to display name.
+func FormatDatabaseName(dbName string) string {
+	if len(dbName) == 0 {
+		return dbName
+	}
+	return strings.ToUpper(dbName[:1]) + dbName[1:]
+}
+
+// TODO: Can't we get these values from the .tar.gz file directly?
+
+// GetDatabaseDescription returns a human-readable description for a database.
+func GetDatabaseDescription(dbName string) string {
+	descriptions := map[string]string{
+		"adverbs":      "Manner modifiers for actions",
+		"adjectives":   "Descriptive attributes",
+		"nouns":        "Core subjects and entities",
+		"emotions":     "Emotional states and expressions",
+		"occupations":  "Professional roles and vocations",
+		"actions":      "Physical activities and poses",
+		"artstyles":    "Artistic movements and styles",
+		"litstyles":    "Literary styles and genres",
+		"colors":       "Color palettes and values",
+		"viewpoints":   "Camera angles and perspectives",
+		"gazes":        "Gaze directions and focus",
+		"backstyles":   "Background styles and treatments",
+		"compositions": "Composition rules and structures",
+	}
+	if desc, ok := descriptions[dbName]; ok {
+		return desc
+	}
+	return ""
+}
 
 // ReadDatabaseCSV extracts the named CSV file from the embedded .tar.gz and returns its lines.
 func ReadDatabaseCSV(name string) ([]string, error) {
