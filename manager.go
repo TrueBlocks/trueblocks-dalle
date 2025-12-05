@@ -13,6 +13,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/walk"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/progress"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
@@ -287,6 +288,67 @@ func ContextCount() int {
 	contextManager.Lock()
 	defer contextManager.Unlock()
 	return len(contextManager.items)
+}
+
+// GetAllItems loads all database items from the cache manager into a map keyed by database name.
+// Items are lazily loaded from embedded CSV files on first call, then cached in memory.
+// Returns a map where keys are database names (e.g., "nouns") and values are slices of Items.
+func GetAllItems() (map[string][]model.Item, error) {
+	cm := storage.GetCacheManager()
+	if err := cm.LoadOrBuild(); err != nil {
+		return nil, fmt.Errorf("failed to load cache: %w", err)
+	}
+
+	allDatabases := storage.GetAvailableDatabases()
+	result := make(map[string][]model.Item, len(allDatabases))
+
+	for _, dbName := range allDatabases {
+		idx, err := cm.GetDatabase(dbName)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Failed to load database %s: %v", dbName, err))
+			continue
+		}
+
+		items := make([]model.Item, 0, len(idx.Records))
+		for i, record := range idx.Records {
+			if len(record.Values) < 2 {
+				continue
+			}
+
+			item := model.Item{
+				ID:           fmt.Sprintf("%s-%d", dbName, i),
+				DatabaseName: dbName,
+				Index:        uint64(i),
+				Version:      record.Values[0],
+				Value:        record.Values[1],
+			}
+
+			if len(record.Values) > 2 {
+				item.Remainder = strings.Join(record.Values[2:], ",")
+			}
+
+			items = append(items, item)
+		}
+
+		result[dbName] = items
+	}
+
+	return result, nil
+}
+
+// GetItemsForDatabase returns all items for a specific database.
+// Returns an empty slice (not an error) if the database is not found.
+func GetItemsForDatabase(dbName string) ([]model.Item, error) {
+	allItems, err := GetAllItems()
+	if err != nil {
+		return nil, err
+	}
+
+	if items, exists := allItems[dbName]; exists {
+		return items, nil
+	}
+
+	return []model.Item{}, nil
 }
 
 // Clean removes generated images and data for a given series and address.

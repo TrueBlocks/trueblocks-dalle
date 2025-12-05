@@ -20,8 +20,9 @@ type Item struct {
 	ID           string `json:"id"`
 	DatabaseName string `json:"databaseName"` // Which database this record belongs to
 	Index        uint64 `json:"index"`        // Item index/position
+	Version      string `json:"version"`      // Version from CSV (e.g., "v0.1.0")
 	Value        string `json:"value"`        // The actual record value
-	Weight       uint64 `json:"weight"`       // Item weight/frequency
+	Remainder    string `json:"remainder"`    // Remaining CSV columns joined
 }
 
 type Generator struct {
