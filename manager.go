@@ -311,7 +311,7 @@ func GetAllItems() (map[string][]model.Item, error) {
 
 		items := make([]model.Item, 0, len(idx.Records))
 		for i, record := range idx.Records {
-			if len(record.Values) < 2 {
+			if len(record.Values) < 1 {
 				continue
 			}
 
@@ -319,14 +319,11 @@ func GetAllItems() (map[string][]model.Item, error) {
 				ID:           fmt.Sprintf("%s-%d", dbName, i),
 				DatabaseName: dbName,
 				Index:        uint64(i),
-				Version:      record.Values[0],
-				Value:        record.Values[1],
 			}
-
-			if len(record.Values) > 2 {
-				item.Remainder = strings.Join(record.Values[2:], ",")
+			item.Value = record.Values[0]
+			if len(record.Values) > 1 {
+				item.Remainder = strings.Join(record.Values[1:], ",")
 			}
-
 			items = append(items, item)
 		}
 
