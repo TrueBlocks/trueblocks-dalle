@@ -64,8 +64,23 @@ func Annotate(text, fileName, location string, annoPct float64) (ret string, err
 	}
 
 	gc := gg.NewContextForImage(newImg)
-	if err := gc.LoadFontFace("/System/Library/Fonts/Monaco.ttf", estimatedFontSize); err != nil {
-		return "", fmt.Errorf("load font: %w", err)
+	
+	// Try multiple font paths for cross-platform compatibility
+	fontPaths := []string{
+		"/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", // Linux
+		"/System/Library/Fonts/Monaco.ttf",                      // macOS
+	}
+	var fontErr error
+	for _, fontPath := range fontPaths {
+		if err := gc.LoadFontFace(fontPath, estimatedFontSize); err == nil {
+			fontErr = nil
+			break
+		} else {
+			fontErr = err
+		}
+	}
+	if fontErr != nil {
+		return "", fmt.Errorf("load font: %w", fontErr)
 	}
 	borderCol := darkenColor(col)
 	gc.SetColor(borderCol)
