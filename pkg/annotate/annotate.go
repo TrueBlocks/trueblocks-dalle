@@ -64,11 +64,11 @@ func Annotate(text, fileName, location string, annoPct float64) (ret string, err
 	}
 
 	gc := gg.NewContextForImage(newImg)
-	
+
 	// Try multiple font paths for cross-platform compatibility
 	fontPaths := []string{
 		"/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", // Linux
-		"/System/Library/Fonts/Monaco.ttf",                      // macOS
+		"/System/Library/Fonts/Monaco.ttf",                    // macOS
 	}
 	var fontErr error
 	for _, fontPath := range fontPaths {
