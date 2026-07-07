@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"text/template"
 	"time"
 
@@ -269,9 +270,11 @@ func enhanceLiteraryContentWithClient(basePrompt, authorContext string, client *
 	systemPrompt := authorContext + "\n\nEnhance the following art generation prompt while maintaining this literary perspective. Make it more vivid and evocative while preserving all key attributes. Focus on emotional depth and narrative richness."
 
 	payload := Request{
-		Model:       config.EnhancementModel,
-		Seed:        config.EnhancementSeed,
-		Temperature: config.EnhancementTemperature,
+		Model: config.EnhancementModel,
+		Seed:  config.EnhancementSeed,
+	}
+	if !strings.HasPrefix(config.EnhancementModel, "gpt-5") {
+		payload.Temperature = config.EnhancementTemperature
 	}
 
 	payload.Messages = append(payload.Messages, Message{Role: "system", Content: systemPrompt})
