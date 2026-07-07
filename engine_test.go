@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/progress"
 )
 
 func TestNewEngineUsesConfigDataDir(t *testing.T) {
@@ -394,6 +396,13 @@ func TestEngineGenerateImage(t *testing.T) {
 	}
 	if _, err := os.Stat(result.GeneratedPath); err != nil {
 		t.Fatalf("expected generated artifact: %v", err)
+	}
+	report := progress.GetProgress(result.Series, result.Seed)
+	if report == nil {
+		t.Fatalf("expected completed progress report")
+	}
+	if !report.Done || report.Current != progress.PhaseCompleted {
+		t.Fatalf("expected completed progress, got %#v", report)
 	}
 }
 

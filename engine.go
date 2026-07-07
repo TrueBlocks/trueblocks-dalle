@@ -10,6 +10,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/image"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/progress"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
@@ -118,6 +119,7 @@ type promptBuild struct {
 	authorContext   string
 	technicalPrompt string
 	filename        string
+	dress           *model.DalleDress
 }
 
 func ResolveDataDir(configDir string) (string, error) {
@@ -461,7 +463,7 @@ func (engine *Engine) buildPromptMetadata(request GenerateRequest) (promptBuild,
 	metadata.Stages.Annotated.Status = "skipped"
 	metadata.Status.Completed = true
 	metadata.ImageID = ComputeImageID(metadata)
-	return promptBuild{metadata: metadata, authorContext: authorContext, technicalPrompt: technicalPrompt, filename: dress.FileName}, nil
+	return promptBuild{metadata: metadata, authorContext: authorContext, technicalPrompt: technicalPrompt, filename: dress.FileName, dress: dress}, nil
 }
 
 func (engine *Engine) Generate(request GenerateRequest) (GenerateResult, error) {
@@ -483,21 +485,34 @@ func (engine *Engine) Generate(request GenerateRequest) (GenerateResult, error) 
 		return GenerateResult{}, err
 	}
 	metadata := build.metadata
+	progressMgr := progress.GetProgressManager()
+	progressMgr.StartRun(metadata.Series.Name, metadata.Seed, build.dress)
+	progressMgr.Transition(metadata.Series.Name, metadata.Seed, progress.PhaseBasePrompts)
 	if request.Enhance {
+		progressMgr.Transition(metadata.Series.Name, metadata.Seed, progress.PhaseEnhance)
 		if engine.enhancePrompt == nil {
-			return GenerateResult{}, NewError(ErrProviderUnavailable, "prompt enhancer is not configured")
+			err := NewError(ErrProviderUnavailable, "prompt enhancer is not configured")
+			progressMgr.Fail(metadata.Series.Name, metadata.Seed, err)
+			return GenerateResult{}, err
 		}
 		enhancedPrompt, err := engine.enhancePrompt(metadata.Prompts.Prompt, build.authorContext)
 		if err != nil {
-			return GenerateResult{}, WrapError(ErrProviderFailed, "enhance prompt", err)
+			wrapped := WrapError(ErrProviderFailed, "enhance prompt", err)
+			progressMgr.Fail(metadata.Series.Name, metadata.Seed, wrapped)
+			return GenerateResult{}, wrapped
 		}
 		metadata.Prompts.EnhancedPrompt = enhancedPrompt
 		metadata.Stages.Enhanced.Status = "complete"
 		metadata.ImageID = ComputeImageID(metadata)
+	} else {
+		progressMgr.Skip(metadata.Series.Name, metadata.Seed, progress.PhaseEnhance)
 	}
 	if request.Image {
+		progressMgr.Transition(metadata.Series.Name, metadata.Seed, progress.PhaseImagePrep)
 		if engine.requestImage == nil {
-			return GenerateResult{}, NewError(ErrProviderUnavailable, "image provider is not configured")
+			err := NewError(ErrProviderUnavailable, "image provider is not configured")
+			progressMgr.Fail(metadata.Series.Name, metadata.Seed, err)
+			return GenerateResult{}, err
 		}
 		imagePrompt := metadata.Prompts.EnhancedPrompt
 		if imagePrompt == "" {
@@ -520,20 +535,32 @@ func (engine *Engine) Generate(request GenerateRequest) (GenerateResult, error) 
 			baseURL:         engine.provider.BaseURL,
 		})
 		if err != nil {
-			return GenerateResult{}, WrapError(ErrProviderFailed, "generate image", err)
+			wrapped := WrapError(ErrProviderFailed, "generate image", err)
+			progressMgr.Fail(metadata.Series.Name, metadata.Seed, wrapped)
+			return GenerateResult{}, wrapped
 		}
 		metadata.Artifacts.Generated = result.generatedPath
 		metadata.Stages.Generated.Status = "complete"
 		if request.Annotate {
 			metadata.Artifacts.Annotated = result.annotatedPath
 			metadata.Stages.Annotated.Status = "complete"
+		} else {
+			progressMgr.Skip(metadata.Series.Name, metadata.Seed, progress.PhaseAnnotate)
 		}
 		metadata.ImageID = ComputeImageID(metadata)
+	} else {
+		progressMgr.Skip(metadata.Series.Name, metadata.Seed, progress.PhaseImagePrep)
+		progressMgr.Skip(metadata.Series.Name, metadata.Seed, progress.PhaseImageWait)
+		progressMgr.Skip(metadata.Series.Name, metadata.Seed, progress.PhaseImageDownload)
+		progressMgr.Skip(metadata.Series.Name, metadata.Seed, progress.PhaseAnnotate)
 	}
 	metadataPath, err := WriteImageMetadata(engine.dataDir, metadata)
 	if err != nil {
+		progressMgr.Fail(metadata.Series.Name, metadata.Seed, err)
 		return GenerateResult{}, err
 	}
+	progressMgr.Transition(metadata.Series.Name, metadata.Seed, progress.PhaseCompleted)
+	progressMgr.Complete(metadata.Series.Name, metadata.Seed)
 	return engine.generateResult(metadata, metadataPath), nil
 }
 
