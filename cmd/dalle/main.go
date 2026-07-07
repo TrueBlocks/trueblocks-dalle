@@ -15,6 +15,7 @@ import (
 type cliConfig struct {
 	dataDir         string
 	providerBaseURL string
+	imageModel      string
 	stdin           io.Reader
 	stdout          io.Writer
 	stderr          io.Writer
@@ -41,12 +42,14 @@ func run(args []string, config cliConfig) int {
 	}
 	config.dataDir = global.dataDir
 	config.providerBaseURL = global.providerBaseURL
+	config.imageModel = global.imageModel
 	if len(remaining) == 0 {
 		writeError(config.stderr, fmt.Errorf("command is required"))
 		return 2
 	}
 	engine, err := dalle.New(dalle.Config{
-		DataDir: config.dataDir,
+		DataDir:    config.dataDir,
+		ImageModel: config.imageModel,
 		Provider: dalle.ProviderConfig{
 			BaseURL: config.providerBaseURL,
 		},
@@ -65,6 +68,7 @@ func run(args []string, config cliConfig) int {
 type globalFlags struct {
 	dataDir         string
 	providerBaseURL string
+	imageModel      string
 }
 
 func parseGlobalFlags(args []string) (globalFlags, []string, error) {
@@ -89,6 +93,14 @@ func parseGlobalFlags(args []string) (globalFlags, []string, error) {
 			global.providerBaseURL = args[index]
 		case strings.HasPrefix(arg, "--provider-base-url="):
 			global.providerBaseURL = strings.TrimPrefix(arg, "--provider-base-url=")
+		case arg == "--model":
+			index++
+			if index >= len(args) {
+				return globalFlags{}, nil, fmt.Errorf("--model requires a value")
+			}
+			global.imageModel = args[index]
+		case strings.HasPrefix(arg, "--model="):
+			global.imageModel = strings.TrimPrefix(arg, "--model=")
 		default:
 			remaining = append(remaining, arg)
 		}
