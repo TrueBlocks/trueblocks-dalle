@@ -69,11 +69,11 @@ func (s *Series) String() string {
 }
 
 // SaveSeries saves the Series to a file with the given filename and last index.
-func (s *Series) SaveSeries(series string, last int) {
+func (s *Series) SaveSeries(series string, last int) error {
 	ss := s
 	ss.Last = last
 	target := filepath.Join(storage.SeriesDir(), series+".json") // creates the folder
-	_ = writeTextFile(target, ss.String())
+	return writeTextFile(target, ss.String())
 }
 
 // GetFilter returns a string slice for the given field name in the Series.

@@ -115,6 +115,26 @@ func TestEngineGetDatabaseArchive(t *testing.T) {
 	}
 }
 
+func TestEngineListDatabaseRecords(t *testing.T) {
+	engine, err := New(Config{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	result, err := engine.ListDatabaseRecords("nouns", 3)
+	if err != nil {
+		t.Fatalf("ListDatabaseRecords: %v", err)
+	}
+	if result.Name != "nouns" {
+		t.Fatalf("expected nouns database, got %#v", result)
+	}
+	if len(result.Records) != 3 {
+		t.Fatalf("expected limited records, got %d", len(result.Records))
+	}
+	if result.Records[0].Key == "" || len(result.Records[0].Values) == 0 {
+		t.Fatalf("expected populated records: %#v", result.Records[0])
+	}
+}
+
 func TestEngineSeriesOperations(t *testing.T) {
 	engine, err := New(Config{DataDir: t.TempDir()})
 	if err != nil {

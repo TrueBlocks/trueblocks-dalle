@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	dalle "github.com/TrueBlocks/trueblocks-dalle/v6"
@@ -201,6 +202,25 @@ func runImages(engine *dalle.Engine, args []string, stdout io.Writer) error {
 		return writeJSON(stdout, record)
 	case "export":
 		return runImagesExport(engine, args[1:], stdout)
+	case "delete":
+		id, err := requiredArg("images delete", args[1:], "image ID")
+		if err != nil {
+			return err
+		}
+		if err := engine.DeleteImage(id); err != nil {
+			return err
+		}
+		return writeJSON(stdout, map[string]bool{"deleted": true})
+	case "regenerate":
+		id, err := requiredArg("images regenerate", args[1:], "image ID")
+		if err != nil {
+			return err
+		}
+		result, err := engine.RegenerateImage(id)
+		if err != nil {
+			return err
+		}
+		return writeJSON(stdout, result)
 	default:
 		return fmt.Errorf("unknown images subcommand %q", args[0])
 	}
@@ -373,6 +393,30 @@ func runDatabases(engine *dalle.Engine, args []string, stdout io.Writer) error {
 			return err
 		}
 		return writeJSON(stdout, archive)
+	case "records":
+		flags := flag.NewFlagSet("databases records", flag.ContinueOnError)
+		flags.SetOutput(io.Discard)
+		limit := 200
+		flags.IntVar(&limit, "limit", 200, "maximum records to return")
+		if err := flags.Parse(reorderFlagArgs(args[1:], map[string]bool{"limit": true})); err != nil {
+			return err
+		}
+		name, err := requiredArg("databases records", flags.Args(), "database name")
+		if err != nil {
+			return err
+		}
+		if limitText := strings.TrimSpace(flags.Lookup("limit").Value.String()); limitText != "" {
+			parsed, err := strconv.Atoi(limitText)
+			if err != nil {
+				return err
+			}
+			limit = parsed
+		}
+		result, err := engine.ListDatabaseRecords(name, limit)
+		if err != nil {
+			return err
+		}
+		return writeJSON(stdout, result)
 	default:
 		return fmt.Errorf("unknown databases subcommand %q", args[0])
 	}

@@ -125,6 +125,19 @@ func TestRunDatabasesAndValidate(t *testing.T) {
 	}
 	stdout.Reset()
 	stderr.Reset()
+	exit = run([]string{"--data-dir", dataDir, "databases", "records", "nouns", "--limit", "2"}, testConfig(t, &stdout, &stderr))
+	if exit != 0 {
+		t.Fatalf("expected databases records exit 0, got %d: %s", exit, stderr.String())
+	}
+	var records dalle.DatabaseRecordsResult
+	if err := json.Unmarshal(stdout.Bytes(), &records); err != nil {
+		t.Fatalf("decode database records: %v\n%s", err, stdout.String())
+	}
+	if records.Name != "nouns" || len(records.Records) != 2 {
+		t.Fatalf("unexpected database records: %#v", records)
+	}
+	stdout.Reset()
+	stderr.Reset()
 	exit = run([]string{"--data-dir", dataDir, "validate"}, testConfig(t, &stdout, &stderr))
 	if exit != 0 {
 		t.Fatalf("expected validate exit 0, got %d: %s", exit, stderr.String())
@@ -135,6 +148,33 @@ func TestRunDatabasesAndValidate(t *testing.T) {
 	}
 	if !validation["valid"] {
 		t.Fatalf("expected valid response: %#v", validation)
+	}
+}
+
+func TestRunImagesDelete(t *testing.T) {
+	dataDir := filepath.Join(t.TempDir(), "dalle-data")
+	stdout := bytes.Buffer{}
+	stderr := bytes.Buffer{}
+	exit := run([]string{"--data-dir", dataDir, "generate", "Person Tour Coordinates"}, testConfig(t, &stdout, &stderr))
+	if exit != 0 {
+		t.Fatalf("expected generate exit 0, got %d: %s", exit, stderr.String())
+	}
+	var result dalle.GenerateResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("decode generate result: %v\n%s", err, stdout.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	exit = run([]string{"--data-dir", dataDir, "images", "delete", result.Metadata.ImageID}, testConfig(t, &stdout, &stderr))
+	if exit != 0 {
+		t.Fatalf("expected delete exit 0, got %d: %s", exit, stderr.String())
+	}
+	var response map[string]bool
+	if err := json.Unmarshal(stdout.Bytes(), &response); err != nil {
+		t.Fatalf("decode delete response: %v\n%s", err, stdout.String())
+	}
+	if !response["deleted"] {
+		t.Fatalf("expected deleted response: %#v", response)
 	}
 }
 

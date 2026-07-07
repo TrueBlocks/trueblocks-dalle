@@ -96,6 +96,12 @@ type ExportImageResult struct {
 	Files map[string]string `json:"files"`
 }
 
+type DatabaseRecordsResult struct {
+	Name    string                   `json:"name"`
+	Version string                   `json:"version"`
+	Records []storage.DatabaseRecord `json:"records"`
+}
+
 func New(config Config) (*Engine, error) {
 	dataDir, err := ResolveDataDir(config.DataDir)
 	if err != nil {
@@ -196,6 +202,33 @@ func (engine *Engine) GetDatabaseArchive(version string) (storage.DatabaseArchiv
 	return storage.DatabaseArchiveManifest{}, NewError(ErrDatabaseVersionUnavailable, "database archive version is not available")
 }
 
+func (engine *Engine) ListDatabaseRecords(name string, limit int) (DatabaseRecordsResult, error) {
+	if engine == nil {
+		return DatabaseRecordsResult{}, NewError(ErrInvalidInput, "engine is nil")
+	}
+	name = strings.TrimSuffix(safePathPart(name), ".csv")
+	if name == "" {
+		return DatabaseRecordsResult{}, NewError(ErrInvalidInput, "database name is required")
+	}
+	if limit <= 0 || limit > 500 {
+		limit = 200
+	}
+	storage.UseDataDir(engine.dataDir)
+	cacheManager := storage.GetCacheManager()
+	if err := cacheManager.LoadOrBuild(); err != nil {
+		return DatabaseRecordsResult{}, WrapError(ErrDatabaseManifestInvalid, "load database cache", err)
+	}
+	index, err := cacheManager.GetDatabase(name)
+	if err != nil {
+		return DatabaseRecordsResult{}, WrapError(ErrDatabaseVersionUnavailable, "load database records", err)
+	}
+	records := index.Records
+	if len(records) > limit {
+		records = records[:limit]
+	}
+	return DatabaseRecordsResult{Name: index.Name, Version: index.Version, Records: records}, nil
+}
+
 func (engine *Engine) ListSeries(filter SeriesFilter) ([]Series, error) {
 	if engine == nil {
 		return nil, NewError(ErrInvalidInput, "engine is nil")
@@ -250,7 +283,9 @@ func (engine *Engine) SaveSeries(series Series) (Series, error) {
 		return Series{}, NewError(ErrInvalidInput, "series suffix is required")
 	}
 	storage.UseDataDir(engine.dataDir)
-	series.SaveSeries(series.Suffix, series.Last)
+	if err := series.SaveSeries(series.Suffix, series.Last); err != nil {
+		return Series{}, WrapError(ErrSeriesInvalid, "save series", err)
+	}
 	return engine.GetSeries(series.Suffix)
 }
 
