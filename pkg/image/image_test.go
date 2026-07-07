@@ -133,10 +133,10 @@ func TestRequestImageOmitsStyleByDefault(t *testing.T) {
 	if _, ok := payload["style"]; ok {
 		t.Fatalf("style should be omitted by default: %#v", payload)
 	}
-	if payload["model"] != "dall-e-3" {
+	if payload["model"] != "gpt-image-1" {
 		t.Fatalf("unexpected model: %#v", payload)
 	}
-	if payload["quality"] != "hd" {
+	if payload["quality"] != "high" {
 		t.Fatalf("unexpected quality: %#v", payload)
 	}
 }

@@ -42,7 +42,7 @@ func DefaultAiConfiguration() AiConfiguration {
 		EnhancementTimeout:     utils.GetEnvDuration("TB_DALLE_ENHANCEMENT_TIMEOUT", 60*time.Second),
 
 		// Image generation defaults
-		ImageModel:   utils.GetEnvString("TB_DALLE_IMAGE_MODEL", "dall-e-3"),
+		ImageModel:   utils.GetEnvString("TB_DALLE_IMAGE_MODEL", "gpt-image-1"),
 		ImageQuality: utils.GetEnvString("TB_DALLE_IMAGE_QUALITY", "hd"),
 		ImageStyle:   utils.GetEnvString("TB_DALLE_IMAGE_STYLE", ""),
 		ImageURL:     utils.GetEnvString("TB_DALLE_IMAGE_URL", "https://api.openai.com/v1/images/generations"),
