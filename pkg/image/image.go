@@ -59,6 +59,20 @@ func RequestImage(outputPath string, imageData *ImageData, config prompt.AiConfi
 	return RequestImageWithOptions(outputPath, imageData, config, ImageOptions{Annotate: true})
 }
 
+func buildImagePrompt(imageData *ImageData, modelName string) string {
+	finalPrompt := imageData.TechnicalPrompt + "\n\n" + imageData.EnhancedPrompt
+	if modelName != "gpt-image-1" {
+		return finalPrompt
+	}
+	return strings.TrimSpace(finalPrompt) + "\n\n" + strings.TrimSpace(gptImageDalleDressDirective)
+}
+
+const gptImageDalleDressDirective = `DalleDress visual directive:
+Make the image vivid, saturated, uncanny, emotionally intense, and deliberately strange.
+Favor bold contrast, theatrical color relationships, eccentric character details, and surreal visual specificity over tasteful realism or muted editorial illustration.
+The subject should feel odd, memorable, and slightly excessive, with the peculiar generated attributes visibly driving the scene.
+Honor any explicit color-palette or monochrome constraint in the prompt, but push that constraint as far as possible through contrast, composition, texture, and weirdness.`
+
 func RequestImageWithOptions(outputPath string, imageData *ImageData, config prompt.AiConfiguration, options ImageOptions) error {
 	start := time.Now()
 	generated := outputPath
@@ -68,15 +82,11 @@ func RequestImageWithOptions(outputPath string, imageData *ImageData, config pro
 		_ = os.MkdirAll(annotated, 0o750)
 	}
 
-	// Combine technical prompt (system instructions) with enhanced prompt (creative content)
-	// Technical specifications come first, then the literary-enhanced content
-	finalPrompt := imageData.TechnicalPrompt + "\n\n" + imageData.EnhancedPrompt
-
 	isLandscape := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "horizontal")
 	isPortrait := strings.Contains(strings.ToLower(imageData.EnhancedPrompt), "landscape") || strings.Contains(imageData.EnhancedPrompt, "vertical")
 
 	modelName := config.ImageModel
-
+	finalPrompt := buildImagePrompt(imageData, modelName)
 	payload := prompt.Request{
 		Prompt: finalPrompt,
 		N:      1,

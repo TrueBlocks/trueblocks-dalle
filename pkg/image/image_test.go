@@ -139,6 +139,13 @@ func TestRequestImageOmitsStyleByDefault(t *testing.T) {
 	if payload["quality"] != "high" {
 		t.Fatalf("unexpected quality: %#v", payload)
 	}
+	promptText, ok := payload["prompt"].(string)
+	if !ok {
+		t.Fatalf("prompt should be a string: %#v", payload)
+	}
+	if !strings.Contains(promptText, "DalleDress visual directive") || !strings.Contains(promptText, "vivid, saturated, uncanny") {
+		t.Fatalf("prompt should restore vivid DalleDress direction: %q", promptText)
+	}
 }
 
 func TestRequestImageWithOptionsSkipsAnnotationWithoutAPIKey(t *testing.T) {
