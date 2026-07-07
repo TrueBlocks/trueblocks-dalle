@@ -302,6 +302,47 @@ func (engine *Engine) GetImage(id string) (ImageMetadataRecord, error) {
 	return ImageMetadataRecord{}, NewError(ErrArtifactMissing, "image metadata record was not found")
 }
 
+func (engine *Engine) DeleteImage(id string) error {
+	if engine == nil {
+		return NewError(ErrInvalidInput, "engine is nil")
+	}
+	record, err := engine.GetImage(id)
+	if err != nil {
+		return err
+	}
+	for _, path := range []string{
+		record.Metadata.Artifacts.Generated,
+		record.Metadata.Artifacts.Annotated,
+		record.Path,
+	} {
+		if err := removeDataDirFile(engine.dataDir, path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (engine *Engine) RegenerateImage(id string) (GenerateResult, error) {
+	if engine == nil {
+		return GenerateResult{}, NewError(ErrInvalidInput, "engine is nil")
+	}
+	record, err := engine.GetImage(id)
+	if err != nil {
+		return GenerateResult{}, err
+	}
+	metadata := record.Metadata
+	return engine.Generate(GenerateRequest{
+		Input:    metadata.Input,
+		Seed:     metadata.Seed,
+		Series:   metadata.Series.Name,
+		Recipe:   metadata.Recipe.Name,
+		Enhance:  strings.TrimSpace(metadata.Prompts.EnhancedPrompt) != "",
+		Image:    true,
+		Annotate: strings.TrimSpace(metadata.Artifacts.Annotated) != "",
+		Force:    true,
+	})
+}
+
 func (engine *Engine) ExportImage(id string, options ExportImageOptions) (ExportImageResult, error) {
 	if engine == nil {
 		return ExportImageResult{}, NewError(ErrInvalidInput, "engine is nil")
@@ -603,6 +644,31 @@ func cachedSatisfiesRequest(metadata ImageMetadata, request GenerateRequest) boo
 		return false
 	}
 	return true
+}
+
+func removeDataDirFile(dataDir string, path string) error {
+	if strings.TrimSpace(path) == "" {
+		return nil
+	}
+	cleanDataDir, err := filepath.Abs(filepath.Clean(dataDir))
+	if err != nil {
+		return WrapError(ErrInvalidInput, "resolve data directory", err)
+	}
+	cleanPath, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return WrapError(ErrInvalidInput, "resolve image artifact path", err)
+	}
+	relative, err := filepath.Rel(cleanDataDir, cleanPath)
+	if err != nil {
+		return WrapError(ErrInvalidInput, "compare image artifact path", err)
+	}
+	if relative == ".." || strings.HasPrefix(relative, ".."+string(os.PathSeparator)) {
+		return NewError(ErrInvalidInput, "image artifact path is outside the data directory")
+	}
+	if err := os.Remove(cleanPath); err != nil && !os.IsNotExist(err) {
+		return WrapError(ErrMetadataInvalid, "delete image artifact", err)
+	}
+	return nil
 }
 
 func (engine *Engine) generateResult(metadata ImageMetadata, metadataPath string) GenerateResult {

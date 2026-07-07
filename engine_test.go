@@ -334,6 +334,75 @@ func TestEngineGenerateForceBypassesMetadataCache(t *testing.T) {
 	}
 }
 
+func TestEngineDeleteImageRemovesMetadataAndArtifacts(t *testing.T) {
+	engine, err := New(Config{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	engine.requestImage = func(request imageRequest) (imageResult, error) {
+		if err := os.MkdirAll(filepath.Dir(request.generatedPath), 0o750); err != nil {
+			return imageResult{}, err
+		}
+		if err := os.MkdirAll(filepath.Dir(request.annotatedPath), 0o750); err != nil {
+			return imageResult{}, err
+		}
+		if err := os.WriteFile(request.generatedPath, []byte("png"), 0o600); err != nil {
+			return imageResult{}, err
+		}
+		if err := os.WriteFile(request.annotatedPath, []byte("annotated"), 0o600); err != nil {
+			return imageResult{}, err
+		}
+		return imageResult{generatedPath: request.generatedPath, annotatedPath: request.annotatedPath}, nil
+	}
+	result, err := engine.Generate(GenerateRequest{Input: "Person Tour Coordinates", Image: true, Annotate: true})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if err := engine.DeleteImage(result.Metadata.ImageID); err != nil {
+		t.Fatalf("DeleteImage: %v", err)
+	}
+	for _, path := range []string{result.GeneratedPath, result.AnnotatedPath, result.MetadataPath} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("expected %s deleted, got %v", path, err)
+		}
+	}
+	if _, err := engine.GetImage(result.Metadata.ImageID); ErrorCodeOf(err) != ErrArtifactMissing {
+		t.Fatalf("expected deleted image lookup to fail, got %v", err)
+	}
+}
+
+func TestEngineRegenerateImageForcesNewImageRequest(t *testing.T) {
+	engine, err := New(Config{DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	requests := 0
+	engine.requestImage = func(request imageRequest) (imageResult, error) {
+		requests++
+		if err := os.MkdirAll(filepath.Dir(request.generatedPath), 0o750); err != nil {
+			return imageResult{}, err
+		}
+		if err := os.WriteFile(request.generatedPath, []byte("png"), 0o600); err != nil {
+			return imageResult{}, err
+		}
+		return imageResult{generatedPath: request.generatedPath, annotatedPath: request.annotatedPath}, nil
+	}
+	result, err := engine.Generate(GenerateRequest{Input: "Person Tour Coordinates", Image: true})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	regenerated, err := engine.RegenerateImage(result.Metadata.ImageID)
+	if err != nil {
+		t.Fatalf("RegenerateImage: %v", err)
+	}
+	if requests != 2 {
+		t.Fatalf("expected two image provider requests, got %d", requests)
+	}
+	if regenerated.Seed != result.Seed || regenerated.Series != result.Series {
+		t.Fatalf("expected regeneration to preserve identity: first %#v regenerated %#v", result, regenerated)
+	}
+}
+
 func TestEngineGenerateRefusesIncompatibleMetadata(t *testing.T) {
 	engine, err := New(Config{DataDir: t.TempDir()})
 	if err != nil {

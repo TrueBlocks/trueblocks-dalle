@@ -41,6 +41,7 @@ func LoadEmbeddedArchiveManifest() (DatabaseArchiveManifest, error) {
 		if manifest.ArchiveHash == "" {
 			manifest.ArchiveHash = EmbeddedArchiveHash()
 		}
+		manifest.Files = filterDatabaseFileManifests(manifest.Files)
 		return manifest, ValidateDatabaseArchiveManifest(manifest)
 	}
 	return BuildEmbeddedArchiveManifest()
@@ -60,7 +61,7 @@ func BuildDatabaseArchiveManifest(archive []byte, version string) (DatabaseArchi
 		manifest.Version = DefaultDatabaseVersion
 	}
 	if err := walkArchiveFiles(archive, func(path string, body []byte) error {
-		if filepath.Base(path) == "manifest.json" || filepath.Ext(path) != ".csv" {
+		if !isDatabaseArchiveCSV(path) {
 			return nil
 		}
 		fileManifest, err := buildFileManifest(path, body)
@@ -76,6 +77,37 @@ func BuildDatabaseArchiveManifest(archive []byte, version string) (DatabaseArchi
 		return manifest.Files[left].Path < manifest.Files[right].Path
 	})
 	return manifest, ValidateDatabaseArchiveManifest(manifest)
+}
+
+func filterDatabaseFileManifests(files []DatabaseFileManifest) []DatabaseFileManifest {
+	filtered := make([]DatabaseFileManifest, 0, len(files))
+	for _, file := range files {
+		if isAppleDoubleArchivePath(file.Path) || strings.HasPrefix(file.Name, "._") {
+			continue
+		}
+		filtered = append(filtered, file)
+	}
+	return filtered
+}
+
+func isDatabaseArchiveCSV(path string) bool {
+	if isAppleDoubleArchivePath(path) {
+		return false
+	}
+	return filepath.Ext(path) == ".csv"
+}
+
+func isAppleDoubleArchivePath(path string) bool {
+	archivePath := filepath.ToSlash(strings.TrimSpace(path))
+	if archivePath == "" {
+		return false
+	}
+	for _, part := range strings.Split(archivePath, "/") {
+		if part == "__MACOSX" || strings.HasPrefix(part, "._") {
+			return true
+		}
+	}
+	return false
 }
 
 func ValidateDatabaseArchiveManifest(manifest DatabaseArchiveManifest) error {
