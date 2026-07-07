@@ -89,12 +89,14 @@ type MetadataStatus struct {
 }
 
 type ImageFilter struct {
-	Series string
+	Series          string
+	IncludeArchived bool
 }
 
 type ImageMetadataRecord struct {
 	Path     string        `json:"path"`
 	Metadata ImageMetadata `json:"metadata"`
+	Archived bool          `json:"archived"`
 }
 
 func NewImageMetadata(input, seed, series string) ImageMetadata {
@@ -223,7 +225,13 @@ func ListImageMetadata(dataDir string, filter ImageFilter) ([]ImageMetadataRecor
 		if dirEntry.IsDir() || filepath.Ext(path) != ".json" {
 			return nil
 		}
-		if filepath.Base(filepath.Dir(path)) != "metadata" {
+		parentDir := filepath.Base(filepath.Dir(path))
+		if parentDir != "metadata" {
+			return nil
+		}
+		grandparentDir := filepath.Base(filepath.Dir(filepath.Dir(path)))
+		isArchived := grandparentDir == "archive"
+		if isArchived && !filter.IncludeArchived {
 			return nil
 		}
 		metadata, err := ReadImageMetadata(path)
@@ -233,7 +241,7 @@ func ListImageMetadata(dataDir string, filter ImageFilter) ([]ImageMetadataRecor
 		if seriesFilter != "" && metadata.Series.Name != seriesFilter {
 			return nil
 		}
-		records = append(records, ImageMetadataRecord{Path: path, Metadata: metadata})
+		records = append(records, ImageMetadataRecord{Path: path, Metadata: metadata, Archived: isArchived})
 		return nil
 	})
 	if err != nil {

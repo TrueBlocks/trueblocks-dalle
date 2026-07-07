@@ -354,7 +354,7 @@ func (engine *Engine) DeleteImage(id string) error {
 		record.Metadata.Artifacts.Annotated,
 		record.Path,
 	} {
-		if err := removeDataDirFile(engine.dataDir, path); err != nil {
+		if err := archiveDataDirFile(engine.dataDir, path); err != nil {
 			return err
 		}
 	}
@@ -707,6 +707,38 @@ func removeDataDirFile(dataDir string, path string) error {
 	}
 	if err := os.Remove(cleanPath); err != nil && !os.IsNotExist(err) {
 		return WrapError(ErrMetadataInvalid, "delete image artifact", err)
+	}
+	return nil
+}
+
+func archiveDataDirFile(dataDir string, path string) error {
+	if strings.TrimSpace(path) == "" {
+		return nil
+	}
+	cleanDataDir, err := filepath.Abs(filepath.Clean(dataDir))
+	if err != nil {
+		return WrapError(ErrInvalidInput, "resolve data directory", err)
+	}
+	cleanPath, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return WrapError(ErrInvalidInput, "resolve image artifact path", err)
+	}
+	relative, err := filepath.Rel(cleanDataDir, cleanPath)
+	if err != nil {
+		return WrapError(ErrInvalidInput, "compare image artifact path", err)
+	}
+	if relative == ".." || strings.HasPrefix(relative, ".."+string(os.PathSeparator)) {
+		return NewError(ErrInvalidInput, "image artifact path is outside the data directory")
+	}
+	dir := filepath.Dir(cleanPath)
+	base := filepath.Base(cleanPath)
+	archiveDir := filepath.Join(filepath.Dir(dir), "archive", filepath.Base(dir))
+	if err := os.MkdirAll(archiveDir, 0o750); err != nil {
+		return WrapError(ErrInvalidInput, "create archive directory", err)
+	}
+	dest := filepath.Join(archiveDir, base)
+	if err := os.Rename(cleanPath, dest); err != nil {
+		return WrapError(ErrMetadataInvalid, "archive image artifact", err)
 	}
 	return nil
 }
