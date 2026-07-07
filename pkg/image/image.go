@@ -113,6 +113,8 @@ func RequestImageWithOptions(outputPath string, imageData *ImageData, config pro
 			payload.Size = "1024x1024"
 		}
 		payload.Quality = "high"
+	case "dall-e-2":
+		payload.Size = "1024x1024"
 	default:
 		logger.InfoR("image.request.unknown_model", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "model", modelName)
 	}

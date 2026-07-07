@@ -22,13 +22,15 @@ type ProviderConfig struct {
 }
 
 type Config struct {
-	DataDir  string         `json:"dataDir,omitempty"`
-	Provider ProviderConfig `json:"provider,omitempty"`
+	DataDir    string         `json:"dataDir,omitempty"`
+	Provider   ProviderConfig `json:"provider,omitempty"`
+	ImageModel string         `json:"imageModel,omitempty"`
 }
 
 type Engine struct {
 	dataDir       string
 	provider      ProviderConfig
+	imageModel    string
 	database      storage.DatabaseArchiveManifest
 	enhancePrompt func(basePrompt, authorContext string) (string, error)
 	requestImage  func(request imageRequest) (imageResult, error)
@@ -47,6 +49,7 @@ type imageRequest struct {
 	titlePrompt     string
 	tersePrompt     string
 	baseURL         string
+	imageModel      string
 }
 
 type imageResult struct {
@@ -114,6 +117,7 @@ func New(config Config) (*Engine, error) {
 	return &Engine{
 		dataDir:       dataDir,
 		provider:      config.Provider,
+		imageModel:    config.ImageModel,
 		database:      manifest,
 		enhancePrompt: prompt.EnhanceLiteraryContent,
 		requestImage:  requestGeneratedImage,
@@ -609,6 +613,7 @@ func (engine *Engine) Generate(request GenerateRequest) (GenerateResult, error) 
 			titlePrompt:     metadata.Prompts.TitlePrompt,
 			tersePrompt:     metadata.Prompts.TersePrompt,
 			baseURL:         engine.provider.BaseURL,
+			imageModel:      engine.imageModel,
 		})
 		if err != nil {
 			wrapped := WrapError(ErrProviderFailed, "generate image", err)
@@ -719,8 +724,22 @@ func (engine *Engine) generateResult(metadata ImageMetadata, metadataPath string
 	}
 }
 
+func (engine *Engine) ImageModel() string {
+	if engine.imageModel != "" {
+		return engine.imageModel
+	}
+	return "gpt-image-1"
+}
+
+func (engine *Engine) SetImageModel(model string) {
+	engine.imageModel = model
+}
+
 func requestGeneratedImage(request imageRequest) (imageResult, error) {
 	config := prompt.DefaultAiConfiguration()
+	if request.imageModel != "" {
+		config.ImageModel = request.imageModel
+	}
 	config.ImageURL = request.baseURL
 	data := image.ImageData{
 		EnhancedPrompt:  request.prompt,
