@@ -33,6 +33,7 @@ type Series struct {
 	Gazes        []string `json:"gazes"`
 	Backstyles   []string `json:"backstyles"`
 	Compositions []string `json:"compositions"`
+	ColorLimit   string   `json:"colorLimit,omitempty"`
 	ModifiedAt   string   `json:"modifiedAt,omitempty"`
 }
 
@@ -57,6 +58,7 @@ func (s *Series) Model(chain, format string, verbose bool, extraOpts map[string]
 			"gazes":        s.Gazes,
 			"backstyles":   s.Backstyles,
 			"compositions": s.Compositions,
+			"colorLimit":   s.ColorLimit,
 		},
 		Order: []string{"suffix", "purpose", "last", "deleted", "modifiedAt", "adverbs", "adjectives", "nouns", "emotions", "occupations", "actions", "artstyles", "litstyles", "colors", "viewpoints", "gazes", "backstyles", "compositions"},
 	}

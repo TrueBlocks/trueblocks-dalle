@@ -36,6 +36,7 @@ type DalleDress struct {
 	CacheHit        bool                        `json:"cacheHit"`
 	Completed       bool                        `json:"completed"`
 	Series          string                      `json:"series"`
+	ColorLimit      string                      `json:"colorLimit"`
 }
 
 func (d *DalleDress) String() string {
@@ -173,6 +174,16 @@ func (dd *DalleDress) Color(short bool, which int) string {
 		return parts[1]
 	}
 	return parts[1] + " (" + parts[0] + ")"
+}
+
+func (dd *DalleDress) ColorDirective() string {
+	c1 := dd.Color(true, 1)
+	c2 := dd.Color(true, 2)
+	limit := strings.TrimSpace(dd.ColorLimit)
+	if limit == "" {
+		return "The primary color scheme should emphasize " + c1 + " and " + c2 + ", but use the full range of colors the artistic style demands."
+	}
+	return "Use only " + limit + " colors based on " + c1 + " and " + c2 + ". Do not introduce other colors."
 }
 
 func (dd *DalleDress) Viewpoint(short bool) string {

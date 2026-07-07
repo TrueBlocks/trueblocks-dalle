@@ -62,7 +62,7 @@ Occupation: {{.Occupation false}}.
 Action: {{.Action false}}.
 Artistic style: {{.ArtStyle false 1}}.
 {{if .HasLitStyle}}Literary Style: {{.LitStyle false}}.
-{{end}}Use only the colors {{.Color true 1}} and {{.Color true 2}}.
+{{end}}{{.ColorDirective}}
 {{.Viewpoint false}}.
 {{.Composition false}}.
 {{.BackStyle false}}.
@@ -118,7 +118,7 @@ style called {{.LitStyle true}}. Take on the persona of such an author.
 
 const technicalTemplateStr = `Technical Specifications:
 - Artistic style: {{.ArtStyle false 1}}{{if ne (.ArtStyle true 1) (.ArtStyle true 2)}} with {{.ArtStyle false 2}} influences{{end}}
-- Color palette: Use {{.Color true 1}} and {{.Color true 2}}
+- Color palette: {{.ColorDirective}}
 - Composition style: {{.Composition false}}
 - Background approach: {{.BackStyle false}}
 - Camera/viewpoint: {{.Viewpoint false}}

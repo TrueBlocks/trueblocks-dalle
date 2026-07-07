@@ -118,6 +118,7 @@ func (ctx *Context) makeDalleDress(addressIn string, writeReports bool) (*model.
 		SelectedRecords: []string{},
 		Attribs:         []prompt.Attribute{},
 		Series:          ctx.Series.Suffix,
+		ColorLimit:      ctx.Series.ColorLimit,
 	}
 
 	// Generate attributes from the seed. We cap the number of attributes to the number of
