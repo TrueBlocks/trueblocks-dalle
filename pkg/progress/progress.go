@@ -146,7 +146,6 @@ func saveMetricsLocked(pm *ProgressManager) {
 	if pm.metrics.Version == "" {
 		pm.metrics.Version = "v1"
 	}
-	// Restrict directory permissions (gosec G301)
 	_ = os.MkdirAll(storage.MetricsDir(), 0o750)
 	path := filepath.Join(storage.MetricsDir(), metricsFile)
 	b, err := json.MarshalIndent(pm.metrics, "", "  ")
@@ -158,6 +157,34 @@ func saveMetricsLocked(pm *ProgressManager) {
 		return
 	}
 	_ = os.Rename(tmp, path)
+	appendMetricsHistory(pm)
+}
+
+const metricsHistoryFile = "progress_phase_history.jsonl"
+
+func appendMetricsHistory(pm *ProgressManager) {
+	entry := struct {
+		Timestamp string                  `json:"timestamp"`
+		Phases    map[Phase]*phaseAverage `json:"phases"`
+		Runs      int64                   `json:"runs"`
+		CacheHits int64                   `json:"cacheHits"`
+	}{
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Phases:    pm.metrics.Phase,
+		Runs:      pm.metrics.GenerationRuns,
+		CacheHits: pm.metrics.CacheHits,
+	}
+	b, err := json.Marshal(entry)
+	if err != nil {
+		return
+	}
+	historyPath := filepath.Join(storage.MetricsDir(), metricsHistoryFile)
+	f, err := os.OpenFile(historyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	_, _ = f.Write(append(b, '\n'))
 }
 
 // key builds a composite key.
