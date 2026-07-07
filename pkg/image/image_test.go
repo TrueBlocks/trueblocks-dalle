@@ -1,6 +1,7 @@
 package image
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -86,6 +87,57 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 	err := RequestImage(outputPath, imgData, config)
 	if err != nil {
 		t.Errorf("RequestImage failed: %v", err)
+	}
+}
+
+func TestRequestImageOmitsStyleByDefault(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "test-key")
+
+	var payload map[string]any
+	openaiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"data":[{"url":"http://mockimage.com/image.png"}]}`))
+	}))
+	defer openaiServer.Close()
+
+	imageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("PNGDATA"))
+	}))
+	defer imageServer.Close()
+
+	oldHTTPGet := httpGet
+	httpGet = func(url string) (*http.Response, error) {
+		if strings.Contains(url, "mockimage.com") {
+			return http.Get(imageServer.URL)
+		}
+		return http.Get(url)
+	}
+	defer func() { httpGet = oldHTTPGet }()
+
+	imgData := &ImageData{
+		EnhancedPrompt: "enhanced prompt",
+		TersePrompt:    "terse",
+		TitlePrompt:    "title",
+		SeriesName:     "testseries",
+		Filename:       "testfile",
+	}
+	config := prompt.DefaultAiConfiguration()
+	config.ImageURL = openaiServer.URL
+	if err := RequestImageWithOptions(t.TempDir(), imgData, config, ImageOptions{Annotate: false}); err != nil {
+		t.Fatalf("RequestImageWithOptions: %v", err)
+	}
+	if _, ok := payload["style"]; ok {
+		t.Fatalf("style should be omitted by default: %#v", payload)
+	}
+	if payload["model"] != "dall-e-3" {
+		t.Fatalf("unexpected model: %#v", payload)
+	}
+	if payload["quality"] != "hd" {
+		t.Fatalf("unexpected quality: %#v", payload)
 	}
 }
 

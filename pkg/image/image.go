@@ -93,7 +93,7 @@ func RequestImageWithOptions(outputPath string, imageData *ImageData, config pro
 			payload.Size = "1024x1024"
 		}
 		payload.Quality = config.ImageQuality
-		payload.Style = "vivid"
+		payload.Style = config.ImageStyle
 	case "gpt-image-1":
 		if isLandscape {
 			payload.Size = "1536x1024"

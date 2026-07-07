@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 )
 
@@ -65,6 +66,28 @@ func TestComputeDataDir_DefaultWhenNoXDG(t *testing.T) {
 	if got != expect {
 		t.Fatalf("expected %s got %s", expect, got)
 	}
+}
+
+func TestUseDataDirConcurrent(t *testing.T) {
+	base := filepath.Join(t.TempDir(), "dalle-data")
+	UseDataDir(base)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 32; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 100; j++ {
+				UseDataDir(base)
+				if got := DataDir(); got != base {
+					t.Errorf("expected %s got %s", base, got)
+				}
+				_ = SeriesDir()
+				_ = GetCacheManager()
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 func computeDataDir(flagDir, envDir string) string {

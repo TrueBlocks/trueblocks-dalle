@@ -9,8 +9,10 @@ import (
 )
 
 var (
-	dataDirOnce sync.Once
-	dataDir     string
+	storageStateMu   sync.Mutex
+	cacheManager     *CacheManager
+	cacheManagerOnce sync.Once
+	dataDir          string
 )
 
 // TestOnlyResetDataDir resets internal directory state (intended for tests).
@@ -20,11 +22,16 @@ func TestOnlyResetDataDir(flagVal string) {
 
 // UseDataDir resets internal directory state to the supplied base directory.
 func UseDataDir(flagVal string) {
+	storageStateMu.Lock()
+	defer storageStateMu.Unlock()
+
+	previous := dataDir
 	dataDir = ""
-	dataDirOnce = sync.Once{}
-	dataDirOnce.Do(func() { initDataDir(flagVal) })
-	cacheManager = nil
-	cacheManagerOnce = sync.Once{}
+	initDataDir(flagVal)
+	if dataDir != previous {
+		cacheManager = nil
+		cacheManagerOnce = sync.Once{}
+	}
 }
 
 func initDataDir(flagVal string) {
@@ -68,7 +75,15 @@ func initDataDir(flagVal string) {
 
 // DataDir returns the lazily-initialized base directory.
 func DataDir() string {
-	dataDirOnce.Do(func() { initDataDir("") })
+	storageStateMu.Lock()
+	defer storageStateMu.Unlock()
+	return dataDirLocked()
+}
+
+func dataDirLocked() string {
+	if dataDir == "" {
+		initDataDir("")
+	}
 	return dataDir
 }
 

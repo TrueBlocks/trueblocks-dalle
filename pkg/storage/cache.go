@@ -45,16 +45,14 @@ type CacheManager struct {
 	loaded   bool
 }
 
-var (
-	cacheManager     *CacheManager
-	cacheManagerOnce sync.Once
-)
-
 // GetCacheManager returns the singleton cache manager
 func GetCacheManager() *CacheManager {
+	storageStateMu.Lock()
+	defer storageStateMu.Unlock()
+
 	cacheManagerOnce.Do(func() {
 		cacheManager = &CacheManager{
-			cacheDir: filepath.Join(DataDir(), "cache"),
+			cacheDir: filepath.Join(dataDirLocked(), "cache"),
 		}
 	})
 	return cacheManager
@@ -67,6 +65,9 @@ func fileExists(path string) bool {
 
 // TestOnlyResetCacheManager resets cache manager singleton for testing isolation
 func TestOnlyResetCacheManager() {
+	storageStateMu.Lock()
+	defer storageStateMu.Unlock()
+
 	cacheManagerOnce = sync.Once{}
 	cacheManager = nil
 }
