@@ -1,6 +1,6 @@
 package prompt
 
-import "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/base"
+import "strconv"
 
 // Attribute represents a data attribute with metadata used for prompt generation.
 type Attribute struct {
@@ -58,12 +58,16 @@ func AttributeNames() []string { return attributeNames }
 
 // NewAttribute constructs an Attribute from database info and a byte string.
 func NewAttribute(dbs map[string][]string, index int, bytes string) Attribute {
+	number, err := strconv.ParseUint(bytes, 16, 64)
+	if err != nil {
+		number = 0
+	}
 	attr := Attribute{
 		Database: DatabaseNames[index],
 		Name:     attributeNames[index],
 		Bytes:    bytes,
-		Number:   base.MustParseUint64("0x" + bytes),
-		Factor:   float64(base.MustParseUint64("0x"+bytes)) / float64(1<<24),
+		Number:   number,
+		Factor:   float64(number) / float64(1<<24),
 		Count:    8,
 		Selector: 0,
 		Value:    "",

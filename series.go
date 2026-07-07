@@ -6,10 +6,13 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
-	coreTypes "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/types"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
+
+type SeriesModel struct {
+	Data  map[string]any `json:"data"`
+	Order []string       `json:"order"`
+}
 
 // Series represents a collection of prompt attributes and their values.
 type Series struct {
@@ -33,8 +36,8 @@ type Series struct {
 	ModifiedAt   string   `json:"modifiedAt,omitempty"`
 }
 
-func (s *Series) Model(chain, format string, verbose bool, extraOpts map[string]any) coreTypes.Model {
-	return coreTypes.Model{
+func (s *Series) Model(chain, format string, verbose bool, extraOpts map[string]any) SeriesModel {
+	return SeriesModel{
 		Data: map[string]any{
 			"suffix":       s.Suffix,
 			"purpose":      s.Purpose,
@@ -70,7 +73,7 @@ func (s *Series) SaveSeries(series string, last int) {
 	ss := s
 	ss.Last = last
 	target := filepath.Join(storage.SeriesDir(), series+".json") // creates the folder
-	_ = file.StringToAsciiFile(target, ss.String())
+	_ = writeTextFile(target, ss.String())
 }
 
 // GetFilter returns a string slice for the given field name in the Series.

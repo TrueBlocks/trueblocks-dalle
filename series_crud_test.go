@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v6"
 )
 
 func writeSeriesFile(t *testing.T, dir, suffix string, deleted bool, last int) {
@@ -65,22 +64,22 @@ func TestSortSeries(t *testing.T) {
 		{Suffix: "c", Last: 1, ModifiedAt: "2025-01-03T00:00:00Z"},
 	}
 	// sort by suffix asc
-	_ = SortSeries(items, sdk.SortSpec{Fields: []string{"suffix"}, Order: []sdk.SortOrder{sdk.Asc}})
+	_ = SortSeries(items, SortSpec{Fields: []string{"suffix"}, Order: []SortOrder{Asc}})
 	if items[0].Suffix != "a" || items[2].Suffix != "c" {
 		t.Fatalf("suffix asc sort wrong: %#v", items)
 	}
 	// sort by last desc
-	_ = SortSeries(items, sdk.SortSpec{Fields: []string{"last"}, Order: []sdk.SortOrder{sdk.Dec}})
+	_ = SortSeries(items, SortSpec{Fields: []string{"last"}, Order: []SortOrder{Dec}})
 	if items[0].Last != 3 || items[2].Last != 1 {
 		t.Fatalf("last desc sort wrong: %#v", items)
 	}
 	// unknown field falls back to suffix
-	_ = SortSeries(items, sdk.SortSpec{Fields: []string{"unknown"}})
+	_ = SortSeries(items, SortSpec{Fields: []string{"unknown"}})
 	if items[0].Suffix != "a" {
 		t.Fatalf("fallback sort expected a first: %#v", items)
 	}
 	// modifiedAt asc
-	_ = SortSeries(items, sdk.SortSpec{Fields: []string{"modifiedAt"}, Order: []sdk.SortOrder{sdk.Asc}})
+	_ = SortSeries(items, SortSpec{Fields: []string{"modifiedAt"}, Order: []SortOrder{Asc}})
 	if items[0].ModifiedAt != "2025-01-01T00:00:00Z" {
 		t.Fatalf("modifiedAt asc sort wrong: %#v", items)
 	}

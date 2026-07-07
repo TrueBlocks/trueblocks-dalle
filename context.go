@@ -3,14 +3,14 @@ package dalle
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"text/template"
 
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/image"
+	logger "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
@@ -64,15 +64,27 @@ func (ctx *Context) reportOn(dd *model.DalleDress, addr, loc, ft, value string) 
 
 	saveMutex.Lock()
 	defer saveMutex.Unlock()
-	_ = file.EstablishFolder(path)
-	_ = file.StringToAsciiFile(filepath.Join(path, dd.FileName+"."+ft), value)
+	_ = os.MkdirAll(path, 0o750)
+	_ = writeTextFile(filepath.Join(path, dd.FileName+"."+ft), value)
 }
 
 // MakeDalleDress builds or retrieves a DalleDress for the given address using the context's templates, series, dbs, and cache.
 func (ctx *Context) MakeDalleDress(addressIn string) (*model.DalleDress, error) {
+	return ctx.makeDalleDress(addressIn, true)
+}
+
+// PreviewDalleDress builds or retrieves a DalleDress without writing prompt sidecars.
+func (ctx *Context) PreviewDalleDress(addressIn string) (*model.DalleDress, error) {
+	return ctx.makeDalleDress(addressIn, false)
+}
+
+func (ctx *Context) makeDalleDress(addressIn string, writeReports bool) (*model.DalleDress, error) {
 	ctx.CacheMutex.Lock()
 	defer ctx.CacheMutex.Unlock()
 	if ctx.DalleCache[addressIn] != nil {
+		if writeReports {
+			ctx.reportDalleDress(ctx.DalleCache[addressIn], addressIn)
+		}
 		return ctx.DalleCache[addressIn], nil
 	}
 
@@ -90,6 +102,9 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*model.DalleDress, error) 
 
 	fn := utils.ValidFilename(address)
 	if ctx.DalleCache[fn] != nil {
+		if writeReports {
+			ctx.reportDalleDress(ctx.DalleCache[fn], addressIn)
+		}
 		return ctx.DalleCache[fn], nil
 	}
 
@@ -131,22 +146,17 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*model.DalleDress, error) 
 		}
 	}
 
-	suff := ctx.Series.Suffix
 	dd.DataPrompt, _ = dd.ExecuteTemplate(ctx.dataTemplate, nil)
-	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "data"), "txt", dd.DataPrompt)
 	dd.TitlePrompt, _ = dd.ExecuteTemplate(ctx.titleTemplate, nil)
-	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "title"), "txt", dd.TitlePrompt)
 	dd.TersePrompt, _ = dd.ExecuteTemplate(ctx.terseTemplate, nil)
-	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "terse"), "txt", dd.TersePrompt)
 	dd.Prompt, _ = dd.ExecuteTemplate(ctx.promptTemplate, nil)
-	ctx.reportOn(&dd, addressIn, filepath.Join(suff, "prompt"), "txt", dd.Prompt)
 	fnPath := filepath.Join(storage.OutputDir(), ctx.Series.Suffix, "enhanced", dd.FileName+".txt")
-	if !file.FileExists(fnPath) {
+	if !fileExists(fnPath) {
 		fnPath = filepath.Join(storage.OutputDir(), ctx.Series.Suffix, "enhanced", dd.FileName+".txt")
 	}
 	dd.EnhancedPrompt = ""
-	if file.FileExists(fnPath) {
-		dd.EnhancedPrompt = file.AsciiFileToString(fnPath)
+	if fileExists(fnPath) {
+		dd.EnhancedPrompt = readTextFile(fnPath)
 	}
 
 	ctx.DalleCache[dd.FileName] = &dd
@@ -154,7 +164,18 @@ func (ctx *Context) MakeDalleDress(addressIn string) (*model.DalleDress, error) 
 	if dd.Series != ctx.Series.Suffix {
 		logger.Error("MakeDalleDress:seriesMismatch", addressIn, "series", dd.Series, "loaded", ctx.Series.Suffix)
 	}
+	if writeReports {
+		ctx.reportDalleDress(&dd, addressIn)
+	}
 	return &dd, nil
+}
+
+func (ctx *Context) reportDalleDress(dd *model.DalleDress, address string) {
+	suff := ctx.Series.Suffix
+	ctx.reportOn(dd, address, filepath.Join(suff, "data"), "txt", dd.DataPrompt)
+	ctx.reportOn(dd, address, filepath.Join(suff, "title"), "txt", dd.TitlePrompt)
+	ctx.reportOn(dd, address, filepath.Join(suff, "terse"), "txt", dd.TersePrompt)
+	ctx.reportOn(dd, address, filepath.Join(suff, "prompt"), "txt", dd.Prompt)
 }
 
 // GetPrompt returns the generated prompt for the given address.
@@ -371,13 +392,13 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 	}
 
 	fn := filepath.Join(storage.DataDir(), "series", filter+".json")
-	str := strings.TrimSpace(file.AsciiFileToString(fn))
+	str := strings.TrimSpace(readTextFile(fn))
 
 	ret := Series{
 		Suffix: filter,
 	}
 
-	if !file.FileExists(fn) || len(str) == 0 {
+	if !fileExists(fn) || len(str) == 0 {
 		logger.Info("no series found, creating a new file", fn)
 		ret.SaveSeries(filter, 0)
 		return ret, nil

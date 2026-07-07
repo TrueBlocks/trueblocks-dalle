@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
+	logger "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )

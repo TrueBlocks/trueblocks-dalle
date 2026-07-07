@@ -9,14 +9,13 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
-	coreUtils "github.com/TrueBlocks/trueblocks-chifra/v6/pkg/utils"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/annotate"
+	logger "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/progress"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
@@ -49,15 +48,25 @@ type ImageData struct {
 	Address         string `json:"-"`
 }
 
+type ImageOptions struct {
+	Annotate bool
+}
+
 // msSince returns elapsed milliseconds since t.
 func msSince(t time.Time) int64 { return time.Since(t).Milliseconds() }
 
 func RequestImage(outputPath string, imageData *ImageData, config prompt.AiConfiguration) error {
+	return RequestImageWithOptions(outputPath, imageData, config, ImageOptions{Annotate: true})
+}
+
+func RequestImageWithOptions(outputPath string, imageData *ImageData, config prompt.AiConfiguration, options ImageOptions) error {
 	start := time.Now()
 	generated := outputPath
-	_ = file.EstablishFolder(generated)
+	_ = os.MkdirAll(generated, 0o750)
 	annotated := strings.ReplaceAll(generated, "/generated", "/annotated")
-	_ = file.EstablishFolder(annotated)
+	if options.Annotate {
+		_ = os.MkdirAll(annotated, 0o750)
+	}
 
 	// Combine technical prompt (system instructions) with enhanced prompt (creative content)
 	// Technical specifications come first, then the literary-enhanced content
@@ -116,8 +125,12 @@ func RequestImage(outputPath string, imageData *ImageData, config prompt.AiConfi
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
-		// No key: create a placeholder empty annotated file and return
-		placeholder := filepath.Join(annotated, fmt.Sprintf("%s.png", imageData.Filename))
+		// No key: create a placeholder empty artifact and return
+		placeholderDir := generated
+		if options.Annotate {
+			placeholderDir = annotated
+		}
+		placeholder := filepath.Join(placeholderDir, fmt.Sprintf("%s.png", imageData.Filename))
 		_ = os.WriteFile(placeholder, []byte{}, 0o600)
 		logger.Info("image.request.skip_no_api_key", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "durMs", msSince(start))
 		return nil
@@ -277,6 +290,11 @@ func RequestImage(outputPath string, imageData *ImageData, config prompt.AiConfi
 		}
 		logger.InfoG("image.download.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "status", imageResp.StatusCode, "durMs", time.Since(dlStart).Milliseconds(), "bytes", written)
 	}
+	if !options.Annotate {
+		progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *model.DalleDress) { dd.GeneratedPath = fn })
+		logger.InfoG("image.request.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "durMs", msSince(start))
+		return nil
+	}
 
 	path, err := annotateFunc(imageData.TersePrompt, fn, "bottom", 0.2)
 	if err != nil {
@@ -288,9 +306,8 @@ func RequestImage(outputPath string, imageData *ImageData, config prompt.AiConfi
 	logger.InfoG("image.annotate.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "path", strings.TrimSpace(path))
 	logger.InfoG("image.request.end", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "durMs", msSince(start))
 	if os.Getenv("TB_CMD_LINE") == "true" {
-		// utils.System returns exit code (int); treat non-zero as error condition
-		if code := coreUtils.System("open " + path); code != 0 {
-			logger.InfoR("image.open.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", fmt.Sprintf("open command exited with code %d", code))
+		if err := exec.Command("open", path).Run(); err != nil {
+			logger.InfoR("image.open.error", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "error", err.Error())
 		}
 	}
 	return nil

@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 )
 
 func TestCacheManager_DatabaseCache(t *testing.T) {
@@ -31,7 +29,7 @@ func TestCacheManager_DatabaseCache(t *testing.T) {
 
 	// Test that cache was created
 	cacheFile := filepath.Join(tmpDir, "cache", "databases_v0.1.0.gob")
-	if !file.FileExists(cacheFile) {
+	if !fileExists(cacheFile) {
 		t.Error("Expected cache file to be created")
 	}
 
@@ -135,7 +133,7 @@ func TestCacheManager_InvalidateCache(t *testing.T) {
 	}
 
 	cacheFile := filepath.Join(tmpDir, "cache", "databases_v0.1.0.gob")
-	if !file.FileExists(cacheFile) {
+	if !fileExists(cacheFile) {
 		t.Fatal("Expected cache file to exist before invalidation")
 	}
 
@@ -145,7 +143,7 @@ func TestCacheManager_InvalidateCache(t *testing.T) {
 	}
 
 	// Verify cache file is removed
-	if file.FileExists(cacheFile) {
+	if fileExists(cacheFile) {
 		t.Error("Expected cache file to be removed after invalidation")
 	}
 

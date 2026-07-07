@@ -7,7 +7,6 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
@@ -153,7 +152,7 @@ func TestDatabaseIntegrationWithCache(t *testing.T) {
 
 	// Check that cache file was created during database reload
 	cacheFile := filepath.Join(tmpDir, "cache", "databases_v0.1.0.gob")
-	if !file.FileExists(cacheFile) {
+	if !fileExists(cacheFile) {
 		t.Error("Expected cache file to be created during database reload")
 	}
 

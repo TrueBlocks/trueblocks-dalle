@@ -10,8 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
+	logger "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
 
@@ -131,7 +130,7 @@ func GenerateSpeech(series, address string, lockTTL time.Duration) (string, erro
 	}
 	key := "speech:" + series + ":" + address
 	audioPath := filepath.Join(storage.OutputDir(), series, "audio", address+".mp3")
-	if file.FileExists(audioPath) { // fast path
+	if fileExists(audioPath) { // fast path
 		return audioPath, nil
 	}
 	if !acquireLock(key, lockTTL) { // another generation in progress
@@ -168,7 +167,7 @@ func Speak(series, address string) (string, error) {
 		return "", errors.New("address required")
 	}
 	audioPath := filepath.Join(storage.OutputDir(), series, "audio", address+".mp3")
-	if !file.FileExists(audioPath) {
+	if !fileExists(audioPath) {
 		// Generate (ignore lock TTL customization here; use default 0 which GenerateSpeech adjusts)
 		p, err := GenerateSpeech(series, address, 0)
 		if err != nil {
@@ -189,7 +188,7 @@ func ReadToMe(series, address string) (string, error) {
 		return "", errors.New("address required")
 	}
 	audioPath := filepath.Join(storage.OutputDir(), series, "audio", address+".mp3")
-	if !file.FileExists(audioPath) {
+	if !fileExists(audioPath) {
 		p, err := GenerateSpeech(series, address, 0)
 		if err != nil {
 			return "", err

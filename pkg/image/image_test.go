@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -85,5 +86,28 @@ func TestRequestImage_MockSuccess(t *testing.T) {
 	err := RequestImage(outputPath, imgData, config)
 	if err != nil {
 		t.Errorf("RequestImage failed: %v", err)
+	}
+}
+
+func TestRequestImageWithOptionsSkipsAnnotationWithoutAPIKey(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "")
+	outputPath := filepath.Join(t.TempDir(), "generated")
+	imgData := &ImageData{
+		EnhancedPrompt: "enhanced prompt",
+		TersePrompt:    "terse",
+		TitlePrompt:    "title",
+		SeriesName:     "testseries",
+		Filename:       "testfile",
+	}
+	config := prompt.DefaultAiConfiguration()
+	if err := RequestImageWithOptions(outputPath, imgData, config, ImageOptions{Annotate: false}); err != nil {
+		t.Fatalf("RequestImageWithOptions: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(outputPath, "testfile.png")); err != nil {
+		t.Fatalf("expected generated placeholder: %v", err)
+	}
+	annotatedPath := strings.ReplaceAll(outputPath, "/generated", "/annotated")
+	if _, err := os.Stat(filepath.Join(annotatedPath, "testfile.png")); err == nil || !os.IsNotExist(err) {
+		t.Fatalf("expected no annotated placeholder, got %v", err)
 	}
 }

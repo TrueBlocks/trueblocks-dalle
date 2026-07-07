@@ -5,19 +5,27 @@ import (
 	"strings"
 
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
-	sdk "github.com/TrueBlocks/trueblocks-sdk/v6"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/sortspec"
+)
+
+type SortOrder = sortspec.SortOrder
+type SortSpec = sortspec.SortSpec
+
+const (
+	Asc = sortspec.Asc
+	Dec = sortspec.Dec
 )
 
 // SortDalleDress sorts in place based on field in spec
-func SortDalleDress(items []model.DalleDress, sortSpec sdk.SortSpec) error {
+func SortDalleDress(items []model.DalleDress, sortSpec SortSpec) error {
 	if len(items) < 2 || len(sortSpec.Fields) == 0 {
 		return nil
 	}
 	if len(sortSpec.Order) == 0 {
-		sortSpec.Order = append(sortSpec.Order, sdk.Asc)
+		sortSpec.Order = append(sortSpec.Order, Asc)
 	}
 	field := sortSpec.Fields[0]
-	asc := sortSpec.Order[0] == sdk.Asc
+	asc := sortSpec.Order[0] == Asc
 	cmp := func(i, j int) bool { return true }
 	switch strings.ToLower(field) {
 	case "original":
@@ -73,15 +81,15 @@ func SortDalleDress(items []model.DalleDress, sortSpec sdk.SortSpec) error {
 }
 
 // SortSeries sorts in place based on field in spec (suffix, modifiedAt, last)
-func SortSeries(items []Series, sortSpec sdk.SortSpec) error {
+func SortSeries(items []Series, sortSpec SortSpec) error {
 	if len(items) < 2 || len(sortSpec.Fields) == 0 {
 		return nil
 	}
 	if len(sortSpec.Order) == 0 {
-		sortSpec.Order = append(sortSpec.Order, sdk.Asc)
+		sortSpec.Order = append(sortSpec.Order, Asc)
 	}
 	field := sortSpec.Fields[0]
-	asc := sortSpec.Order[0] == sdk.Asc
+	asc := sortSpec.Order[0] == Asc
 	cmp := func(i, j int) bool { return true }
 	switch strings.ToLower(field) {
 	case "suffix":
@@ -103,15 +111,15 @@ func SortSeries(items []Series, sortSpec sdk.SortSpec) error {
 }
 
 // SortDatabases sorts in place based on field in spec
-func SortDatabases(items []model.Database, sortSpec sdk.SortSpec) error {
+func SortDatabases(items []model.Database, sortSpec SortSpec) error {
 	if len(items) < 2 || len(sortSpec.Fields) == 0 {
 		return nil
 	}
 	if len(sortSpec.Order) == 0 {
-		sortSpec.Order = append(sortSpec.Order, sdk.Asc)
+		sortSpec.Order = append(sortSpec.Order, Asc)
 	}
 	field := sortSpec.Fields[0]
-	asc := sortSpec.Order[0] == sdk.Asc
+	asc := sortSpec.Order[0] == Asc
 	cmp := func(i, j int) bool { return true }
 	switch strings.ToLower(field) {
 	case "id":

@@ -128,8 +128,8 @@ func TestProgressManager_Fail(t *testing.T) {
 	if report.Current != PhaseFailed {
 		t.Errorf("expected current phase to be 'failed', got %s", report.Current)
 	}
-	if report.Done {
-		t.Error("expected run to NOT be done yet after first fail report")
+	if !report.Done {
+		t.Error("expected failed run to be done after first fail report")
 	}
 	if report.Error != errMsg {
 		t.Errorf("expected error message '%s', got '%s'", errMsg, report.Error)

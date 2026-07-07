@@ -1,6 +1,6 @@
 package model
 
-import sdk "github.com/TrueBlocks/trueblocks-sdk/v6"
+import "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/sortspec"
 
 type Database struct {
 	ID           string   `json:"id"`
@@ -30,7 +30,7 @@ type Generator struct {
 	Name string `json:"name"`
 }
 
-func SortItems(items []Item, sortSpec sdk.SortSpec) error {
+func SortItems(items []Item, sortSpec sortspec.SortSpec) error {
 	_ = items
 	_ = sortSpec
 	return nil

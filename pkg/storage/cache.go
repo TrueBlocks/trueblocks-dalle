@@ -10,8 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
+	logger "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 )
 
@@ -61,6 +60,11 @@ func GetCacheManager() *CacheManager {
 	return cacheManager
 }
 
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 // TestOnlyResetCacheManager resets cache manager singleton for testing isolation
 func TestOnlyResetCacheManager() {
 	cacheManagerOnce = sync.Once{}
@@ -79,7 +83,7 @@ func (cm *CacheManager) LoadOrBuild() error {
 	}
 
 	// Ensure cache directory exists
-	if err := file.EstablishFolder(cm.cacheDir); err != nil {
+	if err := os.MkdirAll(cm.cacheDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
@@ -155,7 +159,7 @@ func (cm *CacheManager) loadOrBuildDatabaseCache() error {
 	cacheFile := filepath.Join(cm.cacheDir, fmt.Sprintf("databases_%s.gob", version))
 	logger.InfoG(fmt.Sprintf("DEBUG: Looking for cache file: %s", cacheFile))
 
-	if file.FileExists(cacheFile) {
+	if fileExists(cacheFile) {
 		logger.InfoG("DEBUG: Cache file exists, attempting to load")
 		if cache, err := cm.loadDatabaseCache(cacheFile); err == nil {
 			logger.InfoG(fmt.Sprintf("DEBUG: Loaded cache - stored hash: %s", cache.SourceHash[:16]))
@@ -368,7 +372,7 @@ func (cm *CacheManager) InvalidateCache() error {
 
 	// Also remove legacy unversioned cache file if it exists
 	legacyCacheFile := filepath.Join(cm.cacheDir, "databases.gob")
-	if file.FileExists(legacyCacheFile) {
+	if fileExists(legacyCacheFile) {
 		if err := os.Remove(legacyCacheFile); err != nil {
 			return fmt.Errorf("failed to remove legacy cache: %w", err)
 		}

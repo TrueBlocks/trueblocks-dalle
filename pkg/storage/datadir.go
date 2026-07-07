@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
+	logger "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 )
 
 var (
@@ -15,9 +15,16 @@ var (
 
 // TestOnlyResetDataDir resets internal directory state (intended for tests).
 func TestOnlyResetDataDir(flagVal string) {
+	UseDataDir(flagVal)
+}
+
+// UseDataDir resets internal directory state to the supplied base directory.
+func UseDataDir(flagVal string) {
 	dataDir = ""
 	dataDirOnce = sync.Once{}
 	dataDirOnce.Do(func() { initDataDir(flagVal) })
+	cacheManager = nil
+	cacheManagerOnce = sync.Once{}
 }
 
 func initDataDir(flagVal string) {

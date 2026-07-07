@@ -10,9 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/file"
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/logger"
-	"github.com/TrueBlocks/trueblocks-chifra/v6/pkg/walk"
+	logger "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/progress"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
@@ -182,7 +180,7 @@ func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, l
 	key := series + ":" + address
 	annotatedPath := filepath.Join(storage.OutputDir(), series, "annotated", address+".png")
 	// Fast path: if annotated file exists, treat as cache hit (do not acquire new run if another generation not in progress)
-	if file.FileExists(annotatedPath) {
+	if fileExists(annotatedPath) {
 		// Start a minimal completed progress run if none exists yet
 		progressMgr := progress.GetProgressManager()
 		if progressMgr.GetReport(series, address) == nil { // no active run
@@ -250,15 +248,15 @@ func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, l
 // ListSeries returns the list of existing series (json files) beneath output Dir/series.
 func ListSeries() []string {
 	list := []string{}
-	vFunc := func(fn string, vP any) (bool, error) {
-		if strings.HasSuffix(fn, ".json") {
-			fn = strings.ReplaceAll(fn, storage.SeriesDir()+"/", "")
-			fn = strings.ReplaceAll(fn, ".json", "")
-			list = append(list, fn)
+	seriesDir := storage.SeriesDir()
+	_ = filepath.WalkDir(seriesDir, func(path string, dirEntry os.DirEntry, err error) error {
+		if err != nil || dirEntry.IsDir() || !strings.HasSuffix(path, ".json") {
+			return nil
 		}
-		return true, nil
-	}
-	_ = walk.ForEveryFileInFolder(storage.SeriesDir(), vFunc, nil)
+		name := strings.TrimSuffix(strings.TrimPrefix(path, seriesDir+string(os.PathSeparator)), ".json")
+		list = append(list, name)
+		return nil
+	})
 	return list
 }
 
