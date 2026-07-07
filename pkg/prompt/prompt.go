@@ -35,7 +35,7 @@ type AiConfiguration struct {
 func DefaultAiConfiguration() AiConfiguration {
 	return AiConfiguration{
 		// Enhancement defaults
-		EnhancementModel:       utils.GetEnvString("TB_DALLE_ENHANCEMENT_MODEL", "gpt-4"),
+		EnhancementModel:       utils.GetEnvString("TB_DALLE_ENHANCEMENT_MODEL", "gpt-4.1"),
 		EnhancementSeed:        utils.GetEnvInt("TB_DALLE_ENHANCEMENT_SEED", 1337),
 		EnhancementTemperature: utils.GetEnvFloat("TB_DALLE_ENHANCEMENT_TEMPERATURE", 0.2),
 		EnhancementURL:         utils.GetEnvString("TB_DALLE_ENHANCEMENT_URL", "https://api.openai.com/v1/chat/completions"),
@@ -51,9 +51,7 @@ func DefaultAiConfiguration() AiConfiguration {
 }
 
 // Template strings and compiled templates
-const promptTemplateStr = `{{.LitPrompt false}}Here's the prompt:
-
-Draw a {{.Adverb false}} {{.Adjective false}} {{.Noun true}} with human-like
+const promptTemplateStr = `Draw a {{.Adverb false}} {{.Adjective false}} {{.Noun true}} with human-like
 characteristics feeling {{.Emotion false}}{{.Occupation false}}.
 
 Noun: {{.Noun false}} with human-like characteristics.
