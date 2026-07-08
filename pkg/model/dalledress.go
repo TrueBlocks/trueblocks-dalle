@@ -72,7 +72,7 @@ func (dd *DalleDress) Adverb(short bool) string {
 	if short {
 		return parts[0]
 	}
-	return parts[0] + " (" + parts[1] + ")"
+	return parts[0] + ", meaning " + parts[1]
 }
 
 func (dd *DalleDress) Adjective(short bool) string {
@@ -81,7 +81,7 @@ func (dd *DalleDress) Adjective(short bool) string {
 	if short {
 		return parts[0]
 	}
-	return parts[0] + " (" + parts[1] + ")"
+	return parts[0] + ", meaning " + parts[1]
 }
 
 func (dd *DalleDress) Noun(short bool) string {
@@ -99,7 +99,19 @@ func (dd *DalleDress) Emotion(short bool) string {
 	if short {
 		return parts[0]
 	}
-	return parts[0] + " (" + parts[1] + ", " + parts[4] + ")"
+	return parts[0] + ", " + parts[4]
+}
+
+func (dd *DalleDress) EmotionGroup() string {
+	val := dd.AttribMap["emotion"].Value
+	parts := strings.Split(val, ",")
+	return parts[1]
+}
+
+func (dd *DalleDress) EmotionPolarity() string {
+	val := dd.AttribMap["emotion"].Value
+	parts := strings.Split(val, ",")
+	return parts[2]
 }
 
 func (dd *DalleDress) Occupation(short bool) string {
@@ -111,7 +123,7 @@ func (dd *DalleDress) Occupation(short bool) string {
 	if short {
 		return parts[0]
 	}
-	return " who works as a " + parts[0] + " (" + parts[1] + ")"
+	return " who works as a " + parts[0] + " who " + parts[1]
 }
 
 func (dd *DalleDress) Action(short bool) string {
@@ -120,7 +132,7 @@ func (dd *DalleDress) Action(short bool) string {
 	if short {
 		return parts[0]
 	}
-	return parts[0] + " (" + parts[1] + ")"
+	return parts[0] + ", meaning " + parts[1]
 }
 
 func (dd *DalleDress) ArtStyle(short bool, which int) string {
@@ -129,10 +141,7 @@ func (dd *DalleDress) ArtStyle(short bool, which int) string {
 	if short {
 		return parts[0]
 	}
-	if strings.HasPrefix(parts[2], parts[0]+" ") {
-		parts[2] = strings.Replace(parts[2], (parts[0] + " "), "", 1)
-	}
-	return parts[0] + " (" + parts[2] + ")"
+	return parts[0] + ", which " + parts[3]
 }
 
 func (dd *DalleDress) HasLitStyle() bool {
@@ -149,10 +158,7 @@ func (dd *DalleDress) LitStyle(short bool) string {
 	if short {
 		return parts[0]
 	}
-	if strings.HasPrefix(parts[1], parts[0]+" ") {
-		parts[1] = strings.Replace(parts[1], (parts[0] + " "), "", 1)
-	}
-	return parts[0] + " (" + parts[1] + ")"
+	return parts[0] + ", which " + parts[1]
 }
 
 func (dd *DalleDress) LitStyleDescr() string {
@@ -161,9 +167,6 @@ func (dd *DalleDress) LitStyleDescr() string {
 		return ""
 	}
 	parts := strings.Split(val, ",")
-	if strings.HasPrefix(parts[1], parts[0]+" ") {
-		parts[1] = strings.Replace(parts[1], (parts[0] + " "), "", 1)
-	}
 	return parts[1]
 }
 
@@ -234,6 +237,24 @@ func (dd *DalleDress) BackgroundTreatment() string {
 		val = strings.ReplaceAll(val, "and pay homage to this artistic style [{ArtStyle2}]", "and solid")
 	}
 	return val
+}
+
+func (dd *DalleDress) Place(short bool) string {
+	val := dd.AttribMap["place"].Value
+	parts := strings.Split(val, ",")
+	if short {
+		return parts[0]
+	}
+	return parts[0] + ", " + parts[1] + ", " + parts[2]
+}
+
+func (dd *DalleDress) Trope(short bool) string {
+	val := dd.AttribMap["trope"].Value
+	parts := strings.Split(val, ",")
+	if short {
+		return parts[0]
+	}
+	return parts[0] + ", " + parts[2]
 }
 
 var fusionPhrases = []string{

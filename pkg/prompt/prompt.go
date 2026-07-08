@@ -115,7 +115,8 @@ const titleTemplateStr = `{{.Emotion true}} {{.Adverb true}} {{.Adjective true}}
 
 const authorTemplateStr = `{{if .HasLitStyle}}You are an award winning author who writes in the literary
 style called {{.LitStyle true}}. Take on the persona of such an author.
-{{.LitStyle true}} is a genre or literary style that {{.LitStyleDescr}}.{{end}}`
+{{.LitStyle true}} is a genre or literary style that {{.LitStyleDescr}}.
+The emotional register of this piece is {{.EmotionPolarity}}, rooted in {{.EmotionGroup}}. Let that shape your tone and imagery.{{end}}`
 
 const technicalTemplateStr = `Technical Specifications:
 - Artistic style: {{.StyleDirective}}

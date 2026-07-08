@@ -333,6 +333,15 @@ func (ctx *Context) ReloadDatabases(filter string) error {
 			if ferr != nil {
 				logger.Info(fmt.Sprintf("ReloadDatabases: No series filter for database '%s' (field '%s'): %v", db, fn, ferr))
 			}
+			if db == "artstyles" || db == "litstyles" {
+				nonSensitive := make([]string, 0, len(lines))
+				for _, line := range lines {
+					if !strings.Contains(line, ",sensitive,") {
+						nonSensitive = append(nonSensitive, line)
+					}
+				}
+				lines = nonSensitive
+			}
 		}
 
 		if len(lines) == 0 {

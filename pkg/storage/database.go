@@ -61,6 +61,8 @@ func GetDatabaseDescription(dbName string) string {
 		"gazes":        "Gaze directions and focus",
 		"backstyles":   "Background styles and treatments",
 		"compositions": "Composition rules and structures",
+		"places":       "Real-world locations and landmarks",
+		"tropes":       "Narrative tropes and story patterns",
 	}
 	if desc, ok := descriptions[dbName]; ok {
 		return desc

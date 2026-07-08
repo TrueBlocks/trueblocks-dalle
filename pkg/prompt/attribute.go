@@ -32,6 +32,8 @@ var DatabaseNames = []string{
 	"gazes",
 	"backstyles",
 	"compositions",
+	"places",
+	"tropes",
 }
 
 var attributeNames = []string{
@@ -51,6 +53,8 @@ var attributeNames = []string{
 	"gaze",
 	"backStyle",
 	"composition",
+	"place",
+	"trope",
 }
 
 // AttributeNames returns the list of attribute names (for test and compatibility).
