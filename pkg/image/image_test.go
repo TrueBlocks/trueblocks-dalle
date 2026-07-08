@@ -133,7 +133,7 @@ func TestRequestImageOmitsStyleByDefault(t *testing.T) {
 	if _, ok := payload["style"]; ok {
 		t.Fatalf("style should be omitted by default: %#v", payload)
 	}
-	if payload["model"] != "gpt-image-1" {
+	if payload["model"] != "gpt-image-2" {
 		t.Fatalf("unexpected model: %#v", payload)
 	}
 	if payload["quality"] != "high" {
@@ -143,8 +143,8 @@ func TestRequestImageOmitsStyleByDefault(t *testing.T) {
 	if !ok {
 		t.Fatalf("prompt should be a string: %#v", payload)
 	}
-	if !strings.Contains(promptText, "DalleDress visual directive") || !strings.Contains(promptText, "vivid, saturated, uncanny") {
-		t.Fatalf("prompt should restore vivid DalleDress direction: %q", promptText)
+	if strings.Contains(promptText, "DalleDress visual directive") {
+		t.Fatalf("gpt-image-2 should NOT include DalleDress directive: %q", promptText)
 	}
 }
 

@@ -45,18 +45,22 @@ type PhaseTiming struct {
 
 // ProgressReport is a snapshot of a run.
 type ProgressReport struct {
-	Series        string                  `json:"series"`
-	Address       string                  `json:"address"`
-	Current       Phase                   `json:"currentPhase"`
-	StartedNs     int64                   `json:"startedNs"`
-	Percent       float64                 `json:"percent"`
-	ETASeconds    float64                 `json:"etaSeconds"`
-	Done          bool                    `json:"done"`
-	Error         string                  `json:"error"`
-	CacheHit      bool                    `json:"cacheHit"`
-	Phases        []*PhaseTiming          `json:"phases"`
-	DalleDress    *model.DalleDress       `json:"dalleDress"`
-	PhaseAverages map[Phase]time.Duration `json:"phaseAverages"`
+	Series          string                  `json:"series"`
+	Address         string                  `json:"address"`
+	Current         Phase                   `json:"currentPhase"`
+	StartedNs       int64                   `json:"startedNs"`
+	Percent         float64                 `json:"percent"`
+	ETASeconds      float64                 `json:"etaSeconds"`
+	PhasePercent    float64                 `json:"phasePercent"`
+	PhaseETASeconds float64                 `json:"phaseETASeconds"`
+	PhaseIndex      int                     `json:"phaseIndex"`
+	PhaseCount      int                     `json:"phaseCount"`
+	Done            bool                    `json:"done"`
+	Error           string                  `json:"error"`
+	CacheHit        bool                    `json:"cacheHit"`
+	Phases          []*PhaseTiming          `json:"phases"`
+	DalleDress      *model.DalleDress       `json:"dalleDress"`
+	PhaseAverages   map[Phase]time.Duration `json:"phaseAverages"`
 }
 
 // timeSource allows test control of time.
@@ -445,18 +449,74 @@ func (pm *ProgressManager) UpdateDress(series, addr string, fn func(*model.Dalle
 	}
 }
 
-// computePercentETA fills percent and ETA.
+// computePercentETA fills overall and per-phase percent and ETA.
 func (pm *ProgressManager) computePercentETA(pr *ProgressReport, run *progressRun) {
 	var total, doneDur, currentElapsed time.Duration
 	now := pm.clock.Now()
+
+	// Count actionable phases (excluding completed and failed)
+	phaseCount := 0
+	phaseIndex := 0
 	for _, ph := range run.order {
-		if ph == PhaseCompleted {
+		if ph == PhaseCompleted || ph == PhaseFailed {
 			continue
 		}
+		phaseCount++
 		if a := pm.metrics.Phase[ph]; a != nil && a.Count > 0 {
 			total += time.Duration(a.AvgNs)
 		}
 	}
+	pr.PhaseCount = phaseCount
+
+	// Find current phase index (1-based)
+	for i, ph := range run.order {
+		if ph == PhaseCompleted || ph == PhaseFailed {
+			continue
+		}
+		if ph == run.current {
+			phaseIndex = i + 1 // use order index for consistency
+			break
+		}
+	}
+	// Recount as 1-based index among actionable phases
+	idx := 0
+	for _, ph := range run.order {
+		if ph == PhaseCompleted || ph == PhaseFailed {
+			continue
+		}
+		idx++
+		if ph == run.current {
+			phaseIndex = idx
+			break
+		}
+	}
+	pr.PhaseIndex = phaseIndex
+
+	// Per-phase percent and ETA for the current phase
+	if run.current != PhaseCompleted && run.current != PhaseFailed {
+		pt := run.phases[run.current]
+		var phaseElapsed time.Duration
+		if pt.StartedNs > 0 {
+			phaseElapsed = now.Sub(time.Unix(0, pt.StartedNs))
+		}
+		if a := pm.metrics.Phase[run.current]; a != nil && a.Count > 0 {
+			phaseAvg := time.Duration(a.AvgNs)
+			if phaseAvg > 0 {
+				pct := (float64(phaseElapsed) / float64(phaseAvg)) * 100
+				if pct > 100 {
+					pct = 100
+				}
+				pr.PhasePercent = pct
+				remain := phaseAvg - phaseElapsed
+				if remain < 0 {
+					remain = 0
+				}
+				pr.PhaseETASeconds = remain.Seconds()
+			}
+		}
+	}
+
+	// Overall percent and ETA (existing logic)
 	if total == 0 {
 		pr.Percent = 0
 		pr.ETASeconds = 0

@@ -43,8 +43,12 @@ func run(args []string, config cliConfig) int {
 	config.dataDir = global.dataDir
 	config.providerBaseURL = global.providerBaseURL
 	config.imageModel = global.imageModel
+	if global.help || (len(remaining) > 0 && remaining[0] == "help") {
+		writeUsage(config.stdout)
+		return 0
+	}
 	if len(remaining) == 0 {
-		writeError(config.stderr, fmt.Errorf("command is required"))
+		writeError(config.stderr, fmt.Errorf("command is required (try dalle --help)"))
 		return 2
 	}
 	engine, err := dalle.New(dalle.Config{
@@ -69,6 +73,7 @@ type globalFlags struct {
 	dataDir         string
 	providerBaseURL string
 	imageModel      string
+	help            bool
 }
 
 func parseGlobalFlags(args []string) (globalFlags, []string, error) {
@@ -101,6 +106,8 @@ func parseGlobalFlags(args []string) (globalFlags, []string, error) {
 			global.imageModel = args[index]
 		case strings.HasPrefix(arg, "--model="):
 			global.imageModel = strings.TrimPrefix(arg, "--model=")
+		case arg == "--help" || arg == "-h":
+			global.help = true
 		default:
 			remaining = append(remaining, arg)
 		}
@@ -467,6 +474,70 @@ func reorderFlagArgs(args []string, flagsWithValues map[string]bool) []string {
 		}
 	}
 	return append(flagArgs, positionArgs...)
+}
+
+const usageText = `dalle - prompt and image generation for the TrueBlocks dalle engine
+
+Usage:
+  dalle [global options] <command> [subcommand] [flags] [arguments]
+
+Commands:
+  preview [flags] [input]                 build prompts without generating an image
+  generate [flags] [input]                build prompts and generate artifacts
+  images list [--series <name>]           list generated image records
+  images show <id>                        show one image record
+  images export [flags] <id>              export image artifacts and prompts
+  images delete <id>                      delete an image record
+  images regenerate <id>                  regenerate an image
+  series list [flags]                     list series
+  series show <name>                      show one series
+  series save [flags] [suffix]            create or update a series
+  series hide <name>                      hide a series
+  series restore <name>                   restore a hidden series
+  series hidden [--hidden] <name>         set the hidden state of a series
+  databases list                          list embedded database archives
+  databases show <version>                show one database archive
+  databases records [--limit <n>] <name>  list records from a database
+  validate                                validate the engine configuration
+  help                                    show this help screen
+
+Preview and generate flags:
+  --input <text>    source input (may also be given as positional arguments)
+  --seed <text>     seed
+  --series <name>   series
+  --recipe <name>   recipe
+  --enhance         enhance the prompt
+  --image           generate an image (generate only)
+  --annotate        annotate the generated image (generate only)
+  --force           ignore compatible cached metadata
+
+Images export flags:
+  --dir <path>      export directory
+  --prompt --data --title --terse --enhanced --technical
+                    select which prompts to export
+
+Series list flags:
+  --include-hidden  include hidden series
+  --only-hidden     only hidden series
+
+Series save flags:
+  --suffix <text>   series suffix (may also be given as positional arguments)
+  --last <n>        last index
+  --purpose <text>  purpose
+  --json <doc|->    JSON series document, or - to read from stdin
+
+Global options:
+  --data-dir <path>          data directory
+  --provider-base-url <url>  image provider base URL
+  --model <name>             image model
+  --help, -h                 show this help screen
+
+Results are written to stdout as indented JSON. Errors are written to stderr;
+exit code 2 means invalid usage or a missing resource, 1 a runtime failure.
+`
+
+func writeUsage(stdout io.Writer) {
+	_, _ = fmt.Fprint(stdout, usageText)
 }
 
 func writeJSON(stdout io.Writer, value any) error {

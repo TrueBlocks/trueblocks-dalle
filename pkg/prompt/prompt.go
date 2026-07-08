@@ -59,12 +59,12 @@ Noun: {{.Noun false}} with human-like characteristics.
 Emotion: {{.Emotion false}}.
 Occupation: {{.Occupation false}}.
 Action: {{.Action false}}.
-Artistic style: {{.ArtStyle false 1}}.
+{{.StyleDirective}}.
 {{if .HasLitStyle}}Literary Style: {{.LitStyle false}}.
 {{end}}{{.ColorDirective}}
 {{.Viewpoint false}}.
 {{.Composition false}}.
-{{.BackStyle false}}.
+{{.BackgroundTreatment}}.
 
 Emphasize the emotional aspect of the image. Look deeply into and expand upon the
 many connotative meanings of "{{.Noun true}}," "{{.Emotion true}}," "{{.Adjective true}}",
@@ -81,6 +81,8 @@ Occupation:         {{.Occupation true}}
 Action:        	    {{.Action true}}
 ArtStyle 1:         {{.ArtStyle true 1}}
 ArtStyle 2:         {{.ArtStyle true 2}}
+Mixing Level:       {{.MixingLevel}}
+Style Directive:    {{.StyleDirective}}
 {{if .HasLitStyle}}LitStyle:           {{.LitStyle false}}
 {{end}}Viewpoint:          {{.Viewpoint true}}
 Gaze:               {{.Gaze true}}
@@ -116,10 +118,10 @@ style called {{.LitStyle true}}. Take on the persona of such an author.
 {{.LitStyle true}} is a genre or literary style that {{.LitStyleDescr}}.{{end}}`
 
 const technicalTemplateStr = `Technical Specifications:
-- Artistic style: {{.ArtStyle false 1}}{{if ne (.ArtStyle true 1) (.ArtStyle true 2)}} with {{.ArtStyle false 2}} influences{{end}}
+- Artistic style: {{.StyleDirective}}
 - Color palette: {{.ColorDirective}}
 - Composition style: {{.Composition false}}
-- Background approach: {{.BackStyle false}}
+- Background treatment: {{.BackgroundTreatment}}
 - Camera/viewpoint: {{.Viewpoint false}}
 - Subject gaze direction: {{.Gaze false}}
 

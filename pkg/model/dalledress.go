@@ -227,6 +227,43 @@ func (dd *DalleDress) BackStyle(short bool) string {
 	return val
 }
 
+func (dd *DalleDress) BackgroundTreatment() string {
+	val := dd.AttribMap["backStyle"].Value
+	val = strings.ReplaceAll(val, "[{Color3}]", dd.Color(true, 3))
+	if strings.Contains(val, "[{ArtStyle2}]") {
+		val = strings.ReplaceAll(val, "and pay homage to this artistic style [{ArtStyle2}]", "and solid")
+	}
+	return val
+}
+
+var fusionPhrases = []string{
+	"In the style of %s with subtle echoes of %s",
+	"In the style of %s, lightly influenced by %s",
+	"In the style of %s by an artist trained in %s",
+	"A bold fusion of %s and %s, led by %s",
+	"%s and %s in equal conversation",
+}
+
+func (dd *DalleDress) MixingLevel() int {
+	attr := dd.AttribMap["artStyle2"]
+	return int(attr.Number%5) + 1
+}
+
+func (dd *DalleDress) StyleDirective() string {
+	a1 := dd.ArtStyle(false, 1)
+	a2 := dd.ArtStyle(false, 2)
+	if dd.ArtStyle(true, 1) == dd.ArtStyle(true, 2) {
+		return "In the style of " + a1
+	}
+	level := dd.MixingLevel()
+	switch level {
+	case 4:
+		return fmt.Sprintf(fusionPhrases[3], a1, a2, a1)
+	default:
+		return fmt.Sprintf(fusionPhrases[level-1], a1, a2)
+	}
+}
+
 func (dd *DalleDress) LitPrompt(short bool) string {
 	val := dd.AttribMap["litStyle"].Value
 	if val == "none" {

@@ -565,25 +565,37 @@ func (engine *Engine) Generate(request GenerateRequest) (GenerateResult, error) 
 		return GenerateResult{}, err
 	}
 	metadata := build.metadata
+	// Re-check cached metadata for partial results (e.g. enhanced prompt from a previous failed run)
+	if cached, ok, _ := engine.cachedMetadata(request); ok {
+		if request.Enhance && strings.TrimSpace(cached.Metadata.Prompts.EnhancedPrompt) != "" {
+			metadata.Prompts.EnhancedPrompt = cached.Metadata.Prompts.EnhancedPrompt
+			metadata.Stages.Enhanced.Status = "complete"
+			metadata.ImageID = ComputeImageID(metadata)
+		}
+	}
 	progressMgr := progress.GetProgressManager()
 	progressMgr.StartRun(metadata.Series.Name, metadata.Seed, build.dress)
 	progressMgr.Transition(metadata.Series.Name, metadata.Seed, progress.PhaseBasePrompts)
 	if request.Enhance {
-		progressMgr.Transition(metadata.Series.Name, metadata.Seed, progress.PhaseEnhance)
-		if engine.enhancePrompt == nil {
-			err := NewError(ErrProviderUnavailable, "prompt enhancer is not configured")
-			progressMgr.Fail(metadata.Series.Name, metadata.Seed, err)
-			return GenerateResult{}, err
+		if strings.TrimSpace(metadata.Prompts.EnhancedPrompt) != "" {
+			progressMgr.Skip(metadata.Series.Name, metadata.Seed, progress.PhaseEnhance)
+		} else {
+			progressMgr.Transition(metadata.Series.Name, metadata.Seed, progress.PhaseEnhance)
+			if engine.enhancePrompt == nil {
+				err := NewError(ErrProviderUnavailable, "prompt enhancer is not configured")
+				progressMgr.Fail(metadata.Series.Name, metadata.Seed, err)
+				return GenerateResult{}, err
+			}
+			enhancedPrompt, err := engine.enhancePrompt(metadata.Prompts.Prompt, build.authorContext)
+			if err != nil {
+				wrapped := WrapError(ErrProviderFailed, "enhance prompt", err)
+				progressMgr.Fail(metadata.Series.Name, metadata.Seed, wrapped)
+				return GenerateResult{}, wrapped
+			}
+			metadata.Prompts.EnhancedPrompt = enhancedPrompt
+			metadata.Stages.Enhanced.Status = "complete"
+			metadata.ImageID = ComputeImageID(metadata)
 		}
-		enhancedPrompt, err := engine.enhancePrompt(metadata.Prompts.Prompt, build.authorContext)
-		if err != nil {
-			wrapped := WrapError(ErrProviderFailed, "enhance prompt", err)
-			progressMgr.Fail(metadata.Series.Name, metadata.Seed, wrapped)
-			return GenerateResult{}, wrapped
-		}
-		metadata.Prompts.EnhancedPrompt = enhancedPrompt
-		metadata.Stages.Enhanced.Status = "complete"
-		metadata.ImageID = ComputeImageID(metadata)
 	} else {
 		progressMgr.Skip(metadata.Series.Name, metadata.Seed, progress.PhaseEnhance)
 	}
@@ -618,6 +630,9 @@ func (engine *Engine) Generate(request GenerateRequest) (GenerateResult, error) 
 		if err != nil {
 			wrapped := WrapError(ErrProviderFailed, "generate image", err)
 			progressMgr.Fail(metadata.Series.Name, metadata.Seed, wrapped)
+			// Persist partial metadata so completed stages (e.g. enhancement) are cached for re-runs
+			metadata.Status.Completed = false
+			_, _ = WriteImageMetadata(engine.dataDir, metadata)
 			return GenerateResult{}, wrapped
 		}
 		metadata.Artifacts.Generated = result.generatedPath
@@ -686,30 +701,30 @@ func cachedSatisfiesRequest(metadata ImageMetadata, request GenerateRequest) boo
 	return true
 }
 
-func removeDataDirFile(dataDir string, path string) error {
-	if strings.TrimSpace(path) == "" {
-		return nil
-	}
-	cleanDataDir, err := filepath.Abs(filepath.Clean(dataDir))
-	if err != nil {
-		return WrapError(ErrInvalidInput, "resolve data directory", err)
-	}
-	cleanPath, err := filepath.Abs(filepath.Clean(path))
-	if err != nil {
-		return WrapError(ErrInvalidInput, "resolve image artifact path", err)
-	}
-	relative, err := filepath.Rel(cleanDataDir, cleanPath)
-	if err != nil {
-		return WrapError(ErrInvalidInput, "compare image artifact path", err)
-	}
-	if relative == ".." || strings.HasPrefix(relative, ".."+string(os.PathSeparator)) {
-		return NewError(ErrInvalidInput, "image artifact path is outside the data directory")
-	}
-	if err := os.Remove(cleanPath); err != nil && !os.IsNotExist(err) {
-		return WrapError(ErrMetadataInvalid, "delete image artifact", err)
-	}
-	return nil
-}
+// func removeDataDirFile(dataDir string, path string) error {
+// 	if strings.TrimSpace(path) == "" {
+// 		return nil
+// 	}
+// 	cleanDataDir, err := filepath.Abs(filepath.Clean(dataDir))
+// 	if err != nil {
+// 		return WrapError(ErrInvalidInput, "resolve data directory", err)
+// 	}
+// 	cleanPath, err := filepath.Abs(filepath.Clean(path))
+// 	if err != nil {
+// 		return WrapError(ErrInvalidInput, "resolve image artifact path", err)
+// 	}
+// 	relative, err := filepath.Rel(cleanDataDir, cleanPath)
+// 	if err != nil {
+// 		return WrapError(ErrInvalidInput, "compare image artifact path", err)
+// 	}
+// 	if relative == ".." || strings.HasPrefix(relative, ".."+string(os.PathSeparator)) {
+// 		return NewError(ErrInvalidInput, "image artifact path is outside the data directory")
+// 	}
+// 	if err := os.Remove(cleanPath); err != nil && !os.IsNotExist(err) {
+// 		return WrapError(ErrMetadataInvalid, "delete image artifact", err)
+// 	}
+// 	return nil
+// }
 
 func archiveDataDirFile(dataDir string, path string) error {
 	if strings.TrimSpace(path) == "" {

@@ -20,6 +20,23 @@ func testConfig(t *testing.T, stdout *bytes.Buffer, stderr *bytes.Buffer) cliCon
 	}
 }
 
+func TestRunHelp(t *testing.T) {
+	for _, args := range [][]string{{"--help"}, {"-h"}, {"help"}, {"--help", "generate"}} {
+		stdout := bytes.Buffer{}
+		stderr := bytes.Buffer{}
+		exit := run(args, testConfig(t, &stdout, &stderr))
+		if exit != 0 {
+			t.Fatalf("expected exit 0 for %v, got %d: %s", args, exit, stderr.String())
+		}
+		if !bytes.Contains(stdout.Bytes(), []byte("Usage:")) || !bytes.Contains(stdout.Bytes(), []byte("Commands:")) {
+			t.Fatalf("expected usage output for %v, got %s", args, stdout.String())
+		}
+		if stderr.Len() != 0 {
+			t.Fatalf("expected empty stderr for %v, got %s", args, stderr.String())
+		}
+	}
+}
+
 func TestRunPreview(t *testing.T) {
 	stdout := bytes.Buffer{}
 	stderr := bytes.Buffer{}
