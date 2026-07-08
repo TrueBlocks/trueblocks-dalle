@@ -745,14 +745,20 @@ func archiveDataDirFile(dataDir string, path string) error {
 	if relative == ".." || strings.HasPrefix(relative, ".."+string(os.PathSeparator)) {
 		return NewError(ErrInvalidInput, "image artifact path is outside the data directory")
 	}
-	dir := filepath.Dir(cleanPath)
-	base := filepath.Base(cleanPath)
-	archiveDir := filepath.Join(filepath.Dir(dir), "archive", filepath.Base(dir))
+	outputDir := filepath.Join(cleanDataDir, "output")
+	outputRelative, err := filepath.Rel(outputDir, cleanPath)
+	if err != nil {
+		return WrapError(ErrInvalidInput, "compare image artifact path with output directory", err)
+	}
+	if outputRelative == ".." || strings.HasPrefix(outputRelative, ".."+string(os.PathSeparator)) {
+		return NewError(ErrInvalidInput, "image artifact path is outside the output directory")
+	}
+	archivePath := filepath.Join(cleanDataDir, "archives", outputRelative)
+	archiveDir := filepath.Dir(archivePath)
 	if err := os.MkdirAll(archiveDir, 0o750); err != nil {
 		return WrapError(ErrInvalidInput, "create archive directory", err)
 	}
-	dest := filepath.Join(archiveDir, base)
-	if err := os.Rename(cleanPath, dest); err != nil {
+	if err := os.Rename(cleanPath, archivePath); err != nil {
 		return WrapError(ErrMetadataInvalid, "archive image artifact", err)
 	}
 	return nil

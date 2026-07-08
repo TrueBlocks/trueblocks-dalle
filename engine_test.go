@@ -386,8 +386,25 @@ func TestEngineDeleteImageRemovesMetadataAndArtifacts(t *testing.T) {
 			t.Fatalf("expected %s deleted, got %v", path, err)
 		}
 	}
+	archivePaths := []string{
+		filepath.Join(engine.DataDir(), "archives", result.Series, "generated", filepath.Base(result.GeneratedPath)),
+		filepath.Join(engine.DataDir(), "archives", result.Series, "annotated", filepath.Base(result.AnnotatedPath)),
+		filepath.Join(engine.DataDir(), "archives", result.Series, "metadata", filepath.Base(result.MetadataPath)),
+	}
+	for _, path := range archivePaths {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected archived %s, got %v", path, err)
+		}
+	}
 	if _, err := engine.GetImage(result.Metadata.ImageID); ErrorCodeOf(err) != ErrArtifactMissing {
 		t.Fatalf("expected deleted image lookup to fail, got %v", err)
+	}
+	archived, err := engine.ListImages(ImageFilter{IncludeArchived: true})
+	if err != nil {
+		t.Fatalf("ListImages with archived: %v", err)
+	}
+	if len(archived) != 1 || !archived[0].Archived {
+		t.Fatalf("expected one archived image record, got %#v", archived)
 	}
 }
 

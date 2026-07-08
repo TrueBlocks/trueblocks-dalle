@@ -210,42 +210,56 @@ func ValidateImageMetadata(metadata ImageMetadata) error {
 
 func ListImageMetadata(dataDir string, filter ImageFilter) ([]ImageMetadataRecord, error) {
 	outputDir := filepath.Join(dataDir, "output")
+	archivesDir := filepath.Join(dataDir, "archives")
 	seriesFilter := strings.TrimSpace(filter.Series)
 	records := []ImageMetadataRecord{}
-	if _, err := os.Stat(outputDir); err != nil {
-		if os.IsNotExist(err) {
-			return records, nil
+	walkMetadataDir := func(root string, archived bool) error {
+		if _, err := os.Stat(root); err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return WrapError(ErrMetadataInvalid, "inspect image metadata directory", err)
 		}
-		return nil, WrapError(ErrMetadataInvalid, "inspect output directory", err)
+		return filepath.WalkDir(root, func(path string, dirEntry fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if dirEntry.IsDir() || filepath.Ext(path) != ".json" {
+				return nil
+			}
+			parentDir := filepath.Base(filepath.Dir(path))
+			if parentDir != "metadata" {
+				return nil
+			}
+			grandparentDir := filepath.Base(filepath.Dir(filepath.Dir(path)))
+			isArchived := archived || grandparentDir == "archive"
+			if isArchived && !filter.IncludeArchived {
+				return nil
+			}
+			metadata, err := ReadImageMetadata(path)
+			if err != nil {
+				return err
+			}
+			if seriesFilter != "" && metadata.Series.Name != seriesFilter {
+				return nil
+			}
+			records = append(records, ImageMetadataRecord{Path: path, Metadata: metadata, Archived: isArchived})
+			return nil
+		})
 	}
-	err := filepath.WalkDir(outputDir, func(path string, dirEntry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if dirEntry.IsDir() || filepath.Ext(path) != ".json" {
-			return nil
-		}
-		parentDir := filepath.Base(filepath.Dir(path))
-		if parentDir != "metadata" {
-			return nil
-		}
-		grandparentDir := filepath.Base(filepath.Dir(filepath.Dir(path)))
-		isArchived := grandparentDir == "archive"
-		if isArchived && !filter.IncludeArchived {
-			return nil
-		}
-		metadata, err := ReadImageMetadata(path)
-		if err != nil {
-			return err
-		}
-		if seriesFilter != "" && metadata.Series.Name != seriesFilter {
-			return nil
-		}
-		records = append(records, ImageMetadataRecord{Path: path, Metadata: metadata, Archived: isArchived})
-		return nil
-	})
-	if err != nil {
+	if err := walkMetadataDir(outputDir, false); err != nil {
 		return nil, WrapError(ErrMetadataInvalid, "list image metadata", err)
+	}
+	if err := walkMetadataDir(archivesDir, true); err != nil {
+		return nil, WrapError(ErrMetadataInvalid, "list image metadata", err)
+	}
+	if len(records) == 0 {
+		if _, err := os.Stat(outputDir); err != nil {
+			if os.IsNotExist(err) {
+				return records, nil
+			}
+			return nil, WrapError(ErrMetadataInvalid, "inspect output directory", err)
+		}
 	}
 	sort.Slice(records, func(left, right int) bool {
 		return records[left].Path < records[right].Path
