@@ -306,12 +306,108 @@ func (cm *CacheManager) buildDatabaseIndex(dbName string) (DatabaseIndex, error)
 		version = "v0.1.0" // Default version
 	}
 
-	return DatabaseIndex{
+	idx := DatabaseIndex{
 		Name:    dbName,
 		Version: version,
 		Records: records,
 		Lookup:  lookup,
-	}, nil
+	}
+
+	if dbName == "nouns" {
+		if err := enrichNounsWithHierarchy(&idx); err != nil {
+			logger.Warn("failed to enrich nouns with hierarchy: " + err.Error())
+		}
+	}
+
+	return idx, nil
+}
+
+// loadHierarchyLookup reads a hierarchy CSV and returns a map from the key column to
+// the remaining columns. For example, families.csv maps family -> [order, commonName].
+func loadHierarchyLookup(csvName string, keyCol int) (map[string][]string, error) {
+	lines, err := ReadDatabaseCSV(csvName)
+	if err != nil {
+		return nil, err
+	}
+	lookup := make(map[string][]string, len(lines))
+	for _, line := range lines[1:] {
+		cleanLine := strings.Replace(line, "v0.1.0,", "", 1)
+		parts := strings.Split(cleanLine, ",")
+		if len(parts) <= keyCol {
+			continue
+		}
+		key := strings.TrimSpace(parts[keyCol])
+		if key != "" {
+			lookup[key] = parts
+		}
+	}
+	return lookup, nil
+}
+
+// enrichNounsWithHierarchy walks the taxonomy chain for each noun and appends
+// the resolved hierarchy to its Values slice. After enrichment, each noun record
+// has Values: [commonName, family, familyCommon, order, orderCommon, class, classCommon, phylum, phylumCommon].
+func enrichNounsWithHierarchy(idx *DatabaseIndex) error {
+	families, err := loadHierarchyLookup("families.csv", 0)
+	if err != nil {
+		return fmt.Errorf("loading families: %w", err)
+	}
+	orders, err := loadHierarchyLookup("orders.csv", 0)
+	if err != nil {
+		return fmt.Errorf("loading orders: %w", err)
+	}
+	classes, err := loadHierarchyLookup("classes.csv", 0)
+	if err != nil {
+		return fmt.Errorf("loading classes: %w", err)
+	}
+	phyla, err := loadHierarchyLookup("phyla.csv", 0)
+	if err != nil {
+		return fmt.Errorf("loading phyla: %w", err)
+	}
+
+	enriched := 0
+	for i, rec := range idx.Records {
+		if len(rec.Values) < 2 {
+			continue
+		}
+		familyName := strings.TrimSpace(rec.Values[1])
+
+		familyCommon := ""
+		orderName := ""
+		orderCommon := ""
+		className := ""
+		classCommon := ""
+		phylumName := ""
+		phylumCommon := ""
+
+		if fam, ok := families[familyName]; ok && len(fam) >= 3 {
+			orderName = fam[1]
+			familyCommon = fam[2]
+		}
+		if ord, ok := orders[orderName]; ok && len(ord) >= 3 {
+			className = ord[1]
+			orderCommon = ord[2]
+		}
+		if cls, ok := classes[className]; ok && len(cls) >= 3 {
+			phylumName = cls[1]
+			classCommon = cls[2]
+		}
+		if phy, ok := phyla[phylumName]; ok && len(phy) >= 2 {
+			phylumCommon = phy[1]
+		}
+
+		idx.Records[i].Values = []string{
+			rec.Values[0],
+			familyName, familyCommon,
+			orderName, orderCommon,
+			className, classCommon,
+			phylumName, phylumCommon,
+		}
+		enriched++
+	}
+
+	logger.Info("enriched noun records with taxonomy hierarchy")
+	return nil
 }
 
 // saveDatabaseCache saves cache to disk using GOB encoding

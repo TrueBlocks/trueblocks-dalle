@@ -87,10 +87,18 @@ func (dd *DalleDress) Adjective(short bool) string {
 func (dd *DalleDress) Noun(short bool) string {
 	val := dd.AttribMap["noun"].Value
 	parts := strings.Split(val, ",")
-	if short {
+	if short || len(parts) < 7 {
 		return parts[0]
 	}
-	return parts[0] + " (" + parts[1] + ", " + parts[2] + ")"
+	classCommon := strings.TrimSpace(parts[6])
+	if classCommon == "" {
+		return parts[0]
+	}
+	article := "a "
+	if len(classCommon) > 0 && strings.ContainsRune("aeiou", rune(classCommon[0])) {
+		article = "an "
+	}
+	return parts[0] + ", " + article + classCommon
 }
 
 func (dd *DalleDress) Emotion(short bool) string {
