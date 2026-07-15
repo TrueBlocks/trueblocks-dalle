@@ -259,9 +259,7 @@ func (dd *DalleDress) BackStyle(short bool) string {
 func (dd *DalleDress) BackgroundTreatment() string {
 	val := dd.AttribMap["backStyle"].Value
 	val = strings.ReplaceAll(val, "[{Color3}]", dd.Color(true, 3))
-	if strings.Contains(val, "[{ArtStyle2}]") {
-		val = strings.ReplaceAll(val, "and pay homage to this artistic style [{ArtStyle2}]", "and solid")
-	}
+	val = strings.ReplaceAll(val, "[{ArtStyle2}]", dd.ArtStyle(false, 2))
 	return val
 }
 
