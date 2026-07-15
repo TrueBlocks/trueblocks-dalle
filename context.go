@@ -70,22 +70,29 @@ func (ctx *Context) reportOn(dd *model.DalleDress, addr, loc, ft, value string) 
 
 // MakeDalleDress builds or retrieves a DalleDress for the given address using the context's templates, series, dbs, and cache.
 func (ctx *Context) MakeDalleDress(addressIn string) (*model.DalleDress, error) {
-	return ctx.makeDalleDress(addressIn, true)
+	return ctx.makeDalleDress(addressIn, "", true)
 }
 
 // PreviewDalleDress builds or retrieves a DalleDress without writing prompt sidecars.
 func (ctx *Context) PreviewDalleDress(addressIn string) (*model.DalleDress, error) {
-	return ctx.makeDalleDress(addressIn, false)
+	return ctx.makeDalleDress(addressIn, "", false)
 }
 
-func (ctx *Context) makeDalleDress(addressIn string, writeReports bool) (*model.DalleDress, error) {
+func (ctx *Context) makeDalleDress(addressIn, backstyle string, writeReports bool) (*model.DalleDress, error) {
 	ctx.CacheMutex.Lock()
 	defer ctx.CacheMutex.Unlock()
-	if ctx.DalleCache[addressIn] != nil {
+
+	resolvedBackstyle := strings.TrimSpace(backstyle)
+	if resolvedBackstyle == "" {
+		resolvedBackstyle = defaultBackstyle()
+	}
+
+	cacheKey := addressIn + "|" + resolvedBackstyle
+	if ctx.DalleCache[cacheKey] != nil {
 		if writeReports {
-			ctx.reportDalleDress(ctx.DalleCache[addressIn], addressIn)
+			ctx.reportDalleDress(ctx.DalleCache[cacheKey], addressIn)
 		}
-		return ctx.DalleCache[addressIn], nil
+		return ctx.DalleCache[cacheKey], nil
 	}
 
 	address := addressIn
@@ -101,11 +108,12 @@ func (ctx *Context) makeDalleDress(addressIn string, writeReports bool) (*model.
 	}
 
 	fn := utils.ValidFilename(address)
-	if ctx.DalleCache[fn] != nil {
+	fnKey := fn + "|" + resolvedBackstyle
+	if ctx.DalleCache[fnKey] != nil {
 		if writeReports {
-			ctx.reportDalleDress(ctx.DalleCache[fn], addressIn)
+			ctx.reportDalleDress(ctx.DalleCache[fnKey], addressIn)
 		}
-		return ctx.DalleCache[fn], nil
+		return ctx.DalleCache[fnKey], nil
 	}
 
 	dd := model.DalleDress{
@@ -147,6 +155,16 @@ func (ctx *Context) makeDalleDress(addressIn string, writeReports bool) (*model.
 		}
 	}
 
+	backAttr := prompt.Attribute{
+		Database: "backstyles",
+		Name:     "backStyle",
+		Value:    resolvedBackstyle,
+	}
+	dd.AttribMap["backStyle"] = backAttr
+	dd.Attribs = append(dd.Attribs, backAttr)
+	dd.SelectedTokens = append(dd.SelectedTokens, backAttr.Name)
+	dd.SelectedRecords = append(dd.SelectedRecords, backAttr.Value)
+
 	dd.DataPrompt, _ = dd.ExecuteTemplate(ctx.dataTemplate, nil)
 	dd.TitlePrompt, _ = dd.ExecuteTemplate(ctx.titleTemplate, nil)
 	dd.TersePrompt, _ = dd.ExecuteTemplate(ctx.terseTemplate, nil)
@@ -160,8 +178,8 @@ func (ctx *Context) makeDalleDress(addressIn string, writeReports bool) (*model.
 		dd.EnhancedPrompt = readTextFile(fnPath)
 	}
 
-	ctx.DalleCache[dd.FileName] = &dd
-	ctx.DalleCache[addressIn] = &dd
+	ctx.DalleCache[fnKey] = &dd
+	ctx.DalleCache[cacheKey] = &dd
 	if dd.Series != ctx.Series.Suffix {
 		logger.Error("MakeDalleDress:seriesMismatch", addressIn, "series", dd.Series, "loaded", ctx.Series.Suffix)
 	}
@@ -230,11 +248,9 @@ func (ctx *Context) GenerateImage(address string) (string, error) {
 
 // GenerateImageWithBaseURL generates an image using the DALL-E API with a specific base URL.
 func (ctx *Context) GenerateImageWithBaseURL(address, baseURL string) (string, error) {
-	ctx.CacheMutex.Lock()
-	dd, ok := ctx.DalleCache[address]
-	ctx.CacheMutex.Unlock()
-	if !ok {
-		return "", fmt.Errorf("DalleDress not found in cache for address: %s", address)
+	dd, err := ctx.MakeDalleDress(address)
+	if err != nil {
+		return "", fmt.Errorf("error building DalleDress: %w", err)
 	}
 
 	// If the enhanced prompt is empty, generate it.
@@ -410,7 +426,9 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 
 	if !fileExists(fn) || len(str) == 0 {
 		logger.Info("no series found, creating a new file", fn)
-		ret.SaveSeries(filter, 0)
+		if err := ret.SaveSeries(filter, 0); err != nil {
+			return ret, err
+		}
 		return ret, nil
 	}
 
@@ -420,4 +438,40 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 	}
 
 	return ret, nil
+}
+
+func defaultBackstyle() string {
+	styles, err := loadBackstyleTemplates()
+	if err != nil || len(styles) == 0 {
+		return "none"
+	}
+	return styles[0]
+}
+
+func loadBackstyleTemplates() ([]string, error) {
+	lines, err := storage.ReadDatabaseCSV("backstyles.csv")
+	if err != nil {
+		return nil, err
+	}
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("backstyles.csv is empty")
+	}
+
+	styles := make([]string, 0, len(lines)-1)
+	for _, line := range lines[1:] {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, ",", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		style := strings.TrimSpace(parts[1])
+		if style == "" {
+			continue
+		}
+		styles = append(styles, style)
+	}
+	return styles, nil
 }

@@ -62,6 +62,7 @@ type GenerateRequest struct {
 	Seed     string `json:"seed,omitempty"`
 	Series   string `json:"series,omitempty"`
 	Recipe   string `json:"recipe,omitempty"`
+	Backstyle string `json:"backstyle,omitempty"`
 	Enhance  bool   `json:"enhance,omitempty"`
 	Image    bool   `json:"image,omitempty"`
 	Annotate bool   `json:"annotate,omitempty"`
@@ -370,15 +371,23 @@ func (engine *Engine) RegenerateImage(id string) (GenerateResult, error) {
 		return GenerateResult{}, err
 	}
 	metadata := record.Metadata
+	backstyle := ""
+	for _, rec := range metadata.SelectedRecords {
+		if rec.Attribute == "backStyle" {
+			backstyle = rec.Record
+			break
+		}
+	}
 	return engine.Generate(GenerateRequest{
-		Input:    metadata.Input,
-		Seed:     metadata.Seed,
-		Series:   metadata.Series.Name,
-		Recipe:   metadata.Recipe.Name,
-		Enhance:  strings.TrimSpace(metadata.Prompts.EnhancedPrompt) != "",
-		Image:    true,
-		Annotate: strings.TrimSpace(metadata.Artifacts.Annotated) != "",
-		Force:    true,
+		Input:     metadata.Input,
+		Seed:      metadata.Seed,
+		Series:    metadata.Series.Name,
+		Recipe:    metadata.Recipe.Name,
+		Backstyle: backstyle,
+		Enhance:   strings.TrimSpace(metadata.Prompts.EnhancedPrompt) != "",
+		Image:     true,
+		Annotate:  strings.TrimSpace(metadata.Artifacts.Annotated) != "",
+		Force:     true,
 	})
 }
 
@@ -514,7 +523,7 @@ func (engine *Engine) buildPromptMetadata(request GenerateRequest) (promptBuild,
 	if err := ctx.ReloadDatabases(metadata.Series.Name); err != nil {
 		return promptBuild{}, WrapError(ErrSeriesInvalid, "load series", err)
 	}
-	dress, err := ctx.PreviewDalleDress(metadata.Seed)
+	dress, err := ctx.makeDalleDress(metadata.Seed, request.Backstyle, false)
 	if err != nil {
 		return promptBuild{}, WrapError(ErrInvalidInput, "build preview prompt", err)
 	}
@@ -698,7 +707,16 @@ func cachedSatisfiesRequest(metadata ImageMetadata, request GenerateRequest) boo
 	if request.Annotate && strings.TrimSpace(metadata.Artifacts.Annotated) == "" {
 		return false
 	}
-	return true
+	requestedBackstyle := strings.TrimSpace(request.Backstyle)
+	if requestedBackstyle == "" {
+		return true
+	}
+	for _, rec := range metadata.SelectedRecords {
+		if rec.Attribute == "backStyle" {
+			return rec.Record == requestedBackstyle
+		}
+	}
+	return false
 }
 
 // func removeDataDirFile(dataDir string, path string) error {

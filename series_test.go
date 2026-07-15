@@ -109,7 +109,9 @@ func TestSeries_StringAndSaveSeries(t *testing.T) {
 		t.Fatalf("String() missing suffix: %s", js)
 	}
 	// Save with different last value
-	s.SaveSeries("alpha", 42)
+	if err := s.SaveSeries("alpha", 42); err != nil {
+		t.Fatalf("saving series: %v", err)
+	}
 	fn := filepath.Join(storage.SeriesDir(), "alpha.json")
 	b, err := os.ReadFile(fn)
 	if err != nil {
