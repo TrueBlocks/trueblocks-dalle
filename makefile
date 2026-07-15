@@ -1,5 +1,7 @@
 .PHONY: app
 
+MSG ?= update
+
 test:
 	@export $(grep -v '^#' ../.env | xargs) >/dev/null && go test ./...
 
@@ -25,3 +27,12 @@ clean:
 .PHONY: book
 book:
 	$(MAKE) -C book serve
+
+add:
+	@git add -A
+
+commit: add
+	@git commit -m "$(MSG)" || true
+
+push: commit
+	@git push

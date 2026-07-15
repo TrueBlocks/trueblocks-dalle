@@ -87,6 +87,74 @@ func TestDalleDress_Color(t *testing.T) {
 	}
 }
 
+func TestDalleDress_ColorShortRecord(t *testing.T) {
+	// Regression: a series filter can collapse a database to the 'none' placeholder,
+	// which has only one comma-separated part. Color accessors must not panic.
+	d := &DalleDress{AttribMap: map[string]prompt.Attribute{
+		"color1": {Value: "none"},
+		"color2": {Value: "none"},
+		"color3": {Value: "none"},
+	}}
+	if got := d.Color(true, 1); got != "none" {
+		t.Errorf("Color(true,1) with 'none' = %q, want none", got)
+	}
+	if got := d.Color(false, 1); got != "none" {
+		t.Errorf("Color(false,1) with 'none' = %q, want none", got)
+	}
+	if got := d.ColorDirective(); got == "" {
+		t.Error("ColorDirective with 'none' colors should not be empty")
+	}
+}
+
+func TestDalleDress_AccessorsHandleShortRecords(t *testing.T) {
+	// Ensure accessors used by templates do not panic when a database collapses
+	// to the 'none' placeholder or otherwise short record.
+	d := &DalleDress{AttribMap: map[string]prompt.Attribute{
+		"adverb":      {Value: "none"},
+		"adjective":   {Value: "none"},
+		"noun":        {Value: "none"},
+		"emotion":     {Value: "none"},
+		"occupation":  {Value: "none"},
+		"action":      {Value: "none"},
+		"artStyle1":   {Value: "none"},
+		"artStyle2":   {Value: "none"},
+		"litStyle":    {Value: "none"},
+		"color1":      {Value: "none"},
+		"color2":      {Value: "none"},
+		"color3":      {Value: "none"},
+		"viewpoints":  {Value: "none"},
+		"gaze":        {Value: "none"},
+		"backStyle":   {Value: "none"},
+		"composition": {Value: "none"},
+		"place":       {Value: "none"},
+		"trope":       {Value: "none"},
+	}}
+	_ = d.Adverb(false)
+	_ = d.Adjective(false)
+	_ = d.Noun(false)
+	_ = d.Emotion(false)
+	_ = d.EmotionGroup()
+	_ = d.EmotionPolarity()
+	_ = d.Occupation(false)
+	_ = d.Action(false)
+	_ = d.ArtStyle(false, 1)
+	_ = d.ArtStyle(false, 2)
+	_ = d.LitStyle(false)
+	_ = d.LitStyleDescr()
+	_ = d.Color(false, 1)
+	_ = d.Color(false, 2)
+	_ = d.Color(false, 3)
+	_ = d.ColorDirective()
+	_ = d.Viewpoint(false)
+	_ = d.Composition(false)
+	_ = d.Gaze(false)
+	_ = d.BackStyle(false)
+	_ = d.BackgroundTreatment()
+	_ = d.Place(false)
+	_ = d.Trope(false)
+	_ = d.StyleDirective()
+}
+
 func TestJSONNamingConsistency(t *testing.T) {
 	dd := &DalleDress{Original: "o", FileName: "f.png", Seed: "s", Prompt: "p", DataPrompt: "dp", TitlePrompt: "tp", TersePrompt: "tp2", EnhancedPrompt: "ep", Attribs: []prompt.Attribute{}, SeedChunks: []string{"a"}, SelectedTokens: []string{"b"}, SelectedRecords: []string{"c"}, ImageURL: "http://x", GeneratedPath: "/g/f.png", AnnotatedPath: "/a/f.png", IPFSHash: "h", CacheHit: true, Completed: true, Series: "series"}
 	b, err := json.Marshal(dd)

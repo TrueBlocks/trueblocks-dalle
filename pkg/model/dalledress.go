@@ -69,7 +69,7 @@ func (dd *DalleDress) FromTemplate(templateStr string) (string, error) {
 func (dd *DalleDress) Adverb(short bool) string {
 	val := dd.AttribMap["adverb"].Value
 	parts := strings.Split(val, ",")
-	if short {
+	if short || len(parts) < 2 {
 		return parts[0]
 	}
 	return parts[0] + ", meaning " + parts[1]
@@ -78,7 +78,7 @@ func (dd *DalleDress) Adverb(short bool) string {
 func (dd *DalleDress) Adjective(short bool) string {
 	val := dd.AttribMap["adjective"].Value
 	parts := strings.Split(val, ",")
-	if short {
+	if short || len(parts) < 2 {
 		return parts[0]
 	}
 	return parts[0] + ", meaning " + parts[1]
@@ -104,7 +104,7 @@ func (dd *DalleDress) Noun(short bool) string {
 func (dd *DalleDress) Emotion(short bool) string {
 	val := dd.AttribMap["emotion"].Value
 	parts := strings.Split(val, ",")
-	if short {
+	if short || len(parts) < 5 {
 		return parts[0]
 	}
 	return parts[0] + ", " + parts[4]
@@ -113,13 +113,19 @@ func (dd *DalleDress) Emotion(short bool) string {
 func (dd *DalleDress) EmotionGroup() string {
 	val := dd.AttribMap["emotion"].Value
 	parts := strings.Split(val, ",")
-	return parts[1]
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	return ""
 }
 
 func (dd *DalleDress) EmotionPolarity() string {
 	val := dd.AttribMap["emotion"].Value
 	parts := strings.Split(val, ",")
-	return parts[2]
+	if len(parts) > 2 {
+		return parts[2]
+	}
+	return ""
 }
 
 func (dd *DalleDress) Occupation(short bool) string {
@@ -128,7 +134,7 @@ func (dd *DalleDress) Occupation(short bool) string {
 		return ""
 	}
 	parts := strings.Split(val, ",")
-	if short {
+	if short || len(parts) < 2 {
 		return parts[0]
 	}
 	return " who works as a " + parts[0] + " who " + parts[1]
@@ -137,7 +143,7 @@ func (dd *DalleDress) Occupation(short bool) string {
 func (dd *DalleDress) Action(short bool) string {
 	val := dd.AttribMap["action"].Value
 	parts := strings.Split(val, ",")
-	if short {
+	if short || len(parts) < 2 {
 		return parts[0]
 	}
 	return parts[0] + ", meaning " + parts[1]
@@ -146,7 +152,7 @@ func (dd *DalleDress) Action(short bool) string {
 func (dd *DalleDress) ArtStyle(short bool, which int) string {
 	val := dd.AttribMap["artStyle"+fmt.Sprintf("%d", which)].Value
 	parts := strings.Split(val, ",")
-	if short {
+	if short || len(parts) < 4 {
 		return parts[0]
 	}
 	return parts[0] + ", which " + parts[3]
@@ -163,7 +169,7 @@ func (dd *DalleDress) LitStyle(short bool) string {
 		return ""
 	}
 	parts := strings.Split(val, ",")
-	if short {
+	if short || len(parts) < 2 {
 		return parts[0]
 	}
 	return parts[0] + ", which " + parts[1]
@@ -175,21 +181,33 @@ func (dd *DalleDress) LitStyleDescr() string {
 		return ""
 	}
 	parts := strings.Split(val, ",")
-	return parts[1]
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	return ""
 }
 
 func (dd *DalleDress) Color(short bool, which int) string {
 	val := dd.AttribMap["color"+fmt.Sprintf("%d", which)].Value
 	parts := strings.Split(val, ",")
 	if short {
-		return parts[1]
+		if len(parts) > 1 {
+			return parts[1]
+		}
+		return parts[0]
 	}
-	return parts[1] + " (" + parts[0] + ")"
+	if len(parts) > 1 {
+		return parts[1] + " (" + parts[0] + ")"
+	}
+	return parts[0]
 }
 
 func (dd *DalleDress) ColorDirective() string {
 	c1 := dd.Color(true, 1)
 	c2 := dd.Color(true, 2)
+	if c1 == "none" || c2 == "none" {
+		return "Use whatever color palette best serves the artistic style and subject."
+	}
 	limit := strings.TrimSpace(dd.ColorLimit)
 	if limit == "" {
 		return "The primary color scheme should emphasize " + c1 + " and " + c2 + ", but use the full range of colors the artistic style demands."
@@ -250,7 +268,7 @@ func (dd *DalleDress) BackgroundTreatment() string {
 func (dd *DalleDress) Place(short bool) string {
 	val := dd.AttribMap["place"].Value
 	parts := strings.Split(val, ",")
-	if short {
+	if short || len(parts) < 3 {
 		return parts[0]
 	}
 	return parts[0] + ", " + parts[1] + ", " + parts[2]
@@ -259,7 +277,7 @@ func (dd *DalleDress) Place(short bool) string {
 func (dd *DalleDress) Trope(short bool) string {
 	val := dd.AttribMap["trope"].Value
 	parts := strings.Split(val, ",")
-	if short {
+	if short || len(parts) < 3 {
 		return parts[0]
 	}
 	return parts[0] + ", " + parts[2]
