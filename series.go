@@ -9,6 +9,16 @@ import (
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
 
+// SeriesSource indicates whether a series is built into the binary or user-created.
+type SeriesSource string
+
+const (
+	// SeriesSourceBuiltin marks a series that ships with the application binary.
+	SeriesSourceBuiltin SeriesSource = "builtin"
+	// SeriesSourceUser marks a series created by the end user.
+	SeriesSourceUser SeriesSource = "user"
+)
+
 type SeriesModel struct {
 	Data  map[string]any `json:"data"`
 	Order []string       `json:"order"`
@@ -16,25 +26,27 @@ type SeriesModel struct {
 
 // Series represents a collection of prompt attributes and their values.
 type Series struct {
-	Last         int      `json:"last,omitempty"`
-	Suffix       string   `json:"suffix"`
-	Purpose      string   `json:"purpose,omitempty"`
-	Deleted      bool     `json:"deleted,omitempty"`
-	Adverbs      []string `json:"adverbs"`
-	Adjectives   []string `json:"adjectives"`
-	Nouns        []string `json:"nouns"`
-	Emotions     []string `json:"emotions"`
-	Occupations  []string `json:"occupations"`
-	Actions      []string `json:"actions"`
-	Artstyles    []string `json:"artstyles"`
-	Litstyles    []string `json:"litstyles"`
-	Colors       []string `json:"colors"`
-	Viewpoints   []string `json:"viewpoints"`
-	Gazes        []string `json:"gazes"`
-	Backstyles   []string `json:"backstyles"`
-	Compositions []string `json:"compositions"`
-	ColorLimit   string   `json:"colorLimit,omitempty"`
-	ModifiedAt   string   `json:"modifiedAt,omitempty"`
+	Last         int          `json:"last,omitempty"`
+	Suffix       string       `json:"suffix"`
+	Purpose      string       `json:"purpose,omitempty"`
+	Deleted      bool         `json:"deleted,omitempty"`
+	Adverbs      []string     `json:"adverbs"`
+	Adjectives   []string     `json:"adjectives"`
+	Nouns        []string     `json:"nouns"`
+	Emotions     []string     `json:"emotions"`
+	Occupations  []string     `json:"occupations"`
+	Actions      []string     `json:"actions"`
+	Artstyles    []string     `json:"artstyles"`
+	Litstyles    []string     `json:"litstyles"`
+	Colors       []string     `json:"colors"`
+	Viewpoints   []string     `json:"viewpoints"`
+	Gazes        []string     `json:"gazes"`
+	Backstyles   []string     `json:"backstyles"`
+	Compositions []string     `json:"compositions"`
+	ColorLimit   string       `json:"colorLimit,omitempty"`
+	ModifiedAt   string       `json:"modifiedAt,omitempty"`
+	Version      string       `json:"version,omitempty"`
+	Source       SeriesSource `json:"source,omitempty"`
 }
 
 func (s *Series) Model(chain, format string, verbose bool, extraOpts map[string]any) SeriesModel {
@@ -59,8 +71,10 @@ func (s *Series) Model(chain, format string, verbose bool, extraOpts map[string]
 			"backstyles":   s.Backstyles,
 			"compositions": s.Compositions,
 			"colorLimit":   s.ColorLimit,
+			"version":      s.Version,
+			"source":       string(s.Source),
 		},
-		Order: []string{"suffix", "purpose", "last", "deleted", "modifiedAt", "adverbs", "adjectives", "nouns", "emotions", "occupations", "actions", "artstyles", "litstyles", "colors", "viewpoints", "gazes", "backstyles", "compositions"},
+		Order: []string{"suffix", "purpose", "last", "deleted", "modifiedAt", "adverbs", "adjectives", "nouns", "emotions", "occupations", "actions", "artstyles", "litstyles", "colors", "viewpoints", "gazes", "backstyles", "compositions", "version", "source"},
 	}
 }
 
@@ -74,7 +88,7 @@ func (s *Series) String() string {
 func (s *Series) SaveSeries(series string, last int) error {
 	ss := s
 	ss.Last = last
-	target := filepath.Join(storage.SeriesDir(), series+".json") // creates the folder
+	target := filepath.Join(storage.UserSeriesDir(), series+".json") // creates the folder
 	return writeTextFile(target, ss.String())
 }
 

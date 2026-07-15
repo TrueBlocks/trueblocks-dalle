@@ -245,10 +245,10 @@ func GenerateAnnotatedImageWithBaseURL(series, address string, skipImage bool, l
 	return out, nil
 }
 
-// ListSeries returns the list of existing series (json files) beneath output Dir/series.
+// ListSeries returns the list of existing user series (json files) beneath the user-series directory.
 func ListSeries() []string {
 	list := []string{}
-	seriesDir := storage.SeriesDir()
+	seriesDir := storage.UserSeriesDir()
 	_ = filepath.WalkDir(seriesDir, func(path string, dirEntry os.DirEntry, err error) error {
 		if err != nil || dirEntry.IsDir() || !strings.HasSuffix(path, ".json") {
 			return nil

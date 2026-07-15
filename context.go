@@ -1,7 +1,6 @@
 package dalle
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -417,27 +416,13 @@ func (ctx *Context) loadSeries(filterIn string) (Series, error) {
 		logger.Info("db.load.series", "series", filterIn, "normalized", filter)
 	}
 
-	fn := filepath.Join(storage.DataDir(), "series", filter+".json")
-	str := strings.TrimSpace(readTextFile(fn))
-
-	ret := Series{
-		Suffix: filter,
+	if s, ok := getUserSeries(filter); ok {
+		return s, nil
 	}
-
-	if !fileExists(fn) || len(str) == 0 {
-		logger.Info("no series found, creating a new file", fn)
-		if err := ret.SaveSeries(filter, 0); err != nil {
-			return ret, err
-		}
-		return ret, nil
+	if s, ok := getBuiltinSeries(filter); ok {
+		return s, nil
 	}
-
-	if err := json.Unmarshal([]byte(str), &ret); err != nil {
-		logger.Error("could not unmarshal series:", err)
-		return ret, err
-	}
-
-	return ret, nil
+	return Series{}, fmt.Errorf("series not found: %s", filter)
 }
 
 func defaultBackstyle() string {

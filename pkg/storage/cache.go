@@ -3,7 +3,10 @@ package storage
 import (
 	"crypto/sha256"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
+	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,12 +40,22 @@ type DatabaseCache struct {
 	SourceHash string                   `json:"sourceHash"` // Hash of source data for validation
 }
 
+// SeriesCache holds the raw JSON bodies of built-in series.
+type SeriesCache struct {
+	Version    string            `json:"version"`    // Overall version
+	Timestamp  int64             `json:"timestamp"`  // Cache creation time
+	Builtins   map[string][]byte `json:"builtins"`   // Series suffix -> raw JSON
+	Checksum   string            `json:"checksum"`   // SHA256 of embedded tar.gz
+	SourceHash string            `json:"sourceHash"` // SHA256 of embedded tar.gz for validation
+}
+
 // CacheManager handles loading and building binary caches
 type CacheManager struct {
-	mu       sync.RWMutex
-	cacheDir string
-	dbCache  *DatabaseCache
-	loaded   bool
+	mu          sync.RWMutex
+	cacheDir    string
+	dbCache     *DatabaseCache
+	seriesCache *SeriesCache
+	loaded      bool
 }
 
 // GetCacheManager returns the singleton cache manager
@@ -91,6 +104,12 @@ func (cm *CacheManager) LoadOrBuild() error {
 	// Load or build database cache
 	if err := cm.loadOrBuildDatabaseCache(); err != nil {
 		logger.Error("Failed to load database cache, using embedded fallback:", err)
+		// Continue without cache - fallback to embedded resources
+	}
+
+	// Load or build series cache
+	if err := cm.loadOrBuildSeriesCache(); err != nil {
+		logger.Error("Failed to load series cache, using embedded fallback:", err)
 		// Continue without cache - fallback to embedded resources
 	}
 
@@ -226,7 +245,160 @@ func (cm *CacheManager) loadOrBuildDatabaseCache() error {
 	cm.dbCache = cache
 	logger.Info("Built database cache", "version", cache.Version, "count", len(cache.Databases))
 	return nil
-} // buildDatabaseCache creates a new database cache from embedded resources
+}
+
+// GetSeriesJSON returns the raw JSON body for a built-in series.
+func (cm *CacheManager) GetSeriesJSON(suffix string) ([]byte, bool) {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	if cm.seriesCache == nil {
+		return nil, false
+	}
+	body, ok := cm.seriesCache.Builtins[suffix]
+	return body, ok
+}
+
+// ListSeriesJSON returns a copy of the built-in series suffix-to-JSON map.
+func (cm *CacheManager) ListSeriesJSON() map[string][]byte {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	if cm.seriesCache == nil {
+		return nil
+	}
+	out := make(map[string][]byte, len(cm.seriesCache.Builtins))
+	maps.Copy(out, cm.seriesCache.Builtins)
+	return out
+}
+
+// loadOrBuildSeriesCache loads an existing series cache or builds one from the embedded archive.
+func (cm *CacheManager) loadOrBuildSeriesCache() error {
+	embeddedHash := SeriesArchiveHash()
+	logger.InfoG(fmt.Sprintf("DEBUG: Current embedded series hash: %s (size: %d bytes)", embeddedHash[:16], len(embeddedSeries)))
+
+	version, err := cm.extractSeriesVersionFromEmbedded()
+	if err != nil {
+		logger.Error("Failed to extract series version, using default:", err)
+		version = "v1.0.0"
+	}
+	logger.InfoG(fmt.Sprintf("DEBUG: Extracted series version: %s", version))
+
+	cacheFile := filepath.Join(cm.cacheDir, fmt.Sprintf("series_%s.gob", version))
+	logger.InfoG(fmt.Sprintf("DEBUG: Looking for series cache file: %s", cacheFile))
+
+	if fileExists(cacheFile) {
+		logger.InfoG("DEBUG: Series cache file exists, attempting to load")
+		if cache, err := cm.loadSeriesCache(cacheFile); err == nil {
+			logger.InfoG(fmt.Sprintf("DEBUG: Loaded series cache - stored hash: %s", cache.SourceHash[:16]))
+			if cache.SourceHash == embeddedHash {
+				cm.seriesCache = cache
+				logger.Info("Loaded series cache", "version", cache.Version, "count", len(cache.Builtins))
+				return nil
+			}
+			logger.Info("Series cache outdated, rebuilding", "cached", cache.SourceHash[:8], "current", embeddedHash[:8])
+		} else {
+			logger.InfoG(fmt.Sprintf("DEBUG: Failed to load series cache file: %v", err))
+		}
+	} else {
+		logger.InfoG("DEBUG: Series cache file does not exist")
+	}
+
+	logger.Info("Building series cache from embedded resources")
+	cache, err := cm.buildSeriesCache(version)
+	if err != nil {
+		return fmt.Errorf("failed to build series cache: %w", err)
+	}
+
+	cache.SourceHash = embeddedHash
+	logger.InfoG(fmt.Sprintf("DEBUG: Saving series cache with hash: %s", embeddedHash[:16]))
+
+	if err := cm.saveSeriesCache(cacheFile, cache); err != nil {
+		logger.Error("Failed to save series cache:", err)
+	} else {
+		logger.InfoG(fmt.Sprintf("DEBUG: Successfully saved series cache to: %s", cacheFile))
+	}
+
+	cm.seriesCache = cache
+	logger.Info("Built series cache", "version", cache.Version, "count", len(cache.Builtins))
+	return nil
+}
+
+func (cm *CacheManager) extractSeriesVersionFromEmbedded() (string, error) {
+	var version string
+	err := WalkSeriesArchive(func(path string, body []byte) error {
+		var v struct {
+			Version string `json:"version"`
+		}
+		if err := json.Unmarshal(body, &v); err != nil {
+			return err
+		}
+		version = v.Version
+		return io.EOF
+	})
+	if err != nil && err != io.EOF {
+		return "", err
+	}
+	if version == "" {
+		return "v1.0.0", nil
+	}
+	return version, nil
+}
+
+func (cm *CacheManager) buildSeriesCache(version string) (*SeriesCache, error) {
+	cache := &SeriesCache{
+		Version:   version,
+		Timestamp: time.Now().Unix(),
+		Builtins:  make(map[string][]byte),
+		Checksum:  SeriesArchiveHash(),
+	}
+
+	err := WalkSeriesArchive(func(path string, body []byte) error {
+		suffix := seriesSuffixFromPath(path)
+		cache.Builtins[suffix] = body
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return cache, nil
+}
+
+func (cm *CacheManager) saveSeriesCache(filename string, cache *SeriesCache) error {
+	filename = filepath.Clean(filename)
+	if !strings.HasPrefix(filename, filepath.Clean(cm.cacheDir)+string(os.PathSeparator)) {
+		return fmt.Errorf("invalid cache path: %s", filename)
+	}
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = file.Close() }()
+	encoder := gob.NewEncoder(file)
+	return encoder.Encode(cache)
+}
+
+func (cm *CacheManager) loadSeriesCache(filename string) (*SeriesCache, error) {
+	filename = filepath.Clean(filename)
+	if !strings.HasPrefix(filename, filepath.Clean(cm.cacheDir)+string(os.PathSeparator)) {
+		return nil, fmt.Errorf("invalid cache path: %s", filename)
+	}
+	file, err := os.Open(filename) // #nosec G304 path validated
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+
+	var cache SeriesCache
+	decoder := gob.NewDecoder(file)
+	if err := decoder.Decode(&cache); err != nil {
+		return nil, err
+	}
+	return &cache, nil
+}
+
+// buildDatabaseCache creates a new database cache from embedded resources
 func (cm *CacheManager) buildDatabaseCache() (*DatabaseCache, error) {
 	cache := &DatabaseCache{
 		Timestamp: time.Now().Unix(),
@@ -452,14 +624,23 @@ func (cm *CacheManager) InvalidateCache() error {
 	defer cm.mu.Unlock()
 
 	cm.dbCache = nil
+	cm.seriesCache = nil
 	cm.loaded = false
 
-	// Remove all cache files (both versioned and unversioned for cleanup)
-	pattern := filepath.Join(cm.cacheDir, "databases_*.gob")
-	matches, err := filepath.Glob(pattern)
+	// Remove database cache files
+	dbPattern := filepath.Join(cm.cacheDir, "databases_*.gob")
+	matches, err := filepath.Glob(dbPattern)
 	if err != nil {
-		logger.Error("Failed to glob cache files:", err)
+		logger.Error("Failed to glob database cache files:", err)
 	}
+
+	// Remove series cache files
+	seriesPattern := filepath.Join(cm.cacheDir, "series_*.gob")
+	seriesMatches, err := filepath.Glob(seriesPattern)
+	if err != nil {
+		logger.Error("Failed to glob series cache files:", err)
+	}
+	matches = append(matches, seriesMatches...)
 
 	for _, match := range matches {
 		if err := os.Remove(match); err != nil {
@@ -467,7 +648,7 @@ func (cm *CacheManager) InvalidateCache() error {
 		}
 	}
 
-	// Also remove legacy unversioned cache file if it exists
+	// Also remove legacy unversioned database cache file if it exists
 	legacyCacheFile := filepath.Join(cm.cacheDir, "databases.gob")
 	if fileExists(legacyCacheFile) {
 		if err := os.Remove(legacyCacheFile); err != nil {

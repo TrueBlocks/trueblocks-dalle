@@ -95,7 +95,7 @@ func TestSeries_Model(t *testing.T) {
 		t.Fatalf("model data mismatch: %#v", m.Data)
 	}
 	// Order should contain known keys in order (spot check first / last)
-	if len(m.Order) == 0 || m.Order[0] != "suffix" || m.Order[len(m.Order)-1] != "compositions" {
+	if len(m.Order) == 0 || m.Order[0] != "suffix" || m.Order[len(m.Order)-1] != "source" {
 		t.Fatalf("unexpected order: %v", m.Order)
 	}
 }
@@ -112,7 +112,7 @@ func TestSeries_StringAndSaveSeries(t *testing.T) {
 	if err := s.SaveSeries("alpha", 42); err != nil {
 		t.Fatalf("saving series: %v", err)
 	}
-	fn := filepath.Join(storage.SeriesDir(), "alpha.json")
+	fn := filepath.Join(storage.UserSeriesDir(), "alpha.json")
 	b, err := os.ReadFile(fn)
 	if err != nil {
 		t.Fatalf("reading saved series: %v", err)

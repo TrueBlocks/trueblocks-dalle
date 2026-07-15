@@ -11,6 +11,77 @@ import (
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
 )
 
+// LoadUserSeriesModels loads all user-created series from the user-series directory.
+func LoadUserSeriesModels() ([]Series, error) {
+	items, err := LoadSeriesModels(storage.UserSeriesDir())
+	if err != nil {
+		return nil, err
+	}
+	for i := range items {
+		items[i].Source = SeriesSourceUser
+	}
+	return items, nil
+}
+
+// LoadBuiltinSeriesModels loads all built-in series from the embedded archive cache.
+func LoadBuiltinSeriesModels() ([]Series, error) {
+	cm := storage.GetCacheManager()
+	if err := cm.LoadOrBuild(); err != nil {
+		return nil, err
+	}
+
+	builtins := cm.ListSeriesJSON()
+	items := make([]Series, 0, len(builtins))
+	for suffix, body := range builtins {
+		var s Series
+		if err := json.Unmarshal(body, &s); err != nil {
+			continue
+		}
+		if s.Suffix == "" {
+			s.Suffix = suffix
+		}
+		s.Source = SeriesSourceBuiltin
+		items = append(items, s)
+	}
+	return items, nil
+}
+
+// IsBuiltinSeries reports whether the given suffix is a built-in series.
+func IsBuiltinSeries(suffix string) bool {
+	cm := storage.GetCacheManager()
+	_ = cm.LoadOrBuild()
+	_, ok := cm.GetSeriesJSON(suffix)
+	return ok
+}
+
+// mergeSeries combines built-in and user series, with user series shadowing built-ins.
+func mergeSeries(builtins, users []Series, filter SeriesFilter) []Series {
+	bySuffix := make(map[string]Series, len(builtins)+len(users))
+	for _, s := range builtins {
+		bySuffix[s.Suffix] = s
+	}
+	for _, s := range users {
+		bySuffix[s.Suffix] = s
+	}
+
+	items := make([]Series, 0, len(bySuffix))
+	for _, s := range bySuffix {
+		switch {
+		case filter.OnlyHidden:
+			if s.Deleted {
+				items = append(items, s)
+			}
+		case filter.IncludeHidden:
+			items = append(items, s)
+		default:
+			if !s.Deleted {
+				items = append(items, s)
+			}
+		}
+	}
+	return items
+}
+
 // LoadSeriesModels loads all series JSON files from the series folder beneath the provided dataDir
 func LoadSeriesModels(seriesDir string) ([]Series, error) {
 	items := []Series{}

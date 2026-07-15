@@ -2,65 +2,60 @@
 
 ## 1. Background
 
-The `dalleserver` application currently utilizes a robust system for managing its "database" files (`.csv` files). These files are embedded within the application binary inside a `databases.tar.gz` archive. On startup, a `CacheManager` checks the integrity of a local cache (`~/.local/share/trueblocks/dalle/cache`) by comparing the hash of the embedded archive against a stored hash in a manifest file. If the cache is stale or missing, it is wiped and rebuilt from the embedded data. This ensures that the application's data is always in sync with the compiled version.
+The `dalleserver` application uses a robust system for managing its database files (`.csv` files). These files are embedded within the application binary inside a `databases.tar.gz` archive. On startup, a `CacheManager` reads the embedded archive into an in-memory cache in `~/.local/share/trueblocks/dalle/cache`, keyed by the SHA256 hash of the archive. If the local cache is stale or missing, it is rebuilt from the embedded data.
 
-In contrast, the "series" data (`.json` files) is managed differently. These files reside in `~/.local/share/trueblocks/dalle/series`, and the application reads them directly from the filesystem. If a requested series file does not exist, it is created on-the-fly. This makes the `series` directory a dynamic, user-modifiable space rather than a managed asset.
+The series data (`.json` files) now uses the same mechanism. Built-in series are embedded in `dalle/pkg/storage/series.tar.gz`, parsed into an in-memory `SeriesCache` on startup, and invalidated by the archive hash. User-created series are kept separate in `~/.local/share/trueblocks/dalle/user-series/` so that application updates never overwrite user data.
 
-This document proposes a design to make the handling of `series` data identical to the `databases` data, thereby providing a version-controlled, consistent, and robust mechanism for managing the default set of series.
+## 2. Proposed Changes (Implemented)
 
-## 2. Proposed Changes
+### 2.1. Embedded `series.tar.gz`
 
-The core proposal is to treat the `series` data as a managed, cached asset derived from an embedded source, exactly like the databases.
-
-### 2.1. Introduce Embedded `series.tar.gz`
-
-A new compressed archive, `series.tar.gz`, will be created. This archive will contain the default set of series definition files (e.g., `default.json`, `art-deco.json`, etc.).
-
-This archive will be embedded into the application binary using the `//go:embed` directive in a new file, `dalle/pkg/storage/series.go`:
+A compressed archive, `series.tar.gz`, contains the default set of series definition files. It is embedded into the application binary using a `//go:embed` directive in `dalle/pkg/storage/series.go`.
 
 ```go
 //go:embed series.tar.gz
 var embeddedSeries []byte
 ```
 
+The archive is regenerated from `dalle/pkg/storage/series/` by the existing `make build-db` target.
+
 ### 2.2. Extend the Cache Management System
 
-The existing `CacheManager` will be enhanced to manage both the database cache and the new series cache.
+The `CacheManager` now manages both the database cache and the series cache.
 
-1.  **Extend the Cache Manifest**: The `cache_manifest.json` file will be updated to store two separate hashes: one for the databases and one for the series.
+- `SeriesCache` stores a map of suffix -> raw JSON bytes for every built-in series.
+- The cache file is written to `cache/series_v1.0.0.gob`.
+- On startup, the SHA256 hash of `embeddedSeries` is compared against the `SourceHash` stored in the cache file.
+- If the cache is missing or the hash differs, the cache is rebuilt from the embedded archive.
 
-    ```json
-    {
-      "databases_hash": "sha256_hash_of_databases_tar_gz",
-      "series_hash": "sha256_hash_of_series_tar_gz"
-    }
-    ```
+This mirrors the existing database cache invalidation strategy exactly.
 
-2.  **Dual Hashing**: On startup, the `CacheManager` will compute the SHA256 hash of both the embedded `databases.tar.gz` and the new `embeddedSeries` byte slice.
+### 2.3. User Series Directory
 
-3.  **Independent Cache Validation**: The manager will compare each calculated hash against its corresponding value in the manifest. This allows the database and series caches to be validated and rebuilt independently, although in practice they will be managed together.
+User-created series live in `~/.local/share/trueblocks/dalle/user-series/`. This directory is managed separately from the built-in cache so that:
 
-### 2.3. Treat `series` Directory as a Cache
+- Application updates can replace built-in series without touching user data.
+- User series shadow built-in series on suffix collision.
+- Built-in series are immutable: the application refuses to edit, hide, or delete them.
 
-The directory `~/.local/share/trueblocks/dalle/series` will no longer be treated as a primary data source. Instead, it will be considered a **cache directory**.
+### 2.4. Series Loading Logic
 
-If the `CacheManager` detects that the `series_hash` is different from the one in the manifest (or if the manifest/directory is missing), it will perform the following actions:
-1.  **Wipe the Directory**: The entire `~/.local/share/trueblocks/dalle/series` directory will be deleted.
-2.  **Re-create and Populate**: The directory will be re-created, and its contents will be populated by extracting all the JSON files from the embedded `series.tar.gz`.
-3.  **Update Manifest**: The `series_hash` in `cache_manifest.json` will be updated to the new hash.
+`dalle/engine.go` now loads series through the cache manager:
 
-### 2.4. Modify Series Loading Logic
+- `ListSeries()` merges built-in series from `CacheManager.ListSeriesJSON()` with user series loaded from `UserSeriesDir()`.
+- `GetSeries()` checks user series first, then built-ins.
+- `SaveSeries()` writes to `UserSeriesDir()` and rejects built-in suffixes.
+- `SetSeriesHidden()` operates on user series only.
 
-The `dalle/context.go:loadSeries` function will be simplified. Since the `CacheManager` will guarantee that the `series` directory is present and correct upon application start, `loadSeries` will no longer need to check for file existence or create files on-the-fly. It will simply read the required `[series_name].json` file directly from the now-cached `series` directory.
+`dalle/context.go:loadSeries` no longer auto-creates missing series; it returns an error if the requested series is not found.
 
 ## 3. Consequences and Behavioral Changes
 
-Adopting this design has several important implications:
+1. **Version-Controlled Series**: The default series definitions are part of the source code repository and versioned along with the application.
+2. **Immutable Built-ins**: Built-in series cannot be edited, hidden, or deleted through the application UI.
+3. **User Series Isolation**: User-created series are stored in `user-series/` and survive application updates.
+4. **No Dynamic Creation**: Requesting a non-existent series no longer silently creates a blank file.
 
-1.  **Version-Controlled Series**: The default series definitions will be part of the source code repository and versioned along with the application. This ensures consistency and reliability across all installations.
+## 4. Source of Truth
 
-2.  **Loss of Dynamic Creation**: The ability for a user to create a new series simply by requesting it will be removed. The set of available series will be defined by the contents of the embedded `series.tar.gz`.
-
-3.  **`series` Directory Becomes Volatile**: The `~/.local/share/trueblocks/dalle/series` directory will become a managed cache. **Any manual modifications or new JSON files added to this directory by a user will be deleted** whenever the application is updated with a new `series.tar.gz`. This is a critical change in behavior that moves away from treating this location as persistent user storage.
-
-This change aligns the `series` data handling with the robust and self-contained model already proven for the databases, leading to a more predictable and maintainable application.
+The canonical built-in series files live in `dalle/pkg/storage/series/`. To update built-in series, edit those files and run `make build-db` in the `dalle/` directory before building the application.

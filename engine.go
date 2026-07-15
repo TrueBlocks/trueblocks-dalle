@@ -239,20 +239,17 @@ func (engine *Engine) ListSeries(filter SeriesFilter) ([]Series, error) {
 		return nil, NewError(ErrInvalidInput, "engine is nil")
 	}
 	storage.UseDataDir(engine.dataDir)
-	seriesDir := storage.SeriesDir()
-	var items []Series
-	var err error
-	switch {
-	case filter.OnlyHidden:
-		items, err = LoadDeletedSeriesModels(seriesDir)
-	case filter.IncludeHidden:
-		items, err = LoadSeriesModels(seriesDir)
-	default:
-		items, err = LoadActiveSeriesModels(seriesDir)
-	}
+
+	builtins, err := LoadBuiltinSeriesModels()
 	if err != nil {
-		return nil, WrapError(ErrSeriesInvalid, "list series", err)
+		return nil, WrapError(ErrSeriesInvalid, "list built-in series", err)
 	}
+	users, err := LoadUserSeriesModels()
+	if err != nil {
+		return nil, WrapError(ErrSeriesInvalid, "list user series", err)
+	}
+
+	items := mergeSeries(builtins, users, filter)
 	if err := SortSeries(items, SortSpec{Fields: []string{"suffix"}, Order: []SortOrder{Asc}}); err != nil {
 		return nil, WrapError(ErrSeriesInvalid, "sort series", err)
 	}
@@ -267,16 +264,47 @@ func (engine *Engine) GetSeries(name string) (Series, error) {
 	if name == "" {
 		return Series{}, NewError(ErrInvalidInput, "series name is required")
 	}
-	items, err := engine.ListSeries(SeriesFilter{IncludeHidden: true})
-	if err != nil {
-		return Series{}, err
+	storage.UseDataDir(engine.dataDir)
+
+	if s, ok := getUserSeries(name); ok {
+		return s, nil
 	}
-	for _, item := range items {
-		if item.Suffix == name {
-			return item, nil
-		}
+	if s, ok := getBuiltinSeries(name); ok {
+		return s, nil
 	}
 	return Series{}, NewError(ErrSeriesNotFound, "series was not found")
+}
+
+func getUserSeries(suffix string) (Series, bool) {
+	fn := filepath.Join(storage.UserSeriesDir(), suffix+".json")
+	b, err := os.ReadFile(fn)
+	if err != nil {
+		return Series{}, false
+	}
+	var s Series
+	if err := json.Unmarshal(b, &s); err != nil {
+		return Series{}, false
+	}
+	s.Source = SeriesSourceUser
+	return s, true
+}
+
+func getBuiltinSeries(suffix string) (Series, bool) {
+	cm := storage.GetCacheManager()
+	_ = cm.LoadOrBuild()
+	body, ok := cm.GetSeriesJSON(suffix)
+	if !ok {
+		return Series{}, false
+	}
+	var s Series
+	if err := json.Unmarshal(body, &s); err != nil {
+		return Series{}, false
+	}
+	if s.Suffix == "" {
+		s.Suffix = suffix
+	}
+	s.Source = SeriesSourceBuiltin
+	return s, true
 }
 
 func (engine *Engine) SaveSeries(series Series) (Series, error) {
@@ -288,6 +316,9 @@ func (engine *Engine) SaveSeries(series Series) (Series, error) {
 		return Series{}, NewError(ErrInvalidInput, "series suffix is required")
 	}
 	storage.UseDataDir(engine.dataDir)
+	if IsBuiltinSeries(series.Suffix) {
+		return Series{}, NewError(ErrSeriesInvalid, "cannot modify built-in series")
+	}
 	if err := series.SaveSeries(series.Suffix, series.Last); err != nil {
 		return Series{}, WrapError(ErrSeriesInvalid, "save series", err)
 	}
@@ -303,7 +334,10 @@ func (engine *Engine) SetSeriesHidden(name string, hidden bool) (Series, error) 
 		return Series{}, NewError(ErrInvalidInput, "series name is required")
 	}
 	storage.UseDataDir(engine.dataDir)
-	seriesDir := storage.SeriesDir()
+	if IsBuiltinSeries(name) {
+		return Series{}, NewError(ErrSeriesInvalid, "cannot modify built-in series")
+	}
+	seriesDir := storage.UserSeriesDir()
 	var err error
 	if hidden {
 		err = DeleteSeries(seriesDir, name)

@@ -94,6 +94,11 @@ func SeriesDir() string {
 	_ = os.MkdirAll(seriesDir, 0o750)
 	return seriesDir
 }
+func UserSeriesDir() string {
+	userSeriesDir := filepath.Join(DataDir(), "user-series")
+	_ = os.MkdirAll(userSeriesDir, 0o750)
+	return userSeriesDir
+}
 func MetricsDir() string {
 	metricsDir := filepath.Join(DataDir(), "metrics")
 	_ = os.MkdirAll(metricsDir, 0o750)

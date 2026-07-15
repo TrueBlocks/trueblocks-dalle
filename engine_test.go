@@ -150,8 +150,14 @@ func TestEngineSeriesOperations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListSeries: %v", err)
 	}
-	if len(items) != 2 || items[0].Suffix != "alpha" || items[1].Suffix != "beta-series" {
-		t.Fatalf("unexpected sorted series list: %#v", items)
+	// Built-in series are always present; verify user series are included and sorted.
+	alphaIdx := indexOfSeries(items, "alpha")
+	betaIdx := indexOfSeries(items, "beta-series")
+	if alphaIdx < 0 || betaIdx < 0 {
+		t.Fatalf("expected alpha and beta-series in list: %#v", items)
+	}
+	if alphaIdx >= betaIdx {
+		t.Fatalf("expected alpha before beta-series: %#v", items)
 	}
 	series, err := engine.GetSeries("Beta Series")
 	if err != nil {
@@ -171,15 +177,18 @@ func TestEngineSeriesOperations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListSeries active: %v", err)
 	}
-	if len(active) != 1 || active[0].Suffix != "alpha" {
-		t.Fatalf("unexpected active series list: %#v", active)
+	if indexOfSeries(active, "alpha") < 0 {
+		t.Fatalf("expected alpha in active list: %#v", active)
+	}
+	if indexOfSeries(active, "beta-series") >= 0 {
+		t.Fatalf("expected beta-series hidden from active list: %#v", active)
 	}
 	hidden, err := engine.ListSeries(SeriesFilter{OnlyHidden: true})
 	if err != nil {
 		t.Fatalf("ListSeries hidden: %v", err)
 	}
-	if len(hidden) != 1 || hidden[0].Suffix != "beta-series" {
-		t.Fatalf("unexpected hidden series list: %#v", hidden)
+	if indexOfSeries(hidden, "beta-series") < 0 {
+		t.Fatalf("expected beta-series in hidden list: %#v", hidden)
 	}
 	series, err = engine.SetSeriesHidden("beta-series", false)
 	if err != nil {
@@ -188,6 +197,15 @@ func TestEngineSeriesOperations(t *testing.T) {
 	if series.Deleted {
 		t.Fatalf("expected restored series: %#v", series)
 	}
+}
+
+func indexOfSeries(items []Series, suffix string) int {
+	for i, s := range items {
+		if s.Suffix == suffix {
+			return i
+		}
+	}
+	return -1
 }
 
 func TestEngineGetSeriesMissing(t *testing.T) {
