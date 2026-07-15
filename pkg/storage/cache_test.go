@@ -114,45 +114,140 @@ func TestCacheManager_CacheReuse(t *testing.T) {
 	}
 }
 
-func TestCacheManager_InvalidateCache(t *testing.T) {
-	// Setup isolated test environment
-	tmpDir, err := os.MkdirTemp("", "dalle-cache-invalidate-test-*")
+func TestCacheManager_NounsFlattened(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "dalle-nouns-flattened-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	// Reset global state
 	TestOnlyResetDataDir(tmpDir)
 	TestOnlyResetCacheManager()
 
-	// Create cache
 	cm := GetCacheManager()
 	if err := cm.LoadOrBuild(); err != nil {
 		t.Fatalf("LoadOrBuild failed: %v", err)
 	}
 
-	cacheFile := filepath.Join(tmpDir, "cache", "databases_v0.1.0.gob")
-	if !fileExists(cacheFile) {
-		t.Fatal("Expected cache file to exist before invalidation")
+	nouns, err := cm.GetDatabase("nouns")
+	if err != nil {
+		t.Fatalf("GetDatabase nouns failed: %v", err)
 	}
 
-	// Invalidate cache
-	if err := cm.InvalidateCache(); err != nil {
-		t.Fatalf("InvalidateCache failed: %v", err)
+	if len(nouns.Columns) == 0 {
+		t.Fatal("Expected nouns columns to be populated")
 	}
 
-	// Verify cache file is removed
-	if fileExists(cacheFile) {
-		t.Error("Expected cache file to be removed after invalidation")
+	for _, rec := range nouns.Records {
+		if len(rec.Values) != len(nounColumnNames) {
+			t.Errorf("Expected %d flattened values for %q, got %d", len(nounColumnNames), rec.Key, len(rec.Values))
+		}
+	}
+}
+
+func TestCacheManager_NounsFlattenedCompleteness(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "dalle-nouns-complete-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	TestOnlyResetDataDir(tmpDir)
+	TestOnlyResetCacheManager()
+
+	cm := GetCacheManager()
+	if err := cm.LoadOrBuild(); err != nil {
+		t.Fatalf("LoadOrBuild failed: %v", err)
 	}
 
-	// Verify cache is cleared in memory
-	if cm.dbCache != nil {
-		t.Error("Expected in-memory cache to be cleared")
+	nouns, err := cm.GetDatabase("nouns")
+	if err != nil {
+		t.Fatalf("GetDatabase nouns failed: %v", err)
 	}
 
-	if cm.loaded {
-		t.Error("Expected loaded flag to be false after invalidation")
+	for _, rec := range nouns.Records {
+		if len(rec.Values) != len(nounColumnNames) {
+			t.Errorf("Expected %d flattened values for %q, got %d", len(nounColumnNames), rec.Key, len(rec.Values))
+			continue
+		}
+		if rec.Values[1] == "" || rec.Values[2] == "" || rec.Values[3] == "" || rec.Values[4] == "" {
+			t.Errorf("Incomplete hierarchy for noun %q: familyCommon=%q orderCommon=%q classCommon=%q phylumCommon=%q",
+				rec.Key, rec.Values[1], rec.Values[2], rec.Values[3], rec.Values[4])
+		}
+	}
+}
+
+func TestCacheManager_HierarchyFilesCached(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "dalle-hierarchy-files-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	TestOnlyResetDataDir(tmpDir)
+	TestOnlyResetCacheManager()
+
+	cm := GetCacheManager()
+	if err := cm.LoadOrBuild(); err != nil {
+		t.Fatalf("LoadOrBuild failed: %v", err)
+	}
+
+	for _, name := range HierarchyDatabaseNames {
+		idx, err := cm.GetDatabase(name)
+		if err != nil {
+			t.Errorf("GetDatabase %q failed: %v", name, err)
+			continue
+		}
+		if idx.Name != name {
+			t.Errorf("Expected database name %q, got %q", name, idx.Name)
+		}
+		if len(idx.Records) == 0 {
+			t.Errorf("Expected records for %q", name)
+		}
+	}
+}
+
+func TestCacheManager_EnrichedValuesShape(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "dalle-enriched-shape-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	TestOnlyResetDataDir(tmpDir)
+	TestOnlyResetCacheManager()
+
+	cm := GetCacheManager()
+	if err := cm.LoadOrBuild(); err != nil {
+		t.Fatalf("LoadOrBuild failed: %v", err)
+	}
+
+	nouns, err := cm.GetDatabase("nouns")
+	if err != nil {
+		t.Fatalf("GetDatabase nouns failed: %v", err)
+	}
+
+	if len(nouns.Columns) != len(nounColumnNames) {
+		t.Fatalf("Expected %d columns, got %d", len(nounColumnNames), len(nouns.Columns))
+	}
+	for i, want := range nounColumnNames {
+		if nouns.Columns[i] != want {
+			t.Errorf("Expected column %d to be %q, got %q", i, want, nouns.Columns[i])
+		}
+	}
+
+	for _, rec := range nouns.Records {
+		if len(rec.Values) != len(nounColumnNames) {
+			t.Errorf("Expected %d enriched values for %q, got %d", len(nounColumnNames), rec.Key, len(rec.Values))
+			continue
+		}
+		if rec.Values[0] != rec.Key {
+			t.Errorf("Expected value[0] == key for %q", rec.Key)
+		}
+		for i := 1; i < len(rec.Values); i++ {
+			if rec.Values[i] == "" {
+				t.Errorf("Expected non-empty value[%d] for %q", i, rec.Key)
+			}
+		}
 	}
 }

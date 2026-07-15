@@ -63,6 +63,10 @@ func GetDatabaseDescription(dbName string) string {
 		"compositions": "Composition rules and structures",
 		"places":       "Real-world locations and landmarks",
 		"tropes":       "Narrative tropes and story patterns",
+		"families":     "Taxonomic families and their orders",
+		"orders":       "Taxonomic orders and their classes",
+		"classes":      "Taxonomic classes and their phyla",
+		"phyla":        "Taxonomic phyla and common names",
 	}
 	if desc, ok := descriptions[dbName]; ok {
 		return desc

@@ -103,6 +103,7 @@ type ExportImageResult struct {
 type DatabaseRecordsResult struct {
 	Name    string                   `json:"name"`
 	Version string                   `json:"version"`
+	Columns []string                 `json:"columns,omitempty"`
 	Records []storage.DatabaseRecord `json:"records"`
 }
 
@@ -215,7 +216,8 @@ func (engine *Engine) ListDatabaseRecords(name string, limit int) (DatabaseRecor
 	if name == "" {
 		return DatabaseRecordsResult{}, NewError(ErrInvalidInput, "database name is required")
 	}
-	if limit <= 0 || limit > 500 {
+	const maxDatabaseRecords = 10000
+	if limit <= 0 || limit > maxDatabaseRecords {
 		limit = 200
 	}
 	storage.UseDataDir(engine.dataDir)
@@ -231,7 +233,12 @@ func (engine *Engine) ListDatabaseRecords(name string, limit int) (DatabaseRecor
 	if len(records) > limit {
 		records = records[:limit]
 	}
-	return DatabaseRecordsResult{Name: index.Name, Version: index.Version, Records: records}, nil
+	return DatabaseRecordsResult{
+		Name:    index.Name,
+		Version: index.Version,
+		Columns: index.Columns,
+		Records: records,
+	}, nil
 }
 
 func (engine *Engine) ListSeries(filter SeriesFilter) ([]Series, error) {

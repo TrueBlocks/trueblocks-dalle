@@ -27,17 +27,48 @@ type DatabaseRecord struct {
 type DatabaseIndex struct {
 	Name    string           `json:"name"`    // Database name (e.g., "nouns")
 	Version string           `json:"version"` // Version from CSV
+	Columns []string         `json:"columns,omitempty"` // Column headers; present when enriched beyond the source CSV
 	Records []DatabaseRecord `json:"records"` // All records
 	Lookup  map[string]int   `json:"lookup"`  // Key -> record index mapping
 }
 
+// HierarchyDatabaseNames lists the taxonomy lookup tables that are cached as first-class databases.
+var HierarchyDatabaseNames = []string{"families", "orders", "classes", "phyla"}
+
+// nounHierarchy holds the denormalized taxonomic chain for a single noun during enrichment.
+type nounHierarchy struct {
+	family       string
+	familyCommon string
+	order        string
+	orderCommon  string
+	className    string
+	classCommon  string
+	phylum       string
+	phylumCommon string
+}
+
+// nounColumnNames is the header order for flattened noun records.
+// Headers use Latin taxonomy names, but the values are the corresponding common names.
+var nounColumnNames = []string{
+	"commonName",
+	"family",
+	"order",
+	"class",
+	"phylum",
+}
+
+// currentCacheVersion is bumped whenever the cached DatabaseCache shape changes
+// incompatibly (e.g., adding Columns). Bumping forces a one-time rebuild.
+const currentCacheVersion = 2
+
 // DatabaseCache holds all processed database indexes
 type DatabaseCache struct {
-	Version    string                   `json:"version"`    // Overall version
-	Timestamp  int64                    `json:"timestamp"`  // Cache creation time
-	Databases  map[string]DatabaseIndex `json:"databases"`  // Database name -> index
-	Checksum   string                   `json:"checksum"`   // SHA256 of embedded tar.gz
-	SourceHash string                   `json:"sourceHash"` // Hash of source data for validation
+	Version      string                   `json:"version"`      // Overall version
+	CacheVersion int                      `json:"cacheVersion"` // Internal cache shape version
+	Timestamp    int64                    `json:"timestamp"`    // Cache creation time
+	Databases    map[string]DatabaseIndex `json:"databases"`    // Database name -> index
+	Checksum     string                   `json:"checksum"`     // SHA256 of embedded tar.gz
+	SourceHash   string                   `json:"sourceHash"`   // Hash of source data for validation
 }
 
 // SeriesCache holds the raw JSON bodies of built-in series.
@@ -189,8 +220,15 @@ func (cm *CacheManager) loadOrBuildDatabaseCache() error {
 			for _, name := range prompt.DatabaseNames {
 				expectedDBs[name] = true
 			}
+			for _, name := range HierarchyDatabaseNames {
+				expectedDBs[name] = true
+			}
 
 			schemaMismatch := false
+			if cache.CacheVersion != currentCacheVersion {
+				schemaMismatch = true
+				logger.InfoG(fmt.Sprintf("DEBUG: Cache version mismatch - cached: %d, expected: %d", cache.CacheVersion, currentCacheVersion))
+			}
 			if len(cache.Databases) != len(expectedDBs) {
 				schemaMismatch = true
 				logger.InfoG(fmt.Sprintf("DEBUG: Database count mismatch - cached: %d, expected: %d", len(cache.Databases), len(expectedDBs)))
@@ -204,14 +242,16 @@ func (cm *CacheManager) loadOrBuildDatabaseCache() error {
 				}
 			}
 
-			// Verify cache is still valid (both hash and schema)
+			// Verify cache is still valid (hash, schema, and cache version)
 			if !schemaMismatch && cache.SourceHash == embeddedHash {
 				cm.dbCache = cache
 				logger.Info("Loaded database cache", "version", cache.Version, "count", len(cache.Databases))
 				return nil
 			}
 
-			if schemaMismatch {
+			if cache.CacheVersion != currentCacheVersion {
+				logger.Info("Cache shape changed, rebuilding cache", "cached", cache.CacheVersion, "expected", currentCacheVersion)
+			} else if schemaMismatch {
 				logger.Info("Database schema changed, rebuilding cache", "cached", len(cache.Databases), "expected", len(expectedDBs))
 			} else {
 				logger.Info("Database cache outdated, rebuilding", "cached", cache.SourceHash[:8], "current", embeddedHash[:8])
@@ -401,15 +441,32 @@ func (cm *CacheManager) loadSeriesCache(filename string) (*SeriesCache, error) {
 // buildDatabaseCache creates a new database cache from embedded resources
 func (cm *CacheManager) buildDatabaseCache() (*DatabaseCache, error) {
 	cache := &DatabaseCache{
-		Timestamp: time.Now().Unix(),
-		Databases: make(map[string]DatabaseIndex),
-		Checksum:  fmt.Sprintf("%x", sha256.Sum256(embeddedDbs)),
+		Timestamp:    time.Now().Unix(),
+		CacheVersion: currentCacheVersion,
+		Databases:    make(map[string]DatabaseIndex),
+		Checksum:     fmt.Sprintf("%x", sha256.Sum256(embeddedDbs)),
 	}
 
 	var version string
 
-	// Process each database
+	// Build a deduplicated list of database names, including taxonomy lookup tables.
+	uniqueDBNames := make([]string, 0, len(prompt.DatabaseNames)+len(HierarchyDatabaseNames))
+	seen := make(map[string]bool)
 	for _, dbName := range prompt.DatabaseNames {
+		if !seen[dbName] {
+			seen[dbName] = true
+			uniqueDBNames = append(uniqueDBNames, dbName)
+		}
+	}
+	for _, dbName := range HierarchyDatabaseNames {
+		if !seen[dbName] {
+			seen[dbName] = true
+			uniqueDBNames = append(uniqueDBNames, dbName)
+		}
+	}
+
+	// Process each database
+	for _, dbName := range uniqueDBNames {
 		idx, err := cm.buildDatabaseIndex(dbName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build index for %s: %w", dbName, err)
@@ -488,10 +545,20 @@ func (cm *CacheManager) buildDatabaseIndex(dbName string) (DatabaseIndex, error)
 	if dbName == "nouns" {
 		if err := enrichNounsWithHierarchy(&idx); err != nil {
 			logger.Warn("failed to enrich nouns with hierarchy: " + err.Error())
+		} else {
+			idx.Columns = nounColumnNames
 		}
 	}
 
 	return idx, nil
+}
+
+// hierarchyLookups holds the parsed taxonomy CSVs used to resolve a noun's chain.
+type hierarchyLookups struct {
+	families map[string][]string
+	orders   map[string][]string
+	classes  map[string][]string
+	phyla    map[string][]string
 }
 
 // loadHierarchyLookup reads a hierarchy CSV and returns a map from the key column to
@@ -516,25 +583,74 @@ func loadHierarchyLookup(csvName string, keyCol int) (map[string][]string, error
 	return lookup, nil
 }
 
-// enrichNounsWithHierarchy walks the taxonomy chain for each noun and appends
-// the resolved hierarchy to its Values slice. After enrichment, each noun record
-// has Values: [commonName, family, familyCommon, order, orderCommon, class, classCommon, phylum, phylumCommon].
+// buildHierarchyLookups loads the four taxonomy lookup tables from the embedded archive.
+func buildHierarchyLookups() (hierarchyLookups, error) {
+	lookups := hierarchyLookups{}
+	var err error
+	lookups.families, err = loadHierarchyLookup("families.csv", 0)
+	if err != nil {
+		return lookups, fmt.Errorf("loading families: %w", err)
+	}
+	lookups.orders, err = loadHierarchyLookup("orders.csv", 0)
+	if err != nil {
+		return lookups, fmt.Errorf("loading orders: %w", err)
+	}
+	lookups.classes, err = loadHierarchyLookup("classes.csv", 0)
+	if err != nil {
+		return lookups, fmt.Errorf("loading classes: %w", err)
+	}
+	lookups.phyla, err = loadHierarchyLookup("phyla.csv", 0)
+	if err != nil {
+		return lookups, fmt.Errorf("loading phyla: %w", err)
+	}
+	return lookups, nil
+}
+
+// resolveNounHierarchy walks the taxonomy chain for a single noun using the preloaded lookups.
+func resolveNounHierarchy(familyName string, lookups hierarchyLookups) nounHierarchy {
+	familyCommon := ""
+	orderName := ""
+	orderCommon := ""
+	className := ""
+	classCommon := ""
+	phylumName := ""
+	phylumCommon := ""
+
+	if fam, ok := lookups.families[familyName]; ok && len(fam) >= 3 {
+		orderName = fam[1]
+		familyCommon = fam[2]
+	}
+	if ord, ok := lookups.orders[orderName]; ok && len(ord) >= 3 {
+		className = ord[1]
+		orderCommon = ord[2]
+	}
+	if cls, ok := lookups.classes[className]; ok && len(cls) >= 3 {
+		phylumName = cls[1]
+		classCommon = cls[2]
+	}
+	if phy, ok := lookups.phyla[phylumName]; ok && len(phy) >= 2 {
+		phylumCommon = phy[1]
+	}
+
+	return nounHierarchy{
+		family:       familyName,
+		familyCommon: familyCommon,
+		order:        orderName,
+		orderCommon:  orderCommon,
+		className:    className,
+		classCommon:  classCommon,
+		phylum:       phylumName,
+		phylumCommon: phylumCommon,
+	}
+}
+
+// enrichNounsWithHierarchy loads the taxonomy lookups once, flattens every noun record,
+// and stores the flattened values in record order:
+// [commonName, family, familyCommon, order, orderCommon, class, classCommon, phylum, phylumCommon].
 func enrichNounsWithHierarchy(idx *DatabaseIndex) error {
-	families, err := loadHierarchyLookup("families.csv", 0)
+	lookups, err := buildHierarchyLookups()
 	if err != nil {
-		return fmt.Errorf("loading families: %w", err)
-	}
-	orders, err := loadHierarchyLookup("orders.csv", 0)
-	if err != nil {
-		return fmt.Errorf("loading orders: %w", err)
-	}
-	classes, err := loadHierarchyLookup("classes.csv", 0)
-	if err != nil {
-		return fmt.Errorf("loading classes: %w", err)
-	}
-	phyla, err := loadHierarchyLookup("phyla.csv", 0)
-	if err != nil {
-		return fmt.Errorf("loading phyla: %w", err)
+		return err
 	}
 
 	enriched := 0
@@ -543,42 +659,19 @@ func enrichNounsWithHierarchy(idx *DatabaseIndex) error {
 			continue
 		}
 		familyName := strings.TrimSpace(rec.Values[1])
-
-		familyCommon := ""
-		orderName := ""
-		orderCommon := ""
-		className := ""
-		classCommon := ""
-		phylumName := ""
-		phylumCommon := ""
-
-		if fam, ok := families[familyName]; ok && len(fam) >= 3 {
-			orderName = fam[1]
-			familyCommon = fam[2]
-		}
-		if ord, ok := orders[orderName]; ok && len(ord) >= 3 {
-			className = ord[1]
-			orderCommon = ord[2]
-		}
-		if cls, ok := classes[className]; ok && len(cls) >= 3 {
-			phylumName = cls[1]
-			classCommon = cls[2]
-		}
-		if phy, ok := phyla[phylumName]; ok && len(phy) >= 2 {
-			phylumCommon = phy[1]
-		}
+		h := resolveNounHierarchy(familyName, lookups)
 
 		idx.Records[i].Values = []string{
-			rec.Values[0],
-			familyName, familyCommon,
-			orderName, orderCommon,
-			className, classCommon,
-			phylumName, phylumCommon,
+			strings.TrimSpace(rec.Values[0]),
+			h.familyCommon,
+			h.orderCommon,
+			h.classCommon,
+			h.phylumCommon,
 		}
 		enriched++
 	}
 
-	logger.Info("enriched noun records with taxonomy hierarchy")
+	logger.Info("enriched noun records with taxonomy hierarchy", "count", enriched)
 	return nil
 }
 
