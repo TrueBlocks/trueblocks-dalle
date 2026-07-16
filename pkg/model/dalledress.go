@@ -216,7 +216,7 @@ func (dd *DalleDress) ColorDirective() string {
 }
 
 func (dd *DalleDress) Viewpoint(short bool) string {
-	val := dd.AttribMap["viewpoints"].Value
+	val := dd.AttribMap["viewpoint"].Value
 	if short {
 		parts := strings.Split(val, ",")
 		return parts[0]
@@ -229,7 +229,7 @@ func (dd *DalleDress) Viewpoint(short bool) string {
 }
 
 func (dd *DalleDress) Composition(short bool) string {
-	val := dd.AttribMap["compositions"].Value
+	val := dd.AttribMap["composition"].Value
 	if short {
 		parts := strings.Split(val, ",")
 		return parts[0]

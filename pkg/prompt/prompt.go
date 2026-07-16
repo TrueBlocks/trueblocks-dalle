@@ -62,9 +62,12 @@ Action: {{.Action false}}.
 {{.StyleDirective}}.
 {{if .HasLitStyle}}Literary Style: {{.LitStyle false}}.
 {{end}}{{.ColorDirective}}
-{{.Viewpoint false}}.
-{{.Composition false}}.
+Camera/viewpoint: Render this as a {{.Viewpoint true}}.
+Composition: Use {{.Composition true}}.
+Gaze: Make sure the {{.Noun true}} is facing {{.Gaze true}}.
 {{.BackgroundTreatment}}.
+Setting: Place the scene at {{.Place false}}. Include recognizable visual cues of this location.
+Narrative undertone: {{.Trope false}}.
 
 Emphasize the emotional aspect of the image. Look deeply into and expand upon the
 many connotative meanings of "{{.Noun true}}," "{{.Emotion true}}," "{{.Adjective true}}",
