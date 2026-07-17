@@ -1,0 +1,38 @@
+%% Figure 1: Attribute selection system
+%% 1998-style clean flowchart
+
+flowchart LR
+    SS["(s, σ)"]
+    HASH["Hₙ mod Rₙ^(σ)"]
+    D1["D₁^(σ)"]
+    D2["D₂^(σ)"]
+    D3["D₃^(σ)"]
+    DDOT["..."]
+    DN["Dₙ^(σ)"]
+    A1["a₁"]
+    A2["a₂"]
+    A3["a₃"]
+    AN["aₙ"]
+
+    SS --> HASH
+    HASH --> D1
+    HASH --> D2
+    HASH --> D3
+    HASH --> DDOT
+    HASH --> DN
+
+    D1 --> A1
+    D2 --> A2
+    D3 --> A3
+    DN --> AN
+
+    style SS fill:#fff,stroke:#000,stroke-width:2px
+    style HASH fill:#fff,stroke:#000,stroke-width:2px
+    style D1 fill:#eef,stroke:#000,stroke-width:1px
+    style D2 fill:#eef,stroke:#000,stroke-width:1px
+    style D3 fill:#eef,stroke:#000,stroke-width:1px
+    style DN fill:#eef,stroke:#000,stroke-width:1px
+    style A1 fill:#fee,stroke:#000,stroke-width:1px
+    style A2 fill:#fee,stroke:#000,stroke-width:1px
+    style A3 fill:#fee,stroke:#000,stroke-width:1px
+    style AN fill:#fee,stroke:#000,stroke-width:1px

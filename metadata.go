@@ -261,8 +261,19 @@ func ListImageMetadata(dataDir string, filter ImageFilter) ([]ImageMetadataRecor
 			return nil, WrapError(ErrMetadataInvalid, "inspect output directory", err)
 		}
 	}
+	// Order by seed phrase first, then series, so that one input's variants across
+	// series sit together. Sorting by Path would group by series instead, because
+	// metadata lives at output/<series>/metadata/<seed>.json. Path breaks ties to
+	// keep the order total and stable.
 	sort.Slice(records, func(left, right int) bool {
-		return records[left].Path < records[right].Path
+		a, b := records[left], records[right]
+		if a.Metadata.Input != b.Metadata.Input {
+			return a.Metadata.Input < b.Metadata.Input
+		}
+		if a.Metadata.Series.Name != b.Metadata.Series.Name {
+			return a.Metadata.Series.Name < b.Metadata.Series.Name
+		}
+		return a.Path < b.Path
 	})
 	return records, nil
 }

@@ -1,0 +1,20 @@
+%% Figure 2: Protein-folding chain in 3-D
+%% 1998-style clean path diagram
+
+flowchart LR
+    p0(("p₀"))
+    p1(("p₁"))
+    p2(("p₂"))
+    p3(("pₙ"))
+    pN(("p_N"))
+
+    p0 --"u₁"---> p1
+    p1 --"u₂"---> p2
+    p2 -. "..." .-> p3
+    p3 --"uₙ"---> pN
+
+    style p0 fill:#000,stroke:#000,color:#fff
+    style p1 fill:#000,stroke:#000,color:#fff
+    style p2 fill:#000,stroke:#000,color:#fff
+    style p3 fill:#000,stroke:#000,color:#fff
+    style pN fill:#000,stroke:#000,color:#fff

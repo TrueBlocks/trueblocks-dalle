@@ -63,3 +63,46 @@ func TestCheckRegenerationCompatibility(t *testing.T) {
 		t.Fatalf("expected typed regeneration error, got %v", err)
 	}
 }
+
+// The gallery groups an input's variants together, so listing must order by seed
+// phrase first and series second. Sorting by Path would group by series, since
+// metadata lives at output/<series>/metadata/<seed>.json.
+func TestListImageMetadataOrdersBySeedThenSeries(t *testing.T) {
+	dataDir := t.TempDir()
+
+	// Written in an order that is neither the input order nor the path order, so a
+	// passing result cannot come from insertion order.
+	for _, entry := range []struct{ input, seed, series string }{
+		{"zebra phrase", "seed-z", "alpha-series"},
+		{"apple phrase", "seed-a", "omega-series"},
+		{"apple phrase", "seed-a", "alpha-series"},
+		{"zebra phrase", "seed-z", "omega-series"},
+	} {
+		metadata := NewImageMetadata(entry.input, entry.seed, entry.series)
+		if _, err := WriteImageMetadata(dataDir, metadata); err != nil {
+			t.Fatalf("WriteImageMetadata: %v", err)
+		}
+	}
+
+	records, err := ListImageMetadata(dataDir, ImageFilter{})
+	if err != nil {
+		t.Fatalf("ListImageMetadata: %v", err)
+	}
+
+	want := []struct{ input, series string }{
+		{"apple phrase", "alpha-series"},
+		{"apple phrase", "omega-series"},
+		{"zebra phrase", "alpha-series"},
+		{"zebra phrase", "omega-series"},
+	}
+	if len(records) != len(want) {
+		t.Fatalf("got %d records, want %d", len(records), len(want))
+	}
+	for i, expected := range want {
+		got := records[i]
+		if got.Metadata.Input != expected.input || got.Metadata.Series.Name != expected.series {
+			t.Errorf("record %d = (%q, %q), want (%q, %q)",
+				i, got.Metadata.Input, got.Metadata.Series.Name, expected.input, expected.series)
+		}
+	}
+}

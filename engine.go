@@ -371,12 +371,36 @@ func (engine *Engine) GetImage(id string) (ImageMetadataRecord, error) {
 	if strings.TrimSpace(id) == "" {
 		return ImageMetadataRecord{}, NewError(ErrInvalidInput, "image ID is required")
 	}
-	records, err := engine.ListImages(ImageFilter{})
+	return engine.getImageInSeries(id, "")
+}
+
+// GetImageInSeries resolves an image by ID or seed, restricted to one series.
+// Seeds are stable across series, so a bare seed matches one record per series;
+// callers that know the series must pass it to disambiguate.
+func (engine *Engine) GetImageInSeries(id, series string) (ImageMetadataRecord, error) {
+	if engine == nil {
+		return ImageMetadataRecord{}, NewError(ErrInvalidInput, "engine is nil")
+	}
+	if strings.TrimSpace(id) == "" {
+		return ImageMetadataRecord{}, NewError(ErrInvalidInput, "image ID is required")
+	}
+	return engine.getImageInSeries(id, series)
+}
+
+func (engine *Engine) getImageInSeries(id, series string) (ImageMetadataRecord, error) {
+	records, err := engine.ListImages(ImageFilter{Series: strings.TrimSpace(series)})
 	if err != nil {
 		return ImageMetadataRecord{}, err
 	}
+	// An image ID is unique across series; a seed is not. Prefer an exact ID match
+	// before falling back to the first seed match.
 	for _, record := range records {
-		if record.Metadata.ImageID == id || record.Metadata.Seed == id {
+		if record.Metadata.ImageID == id {
+			return record, nil
+		}
+	}
+	for _, record := range records {
+		if record.Metadata.Seed == id {
 			return record, nil
 		}
 	}
@@ -513,7 +537,7 @@ func (engine *Engine) NewMetadata(request GenerateRequest) (ImageMetadata, error
 		return ImageMetadata{}, NewError(ErrInvalidInput, "engine is nil")
 	}
 	input := strings.TrimSpace(request.Input)
-	seed, err := NormalizeSeed(input, request.Seed)
+	seed, err := NormalizeSeed(input, request.Seed, request.Series)
 	if err != nil {
 		return ImageMetadata{}, err
 	}
@@ -873,17 +897,30 @@ func requestGeneratedImage(request imageRequest) (imageResult, error) {
 	return result, nil
 }
 
-func NormalizeSeed(input, seed string) (string, error) {
+// NormalizeSeed derives the deterministic seed for an input. The series is
+// deliberately not mixed into the digest: the same input must trace the same
+// trajectory through every database no matter which series is applied, so that
+// two series over one input differ only on the axes they actually filter. Per-series
+// identity and storage are keyed elsewhere (see ComputeImageID and MetadataPath),
+// so a shared seed cannot collide across series.
+//
+// The series parameter is retained for API compatibility and is ignored.
+func NormalizeSeed(input, seed, _ string) (string, error) {
 	seed = strings.TrimSpace(seed)
 	if seed != "" {
+		// An explicit seed is treated as already normalized; do not re-hash it.
 		return seed, nil
 	}
 	input = strings.TrimSpace(input)
 	if input == "" {
 		return "", NewError(ErrInvalidInput, "input is required")
 	}
-	digest := sha256.Sum256([]byte(input))
-	return hex.EncodeToString(digest[:]), nil
+	return stableSeed(input), nil
+}
+
+func stableSeed(seed string) string {
+	digest := sha256.Sum256([]byte(seed))
+	return hex.EncodeToString(digest[:])
 }
 
 func ensureWritableDir(path string) error {
