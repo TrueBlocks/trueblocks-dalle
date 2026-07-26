@@ -77,7 +77,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "create:", err)
 		os.Exit(1)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := png.Encode(f, img); err != nil {
 		fmt.Fprintln(os.Stderr, "encode:", err)
 		os.Exit(1)
@@ -253,15 +253,15 @@ func seedChunk(seed, series string, n int) uint32 {
 	if seed == "" {
 		// Synthetic deterministic chunks for the illustrative figure.
 		h := fnv.New32a()
-		fmt.Fprintf(h, "dalle-fold-chunk-%d", n)
+		_, _ = fmt.Fprintf(h, "dalle-fold-chunk-%d", n)
 		return h.Sum32() % (1 << 24)
 	}
 	// Derive chunk n from the (seed, series) pair.
 	h := fnv.New32a()
 	if series != "" {
-		fmt.Fprintf(h, "%s-%s-%d", seed, series, n)
+		_, _ = fmt.Fprintf(h, "%s-%s-%d", seed, series, n)
 	} else {
-		fmt.Fprintf(h, "%s-%d", seed, n)
+		_, _ = fmt.Fprintf(h, "%s-%d", seed, n)
 	}
 	return h.Sum32() % (1 << 24)
 }

@@ -31,8 +31,8 @@ book:
 add:
 	@git add -A
 
-commit: add
+commit: lint
 	@git commit -m "$(MSG)" || true
 
-push: commit
+push: lint
 	@git push
