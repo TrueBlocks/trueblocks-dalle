@@ -10,6 +10,8 @@ require (
 	golang.org/x/image v0.43.0
 )
 
+replace github.com/TrueBlocks/trueblocks-art/packages/creds => ../packages/creds
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect

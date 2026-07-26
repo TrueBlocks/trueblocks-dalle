@@ -12,6 +12,7 @@ import (
 
 	logger "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
+	"github.com/TrueBlocks/trueblocks-art/packages/creds"
 )
 
 // TextToSpeech converts the given text to speech using OpenAI's audio API and writes it to the provided output directory.
@@ -22,8 +23,8 @@ func TextToSpeech(text string, voice string, series string, address string) (str
 	if text == "" {
 		return "", errors.New("empty text")
 	}
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" { // silently skip when no key
+	apiKey, keyErr := creds.Get("OPENAI_API_KEY")
+	if keyErr != nil { // silently skip when no key
 		logger.Info("speech.skip_no_api_key", "series", series, "addr", address)
 		return "", nil
 	}

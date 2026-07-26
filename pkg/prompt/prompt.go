@@ -12,6 +12,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/TrueBlocks/trueblocks-art/packages/creds"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/utils"
 )
 
@@ -151,8 +152,8 @@ func EnhancePrompt(prompt, authorType string) (string, error) {
 	if os.Getenv("TB_DALLE_NO_ENHANCE") == "1" {
 		return prompt, nil
 	}
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" { // no key: skip enhancement silently
+	apiKey, keyErr := creds.Get("OPENAI_API_KEY")
+	if keyErr != nil { // no key: skip enhancement silently
 		return prompt, nil
 	}
 	config := DefaultAiConfiguration()
@@ -258,8 +259,8 @@ func EnhanceLiteraryContent(basePrompt, authorContext string) (string, error) {
 	if os.Getenv("TB_DALLE_NO_ENHANCE") == "1" {
 		return basePrompt, nil
 	}
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
+	apiKey, keyErr := creds.Get("OPENAI_API_KEY")
+	if keyErr != nil {
 		return basePrompt, nil
 	}
 	config := DefaultAiConfiguration()

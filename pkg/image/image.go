@@ -20,6 +20,7 @@ import (
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/progress"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/utils"
+	"github.com/TrueBlocks/trueblocks-art/packages/creds"
 )
 
 var (
@@ -147,8 +148,8 @@ func RequestImageWithOptions(outputPath string, imageData *ImageData, config pro
 		return fmt.Errorf("marshal payload: %w", err)
 	}
 
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
+	apiKey, keyErr := creds.Get("OPENAI_API_KEY")
+	if keyErr != nil {
 		// No key: create a placeholder empty artifact and return
 		placeholderDir := generated
 		if options.Annotate {
