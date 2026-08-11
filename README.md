@@ -51,8 +51,12 @@
 git clone https://github.com/TrueBlocks/trueblocks-dalle/v6.git
 cd trueblocks-dalle
 go mod tidy
-export OPENAI_API_KEY=sk-...yourkey...
 ```
+
+The OpenAI API key is read from the shared credential store at
+`~/.config/trueblocks/credentials` (via the monorepo's `packages/creds`), or
+from the `OPENAI_API_KEY` environment variable — inject it with
+`tb-exec --only OPENAI_API_KEY` rather than exporting it in your shell profile.
 
 ---
 
@@ -128,7 +132,7 @@ This project is licensed under the **GNU GPL v3**. See [LICENSE](./LICENSE).
 
 ## 💡 Tips
 
-- Set `OPENAI_API_KEY` and (optionally) `DALLE_QUALITY`.
+- Keys come from `~/.config/trueblocks/credentials`; set `DALLE_QUALITY` optionally.
 - Progress JSON is always available during generation; poll the server endpoint returning the embedded DalleDress and phase timings.
 - Extend attributes by adding CSVs and updating `attribute.go`.
 - Use Go’s testing/logging for debugging.
