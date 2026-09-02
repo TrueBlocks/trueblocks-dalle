@@ -5,6 +5,7 @@ go 1.25.1
 
 require (
 	git.sr.ht/~sbinet/gg v0.7.0
+	github.com/TrueBlocks/trueblocks-art/packages/creds v0.0.0
 	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/image v0.43.0
