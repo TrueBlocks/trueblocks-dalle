@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -149,7 +150,15 @@ func TestRequestImageOmitsStyleByDefault(t *testing.T) {
 }
 
 func TestRequestImageWithOptionsSkipsAnnotationWithoutAPIKey(t *testing.T) {
-	t.Setenv("OPENAI_API_KEY", "")
+	const isolated = "TB_IMAGE_TEST_NO_CREDENTIALS"
+	if os.Getenv(isolated) != "1" {
+		cmd := exec.Command(os.Args[0], "-test.run=^TestRequestImageWithOptionsSkipsAnnotationWithoutAPIKey$")
+		cmd.Env = append(os.Environ(), isolated+"=1", "TB_CREDENTIALS_FILE="+filepath.Join(t.TempDir(), "missing"))
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("isolated missing-credentials test: %v\n%s", err, output)
+		}
+		return
+	}
 	outputPath := filepath.Join(t.TempDir(), "generated")
 	imgData := &ImageData{
 		EnhancedPrompt: "enhanced prompt",

@@ -50,11 +50,14 @@ func IsOpenAIRetryableError(err error, statusCode int) bool {
 
 // OpenAIAPIError represents an error from the OpenAI API
 type OpenAIAPIError struct {
+	Err        error
 	Message    string
 	StatusCode int
 	RequestID  string
 	Code       string
 }
+
+func (e *OpenAIAPIError) Unwrap() error { return e.Err }
 
 func (e *OpenAIAPIError) Error() string {
 	return fmt.Sprintf("[%s] OpenAI API error (status %d): %s", e.RequestID, e.StatusCode, e.Message)

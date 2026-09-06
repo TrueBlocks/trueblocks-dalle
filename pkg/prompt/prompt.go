@@ -1,23 +1,26 @@
 package prompt
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
 
+	"github.com/TrueBlocks/trueblocks-art/packages/ai"
 	"github.com/TrueBlocks/trueblocks-art/packages/creds"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/utils"
 )
 
 // AiConfiguration holds configuration for both prompt enhancement and image generation
 type AiConfiguration struct {
+	Tool      string `json:"tool,omitempty"`
+	RequestID string `json:"request_id,omitempty"`
 	// Prompt Enhancement Configuration
 	EnhancementModel       string        `json:"enhancement_model"`
 	EnhancementSeed        int           `json:"enhancement_seed"`
@@ -147,215 +150,80 @@ var (
 	TechnicalTemplate = template.Must(template.New("technical").Parse(technicalTemplateStr))
 )
 
-// EnhancePrompt calls the OpenAI API to enhance a prompt using the given author type.
 func EnhancePrompt(prompt, authorType string) (string, error) {
-	if os.Getenv("TB_DALLE_NO_ENHANCE") == "1" {
-		return prompt, nil
-	}
-	apiKey, keyErr := creds.Get("OPENAI_API_KEY")
-	if keyErr != nil { // no key: skip enhancement silently
-		return prompt, nil
-	}
-	config := DefaultAiConfiguration()
-	return enhancePromptWithClient(prompt, authorType, &http.Client{}, apiKey, config, json.Marshal)
+	return enhance(prompt, authorType, false)
 }
 
-// enhancePromptWithClient is like EnhancePrompt but allows injecting an HTTP client, API key, config, and marshal function (for testing).
-func enhancePromptWithClient(prompt, authorType string, client *http.Client, apiKey string, config AiConfiguration, marshal func(v interface{}) ([]byte, error)) (string, error) {
-	// If no author context provided, skip enhancement and return original prompt
-	if authorType == "" {
-		return prompt, nil
-	}
-
-	payload := Request{
-		Model:       config.EnhancementModel,
-		Seed:        config.EnhancementSeed,
-		Temperature: config.EnhancementTemperature,
-	}
-
-	payload.Messages = append(payload.Messages, Message{Role: "system", Content: authorType})
-	payload.Messages = append(payload.Messages, Message{Role: "user", Content: prompt})
-	payloadBytes, err := marshal(payload)
-	if err != nil {
-		return "", err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), config.EnhancementTimeout)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, "POST", config.EnhancementURL, bytes.NewBuffer(payloadBytes))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	utils.DebugCurl("OPENAI CHAT (EnhancePrompt)", "POST", config.EnhancementURL, map[string]string{
-		"Content-Type":  "application/json",
-		"Authorization": "Bearer " + apiKey,
-	}, payload)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		if len(bodyBytes) > 512 { // truncate to keep logs readable
-			bodyBytes = bodyBytes[:512]
-		}
-		// Try to parse error code from JSON
-		var openaiErr struct {
-			Error struct {
-				Code    string `json:"code"`
-				Message string `json:"message"`
-				Type    string `json:"type"`
-			} `json:"error"`
-		}
-		code := "OPENAI_ERROR"
-		msg := string(bodyBytes)
-		if err := json.Unmarshal(bodyBytes, &openaiErr); err == nil && openaiErr.Error.Code != "" {
-			code = openaiErr.Error.Code
-			msg = openaiErr.Error.Message
-			fmt.Printf("[DEBUG] OpenAI error code parsed: %s, message: %s\n", code, msg)
-		} else {
-			fmt.Printf("[DEBUG] OpenAI error code NOT parsed, fallback code: %s, raw body: %s\n", code, string(bodyBytes))
-		}
-		// Return a proper OpenAIAPIError so metrics and logging can extract the code
-		return "", &OpenAIAPIError{
-			Message:    fmt.Sprintf("enhance prompt: %s", msg),
-			StatusCode: resp.StatusCode,
-			RequestID:  "unused",
-			Code:       code,
-		}
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	type response struct {
-		Choices []struct {
-			Message Message `json:"message"`
-		} `json:"choices"`
-	}
-	var r response
-	if err := json.Unmarshal(body, &r); err != nil {
-		return "", err
-	}
-	if len(r.Choices) == 0 {
-		return prompt, nil
-	}
-	content := r.Choices[0].Message.Content
-	if content == "" { // defensive
-		return prompt, nil
-	}
-	return content, nil
-}
-
-// EnhanceLiteraryContent performs Stage 1 enhancement focused on literary and creative content
 func EnhanceLiteraryContent(basePrompt, authorContext string) (string, error) {
-	if os.Getenv("TB_DALLE_NO_ENHANCE") == "1" {
-		return basePrompt, nil
-	}
-	apiKey, keyErr := creds.Get("OPENAI_API_KEY")
-	if keyErr != nil {
-		return basePrompt, nil
-	}
-	config := DefaultAiConfiguration()
-	return enhanceLiteraryContentWithClient(basePrompt, authorContext, &http.Client{}, apiKey, config, json.Marshal)
+	return enhance(basePrompt, authorContext, true)
 }
 
-// enhanceLiteraryContentWithClient performs Stage 1 literary enhancement with dependency injection for testing
-func enhanceLiteraryContentWithClient(basePrompt, authorContext string, client *http.Client, apiKey string, config AiConfiguration, marshal func(v interface{}) ([]byte, error)) (string, error) {
-	// If no author context provided, skip enhancement and return original prompt
-	if authorContext == "" {
-		return basePrompt, nil
+func enhance(prompt, authorContext string, literary bool) (string, error) {
+	if os.Getenv("TB_DALLE_NO_ENHANCE") == "1" || authorContext == "" {
+		return prompt, nil
 	}
-
-	systemPrompt := authorContext + "\n\nEnhance the following art generation prompt while maintaining this literary perspective. Make it more vivid and evocative while preserving all key attributes. Focus on emotional depth and narrative richness."
-
-	payload := Request{
-		Model: config.EnhancementModel,
-		Seed:  config.EnhancementSeed,
-	}
-	if !strings.HasPrefix(config.EnhancementModel, "gpt-5") {
-		payload.Temperature = config.EnhancementTemperature
-	}
-
-	payload.Messages = append(payload.Messages, Message{Role: "system", Content: systemPrompt})
-	payload.Messages = append(payload.Messages, Message{Role: "user", Content: basePrompt})
-
-	payloadBytes, err := marshal(payload)
+	apiKey, err := creds.Get("OPENAI_API_KEY")
 	if err != nil {
-		return "", err
+		return prompt, nil
 	}
+	return enhanceWithClient(prompt, authorContext, literary, nil, apiKey, DefaultAiConfiguration())
+}
 
+func enhanceWithClient(prompt, authorContext string, literary bool, client *http.Client, apiKey string, config AiConfiguration) (string, error) {
+	if authorContext == "" {
+		return prompt, nil
+	}
+	spec, ok := ai.LookupModel(config.EnhancementModel)
+	if !ok || spec.Provider != ai.ProviderOpenAI || !spec.Writes {
+		return "", fmt.Errorf("unsupported enhancement model %q: requires an OpenAI writing model in the shared registry", config.EnhancementModel)
+	}
+	opts := ai.CallOptions{
+		System: authorContext, MaxTokens: -1, KeepEmptyUserMessage: true,
+		RequestID: config.RequestID,
+	}
+	if config.EnhancementSeed != 0 {
+		opts.Seed = &config.EnhancementSeed
+	}
+	if config.EnhancementTemperature != 0 && (!literary || !strings.HasPrefix(config.EnhancementModel, "gpt-5")) {
+		opts.Temperature = &config.EnhancementTemperature
+	}
+	if literary {
+		opts.System += "\n\nEnhance the following art generation prompt while maintaining this literary perspective. Make it more vivid and evocative while preserving all key attributes. Focus on emotional depth and narrative richness."
+	}
+	provider := &ai.OpenAI{
+		APIKey: apiKey, HTTPClient: client, ChatURL: config.EnhancementURL,
+		Pricing: ai.ProviderPricing(ai.ProviderOpenAI),
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), config.EnhancementTimeout)
 	defer cancel()
-
-	url := config.EnhancementURL
-	if url == "" {
-		url = "https://api.openai.com/v1/chat/completions"
-	}
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if apiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+apiKey)
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode != 200 {
-		var openaiErr struct {
-			Error struct {
-				Message string `json:"message"`
-				Code    string `json:"code"`
-			} `json:"error"`
+	start := time.Now()
+	result, err := provider.Call(ctx, config.EnhancementModel, prompt, opts)
+	if err != nil && !errors.Is(err, ai.ErrNoResponse) {
+		var apiErr *ai.APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode >= http.StatusBadRequest {
+			code := apiErr.Code
+			if code == "" {
+				code = "OPENAI_ERROR"
+			}
+			message := apiErr.Message
+			if !literary {
+				message = "enhance prompt: " + message
+			}
+			return "", &OpenAIAPIError{StatusCode: apiErr.StatusCode, Code: code, Message: message, RequestID: apiErr.RequestID, Err: err}
 		}
-		msg := string(body)
-		code := "OPENAI_ERROR"
-		if err := json.Unmarshal(body, &openaiErr); err == nil && openaiErr.Error.Code != "" {
-			code = openaiErr.Error.Code
-			msg = openaiErr.Error.Message
+		return "", err
+	}
+	if result.UsageReported {
+		tool := config.Tool
+		if tool == "" {
+			tool = filepath.Base(os.Args[0])
 		}
-		return "", &OpenAIAPIError{
-			StatusCode: resp.StatusCode,
-			Code:       code,
-			Message:    msg,
+		if err := ai.RecordCall(tool, result, time.Since(start).Seconds()); err != nil {
+			logging.Error("record enhancement usage:", err)
 		}
 	}
-
-	type response struct {
-		Choices []struct {
-			Message Message `json:"message"`
-		} `json:"choices"`
+	if result.Content == "" {
+		return prompt, nil
 	}
-	var r response
-	if err := json.Unmarshal(body, &r); err != nil {
-		return "", err
-	}
-	if len(r.Choices) == 0 {
-		return basePrompt, nil
-	}
-	content := r.Choices[0].Message.Content
-	if content == "" {
-		return basePrompt, nil
-	}
-	return content, nil
+	return result.Content, nil
 }
