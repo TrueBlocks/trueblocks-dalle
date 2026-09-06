@@ -252,6 +252,7 @@ $DATA_DIR/
 
 ### External Dependencies
 
+- `github.com/TrueBlocks/trueblocks-art/packages/ai`: Shared AI client — transport, retries, model registry, pricing, and usage ledger for enhancement, image, and speech calls
 - `github.com/TrueBlocks/trueblocks-core`: Logging and file utilities
 - `github.com/TrueBlocks/trueblocks-sdk`: SDK integration
 - `git.sr.ht/~sbinet/gg`: Graphics rendering for annotation
@@ -260,7 +261,7 @@ $DATA_DIR/
 ## Error Handling Strategy
 
 ### Network Resilience
-- Exponential backoff for API retries
+- Exponential backoff for API retries, owned by the shared `packages/ai` client (one retry loop; speech makes a single bounded attempt)
 - Timeout configuration per operation type
 - Graceful degradation when services unavailable
 

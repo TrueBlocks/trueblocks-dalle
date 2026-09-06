@@ -3,6 +3,7 @@ package dalle
 import (
 	"context"
 	"errors"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,10 +28,14 @@ func TextToSpeech(text string, voice string, series string, address string) (str
 		logger.Info("speech.skip_no_api_key", "series", series, "addr", address)
 		return "", nil
 	}
+	return textToSpeechWithClient(text, voice, series, address, nil, apiKey)
+}
+
+func textToSpeechWithClient(text, voice, series, address string, client *http.Client, apiKey string) (string, error) {
 	baseDir := filepath.Join(storage.OutputDir(), series, "audio")
 	_ = os.MkdirAll(baseDir, 0o750)
 
-	provider := &ai.OpenAI{APIKey: apiKey}
+	provider := &ai.OpenAI{APIKey: apiKey, HTTPClient: client}
 	audio, err := provider.Speak(context.Background(), text, ai.SpeechOptions{Voice: voice})
 	if err != nil {
 		logger.InfoR("speech.error", "series", series, "addr", address, "error", err.Error())
