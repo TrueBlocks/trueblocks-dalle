@@ -58,15 +58,15 @@ type imageResult struct {
 }
 
 type GenerateRequest struct {
-	Input    string `json:"input"`
-	Seed     string `json:"seed,omitempty"`
-	Series   string `json:"series,omitempty"`
-	Recipe   string `json:"recipe,omitempty"`
+	Input     string `json:"input"`
+	Seed      string `json:"seed,omitempty"`
+	Series    string `json:"series,omitempty"`
+	Recipe    string `json:"recipe,omitempty"`
 	Backstyle string `json:"backstyle,omitempty"`
-	Enhance  bool   `json:"enhance,omitempty"`
-	Image    bool   `json:"image,omitempty"`
-	Annotate bool   `json:"annotate,omitempty"`
-	Force    bool   `json:"force,omitempty"`
+	Enhance   bool   `json:"enhance,omitempty"`
+	Image     bool   `json:"image,omitempty"`
+	Annotate  bool   `json:"annotate,omitempty"`
+	Force     bool   `json:"force,omitempty"`
 }
 
 type GenerateResult struct {

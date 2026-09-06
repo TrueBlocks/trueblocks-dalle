@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TrueBlocks/trueblocks-art/packages/creds"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/annotate"
 	logger "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/model"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/progress"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/utils"
-	"github.com/TrueBlocks/trueblocks-art/packages/creds"
 )
 
 var (

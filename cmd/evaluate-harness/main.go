@@ -73,12 +73,12 @@ type config struct {
 }
 
 type metadata struct {
-	Input           string            `json:"input"`
-	Seed            string            `json:"seed"`
-	Series          metadataSeries    `json:"series"`
-	Recipe          metadataRecipe    `json:"recipe"`
-	SelectedRecords []selectedRecord  `json:"selectedRecords"`
-	Prompts         prompts           `json:"prompts"`
+	Input           string           `json:"input"`
+	Seed            string           `json:"seed"`
+	Series          metadataSeries   `json:"series"`
+	Recipe          metadataRecipe   `json:"recipe"`
+	SelectedRecords []selectedRecord `json:"selectedRecords"`
+	Prompts         prompts          `json:"prompts"`
 }
 
 type metadataSeries struct {
@@ -95,8 +95,8 @@ type selectedRecord struct {
 }
 
 type prompts struct {
-	Prompt          string `json:"prompt"`
-	EnhancedPrompt  string `json:"enhancedPrompt"`
+	Prompt         string `json:"prompt"`
+	EnhancedPrompt string `json:"enhancedPrompt"`
 }
 
 func main() {

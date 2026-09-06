@@ -35,9 +35,9 @@ const (
 
 type Vec3 struct{ X, Y, Z float64 }
 
-func (v Vec3) Add(u Vec3) Vec3 { return Vec3{v.X + u.X, v.Y + u.Y, v.Z + u.Z} }
+func (v Vec3) Add(u Vec3) Vec3    { return Vec3{v.X + u.X, v.Y + u.Y, v.Z + u.Z} }
 func (v Vec3) Mul(s float64) Vec3 { return Vec3{v.X * s, v.Y * s, v.Z * s} }
-func (v Vec3) Len() float64 { return math.Sqrt(v.X*v.X + v.Y*v.Y + v.Z*v.Z) }
+func (v Vec3) Len() float64       { return math.Sqrt(v.X*v.X + v.Y*v.Y + v.Z*v.Z) }
 func (v Vec3) Normalize() Vec3 {
 	l := v.Len()
 	if l == 0 {
@@ -169,7 +169,10 @@ func renderFold(seed, series string, n int) (*image.RGBA, error) {
 	}
 
 	// Bonds back-to-front.
-	type seg struct{ i, j int; f float64 }
+	type seg struct {
+		i, j int
+		f    float64
+	}
 	segs := make([]seg, len(points)-1)
 	for i := 0; i < len(points)-1; i++ {
 		segs[i] = seg{i, i + 1, (snodes[i].f + snodes[i+1].f) / 2}

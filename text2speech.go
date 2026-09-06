@@ -3,16 +3,15 @@ package dalle
 import (
 	"context"
 	"errors"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/TrueBlocks/trueblocks-art/packages/ai"
+	"github.com/TrueBlocks/trueblocks-art/packages/creds"
 	logger "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/storage"
-	"github.com/TrueBlocks/trueblocks-art/packages/creds"
 )
 
 // TextToSpeech converts the given text to speech using OpenAI's audio API and writes it to the provided output directory.
@@ -28,49 +27,16 @@ func TextToSpeech(text string, voice string, series string, address string) (str
 		logger.Info("speech.skip_no_api_key", "series", series, "addr", address)
 		return "", nil
 	}
-	if voice == "" {
-		voice = "alloy"
-	}
 	baseDir := filepath.Join(storage.OutputDir(), series, "audio")
 	_ = os.MkdirAll(baseDir, 0o750)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute) // using fixed timeout; TODO consider exposing from prompt pkg (deadline was internal)
-	defer cancel()
 
-	reqBody := []byte("{\n\t\"model\": \"tts-1\",\n\t\"input\": " + marshalEscaped(text) + ",\n\t\"voice\": \"" + voice + "\"\n}") // from text2speech.go
-	var resp *http.Response
-	var err error
-	for attempt := 0; ; attempt++ {
-		req, reqErr := http.NewRequestWithContext(ctx, "POST", "https://api.openai.com/v1/audio/speech", io.NopCloser(bytesReader(reqBody)))
-		if reqErr != nil {
-			return "", reqErr
-		}
-		req.Header.Set("Authorization", "Bearer "+apiKey)
-		req.Header.Set("Content-Type", "application/json")
-		resp, err = (&http.Client{}).Do(req)
-		status := 0
-		if resp != nil {
-			status = resp.StatusCode
-		}
-		if err == nil && resp.StatusCode == http.StatusOK {
-			break
-		}
-		if err != nil || resp.StatusCode != http.StatusOK {
-			statusStr := "<nil>"
-			if resp != nil {
-				statusStr = resp.Status
-			}
-			if err != nil {
-				logger.InfoR("speech.retry", "series", series, "addr", address, "attempt", attempt+1, "status", status, "error", err.Error())
-			} else {
-				logger.InfoR("speech.retry", "series", series, "addr", address, "attempt", attempt+1, "status", statusStr)
-			}
-			if resp != nil {
-				_ = resp.Body.Close() // ignore close error on retry path (gosec G104 handled)
-			}
-			continue
-		}
+	provider := &ai.OpenAI{APIKey: apiKey}
+	audio, err := provider.Speak(context.Background(), text, ai.SpeechOptions{Voice: voice})
+	if err != nil {
+		logger.InfoR("speech.error", "series", series, "addr", address, "error", err.Error())
+		return "", err
 	}
-	defer func() { _ = resp.Body.Close() }()
+
 	name := "speech.mp3"
 	if address != "" {
 		name = address + ".mp3"
@@ -80,41 +46,11 @@ func TextToSpeech(text string, voice string, series string, address string) (str
 	if !strings.HasPrefix(cleanOut, filepath.Clean(baseDir)+string(os.PathSeparator)) {
 		return "", errors.New("invalid audio output path")
 	}
-	f, err := os.OpenFile(cleanOut, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600) // #nosec G304 path validated
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = f.Close() }()
-	if _, err := io.Copy(f, resp.Body); err != nil {
+	if err := os.WriteFile(cleanOut, audio, 0o600); err != nil { // #nosec G304 path validated
 		return "", err
 	}
 	logger.InfoG("speech.write", "series", series, "addr", address, "path", outPath)
 	return outPath, nil
-}
-
-// marshalEscaped produces a JSON string value (with surrounding quotes) escaping quotes/newlines.
-func marshalEscaped(s string) string {
-	// Basic escaping; we only handle backslash, quote, and newlines for this use case.
-	replacer := strings.NewReplacer(
-		"\\", "\\\\",
-		"\"", "\\\"",
-		"\n", "\\n",
-	)
-	return "\"" + replacer.Replace(s) + "\""
-}
-
-// bytesReader returns an io.Reader for the given bytes without importing bytes explicitly elsewhere.
-func bytesReader(b []byte) io.Reader { return &byteReader{b: b} }
-
-type byteReader struct{ b []byte }
-
-func (r *byteReader) Read(p []byte) (int, error) {
-	if len(r.b) == 0 {
-		return 0, io.EOF
-	}
-	n := copy(p, r.b)
-	r.b = r.b[n:]
-	return n, nil
 }
 
 // GenerateSpeech ensures a text-to-speech mp3 exists for the enhanced prompt of the given address.

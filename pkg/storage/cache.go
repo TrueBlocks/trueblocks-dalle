@@ -25,11 +25,11 @@ type DatabaseRecord struct {
 
 // DatabaseIndex provides fast access to database records
 type DatabaseIndex struct {
-	Name    string           `json:"name"`    // Database name (e.g., "nouns")
-	Version string           `json:"version"` // Version from CSV
+	Name    string           `json:"name"`              // Database name (e.g., "nouns")
+	Version string           `json:"version"`           // Version from CSV
 	Columns []string         `json:"columns,omitempty"` // Column headers; present when enriched beyond the source CSV
-	Records []DatabaseRecord `json:"records"` // All records
-	Lookup  map[string]int   `json:"lookup"`  // Key -> record index mapping
+	Records []DatabaseRecord `json:"records"`           // All records
+	Lookup  map[string]int   `json:"lookup"`            // Key -> record index mapping
 }
 
 // HierarchyDatabaseNames lists the taxonomy lookup tables that are cached as first-class databases.

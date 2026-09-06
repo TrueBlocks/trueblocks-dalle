@@ -14,6 +14,7 @@ require (
 replace github.com/TrueBlocks/trueblocks-art/packages/creds => ../packages/creds
 
 require (
+	github.com/TrueBlocks/trueblocks-art/packages/ai v0.0.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
@@ -23,3 +24,5 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/TrueBlocks/trueblocks-art/packages/ai => ../packages/ai
