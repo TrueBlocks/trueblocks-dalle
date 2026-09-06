@@ -206,3 +206,46 @@ func TestRunImagesShowMissing(t *testing.T) {
 		t.Fatalf("expected artifact missing error, got %s", stderr.String())
 	}
 }
+
+func TestRunUnknownFlag(t *testing.T) {
+	for _, args := range [][]string{
+		{"generate", "--open2", "Person Tour Coordinates"},
+		{"preview", "--bogus", "Person Tour Coordinates"},
+		{"images", "list", "--nope"},
+		{"series", "list", "--nope"},
+	} {
+		stdout := bytes.Buffer{}
+		stderr := bytes.Buffer{}
+		exit := run(append([]string{"--data-dir", filepath.Join(t.TempDir(), "dalle-data")}, args...), testConfig(t, &stdout, &stderr))
+		if exit != 2 {
+			t.Fatalf("expected exit 2 for %v, got %d: stdout=%s stderr=%s", args, exit, stdout.String(), stderr.String())
+		}
+		if !bytes.Contains(stderr.Bytes(), []byte("unknown flag")) {
+			t.Fatalf("expected unknown flag error for %v, got %s", args, stderr.String())
+		}
+	}
+}
+
+func TestRunGenerateOpenRequiresImage(t *testing.T) {
+	stdout := bytes.Buffer{}
+	stderr := bytes.Buffer{}
+	exit := run([]string{"--data-dir", filepath.Join(t.TempDir(), "dalle-data"), "generate", "--open", "Person Tour Coordinates"}, testConfig(t, &stdout, &stderr))
+	if exit != 2 {
+		t.Fatalf("expected exit 2, got %d: stdout=%s stderr=%s", exit, stdout.String(), stderr.String())
+	}
+	if !bytes.Contains(stderr.Bytes(), []byte("--open requires --image")) {
+		t.Fatalf("expected --open requires --image error, got %s", stderr.String())
+	}
+}
+
+func TestOpenTarget(t *testing.T) {
+	if got := openTarget(dalle.GenerateResult{}); got != "" {
+		t.Fatalf("expected empty target, got %q", got)
+	}
+	if got := openTarget(dalle.GenerateResult{GeneratedPath: "gen.png"}); got != "gen.png" {
+		t.Fatalf("expected generated path, got %q", got)
+	}
+	if got := openTarget(dalle.GenerateResult{GeneratedPath: "gen.png", AnnotatedPath: "ann.png"}); got != "ann.png" {
+		t.Fatalf("expected annotated path, got %q", got)
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -138,7 +139,7 @@ func dispatch(engine *dalle.Engine, args []string, config cliConfig) error {
 }
 
 func runPreview(engine *dalle.Engine, args []string, stdout io.Writer) error {
-	request, err := parseGenerateRequest("preview", args)
+	request, _, err := parseGenerateRequest("preview", args)
 	if err != nil {
 		return err
 	}
@@ -150,21 +151,46 @@ func runPreview(engine *dalle.Engine, args []string, stdout io.Writer) error {
 }
 
 func runGenerate(engine *dalle.Engine, args []string, stdout io.Writer) error {
-	request, err := parseGenerateRequest("generate", args)
+	request, openImage, err := parseGenerateRequest("generate", args)
 	if err != nil {
 		return err
+	}
+	if openImage && !request.Image {
+		return fmt.Errorf("--open requires --image")
 	}
 	result, err := engine.Generate(request)
 	if err != nil {
 		return err
 	}
-	return writeJSON(stdout, result)
+	if err := writeJSON(stdout, result); err != nil {
+		return err
+	}
+	if openImage {
+		path := openTarget(result)
+		if path == "" {
+			return fmt.Errorf("--open: no image was generated")
+		}
+		return openFile(path)
+	}
+	return nil
 }
 
-func parseGenerateRequest(name string, args []string) (dalle.GenerateRequest, error) {
+func openTarget(result dalle.GenerateResult) string {
+	if result.AnnotatedPath != "" {
+		return result.AnnotatedPath
+	}
+	return result.GeneratedPath
+}
+
+var openFile = func(path string) error {
+	return exec.Command("open", path).Run()
+}
+
+func parseGenerateRequest(name string, args []string) (dalle.GenerateRequest, bool, error) {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	request := dalle.GenerateRequest{}
+	openImage := false
 	flags.StringVar(&request.Input, "input", "", "source input")
 	flags.StringVar(&request.Seed, "seed", "", "seed")
 	flags.StringVar(&request.Series, "series", "", "series")
@@ -173,7 +199,8 @@ func parseGenerateRequest(name string, args []string) (dalle.GenerateRequest, er
 	flags.BoolVar(&request.Image, "image", false, "generate image")
 	flags.BoolVar(&request.Annotate, "annotate", false, "annotate generated image")
 	flags.BoolVar(&request.Force, "force", false, "ignore compatible cached metadata")
-	if err := flags.Parse(reorderFlagArgs(args, map[string]bool{
+	flags.BoolVar(&openImage, "open", false, "open the generated image")
+	reordered, err := reorderFlagArgs(args, map[string]bool{
 		"input":    true,
 		"seed":     true,
 		"series":   true,
@@ -182,13 +209,18 @@ func parseGenerateRequest(name string, args []string) (dalle.GenerateRequest, er
 		"image":    false,
 		"annotate": false,
 		"force":    false,
-	})); err != nil {
-		return dalle.GenerateRequest{}, err
+		"open":     false,
+	})
+	if err != nil {
+		return dalle.GenerateRequest{}, false, err
+	}
+	if err := flags.Parse(reordered); err != nil {
+		return dalle.GenerateRequest{}, false, err
 	}
 	if request.Input == "" && flags.NArg() > 0 {
 		request.Input = strings.Join(flags.Args(), " ")
 	}
-	return request, nil
+	return request, openImage, nil
 }
 
 func runImages(engine *dalle.Engine, args []string, stdout io.Writer) error {
@@ -201,7 +233,11 @@ func runImages(engine *dalle.Engine, args []string, stdout io.Writer) error {
 		flags.SetOutput(io.Discard)
 		filter := dalle.ImageFilter{}
 		flags.StringVar(&filter.Series, "series", "", "series filter")
-		if err := flags.Parse(reorderFlagArgs(args[1:], map[string]bool{"series": true})); err != nil {
+		reordered, err := reorderFlagArgs(args[1:], map[string]bool{"series": true})
+		if err != nil {
+			return err
+		}
+		if err := flags.Parse(reordered); err != nil {
 			return err
 		}
 		records, err := engine.ListImages(filter)
@@ -256,7 +292,7 @@ func runImagesExport(engine *dalle.Engine, args []string, stdout io.Writer) erro
 	flags.BoolVar(&options.IncludeTerse, "terse", false, "export terse prompt")
 	flags.BoolVar(&options.IncludeEnhanced, "enhanced", false, "export enhanced prompt")
 	flags.BoolVar(&options.IncludeTechnical, "technical", false, "export technical prompt")
-	if err := flags.Parse(reorderFlagArgs(args, map[string]bool{
+	reordered, err := reorderFlagArgs(args, map[string]bool{
 		"dir":       true,
 		"prompt":    false,
 		"data":      false,
@@ -264,7 +300,11 @@ func runImagesExport(engine *dalle.Engine, args []string, stdout io.Writer) erro
 		"terse":     false,
 		"enhanced":  false,
 		"technical": false,
-	})); err != nil {
+	})
+	if err != nil {
+		return err
+	}
+	if err := flags.Parse(reordered); err != nil {
 		return err
 	}
 	id, err := requiredArg("images export", flags.Args(), "image ID")
@@ -289,7 +329,11 @@ func runSeries(engine *dalle.Engine, args []string, config cliConfig) error {
 		filter := dalle.SeriesFilter{}
 		flags.BoolVar(&filter.IncludeHidden, "include-hidden", false, "include hidden series")
 		flags.BoolVar(&filter.OnlyHidden, "only-hidden", false, "only hidden series")
-		if err := flags.Parse(reorderFlagArgs(args[1:], map[string]bool{"include-hidden": false, "only-hidden": false})); err != nil {
+		reordered, err := reorderFlagArgs(args[1:], map[string]bool{"include-hidden": false, "only-hidden": false})
+		if err != nil {
+			return err
+		}
+		if err := flags.Parse(reordered); err != nil {
 			return err
 		}
 		series, err := engine.ListSeries(filter)
@@ -329,12 +373,16 @@ func runSeriesSave(engine *dalle.Engine, args []string, config cliConfig) error 
 	flags.IntVar(&series.Last, "last", 0, "last index")
 	flags.StringVar(&series.Purpose, "purpose", "", "purpose")
 	flags.StringVar(&jsonInput, "json", "", "JSON series document, or - for stdin")
-	if err := flags.Parse(reorderFlagArgs(args, map[string]bool{
+	reordered, err := reorderFlagArgs(args, map[string]bool{
 		"suffix":  true,
 		"last":    true,
 		"purpose": true,
 		"json":    true,
-	})); err != nil {
+	})
+	if err != nil {
+		return err
+	}
+	if err := flags.Parse(reordered); err != nil {
 		return err
 	}
 	if jsonInput != "" {
@@ -377,7 +425,11 @@ func runSeriesHidden(engine *dalle.Engine, args []string, stdout io.Writer) erro
 	flags.SetOutput(io.Discard)
 	hidden := false
 	flags.BoolVar(&hidden, "hidden", false, "hidden state")
-	if err := flags.Parse(reorderFlagArgs(args, map[string]bool{"hidden": false})); err != nil {
+	reordered, err := reorderFlagArgs(args, map[string]bool{"hidden": false})
+	if err != nil {
+		return err
+	}
+	if err := flags.Parse(reordered); err != nil {
 		return err
 	}
 	name, err := requiredArg("series hidden", flags.Args(), "series name")
@@ -417,7 +469,11 @@ func runDatabases(engine *dalle.Engine, args []string, stdout io.Writer) error {
 		flags.SetOutput(io.Discard)
 		limit := 200
 		flags.IntVar(&limit, "limit", 200, "maximum records to return")
-		if err := flags.Parse(reorderFlagArgs(args[1:], map[string]bool{"limit": true})); err != nil {
+		reordered, err := reorderFlagArgs(args[1:], map[string]bool{"limit": true})
+		if err != nil {
+			return err
+		}
+		if err := flags.Parse(reordered); err != nil {
 			return err
 		}
 		name, err := requiredArg("databases records", flags.Args(), "database name")
@@ -448,7 +504,7 @@ func requiredArg(command string, args []string, name string) (string, error) {
 	return args[0], nil
 }
 
-func reorderFlagArgs(args []string, flagsWithValues map[string]bool) []string {
+func reorderFlagArgs(args []string, flagsWithValues map[string]bool) ([]string, error) {
 	flagArgs := []string{}
 	positionArgs := []string{}
 	for index := 0; index < len(args); index++ {
@@ -464,8 +520,7 @@ func reorderFlagArgs(args []string, flagsWithValues map[string]bool) []string {
 		}
 		requiresValue, known := flagsWithValues[name]
 		if !known {
-			positionArgs = append(positionArgs, arg)
-			continue
+			return nil, fmt.Errorf("unknown flag --%s", name)
 		}
 		flagArgs = append(flagArgs, arg)
 		if requiresValue && !strings.Contains(arg, "=") && index+1 < len(args) {
@@ -473,7 +528,7 @@ func reorderFlagArgs(args []string, flagsWithValues map[string]bool) []string {
 			flagArgs = append(flagArgs, args[index])
 		}
 	}
-	return append(flagArgs, positionArgs...)
+	return append(flagArgs, positionArgs...), nil
 }
 
 const usageText = `dalle - prompt and image generation for the TrueBlocks dalle engine
@@ -510,6 +565,7 @@ Preview and generate flags:
   --image           generate an image (generate only)
   --annotate        annotate the generated image (generate only)
   --force           ignore compatible cached metadata
+  --open            open the generated image (generate only, requires --image)
 
 Images export flags:
   --dir <path>      export directory
