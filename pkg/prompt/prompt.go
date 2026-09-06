@@ -199,19 +199,11 @@ func enhanceWithClient(prompt, authorContext string, literary bool, client *http
 	start := time.Now()
 	result, err := provider.Call(ctx, config.EnhancementModel, prompt, opts)
 	if err != nil && !errors.Is(err, ai.ErrNoResponse) {
-		var apiErr *ai.APIError
-		if errors.As(err, &apiErr) && apiErr.StatusCode >= http.StatusBadRequest {
-			code := apiErr.Code
-			if code == "" {
-				code = "OPENAI_ERROR"
-			}
-			message := apiErr.Message
-			if !literary {
-				message = "enhance prompt: " + message
-			}
-			return "", &OpenAIAPIError{StatusCode: apiErr.StatusCode, Code: code, Message: message, RequestID: apiErr.RequestID, Err: err}
+		prefix := ""
+		if !literary {
+			prefix = "enhance prompt: "
 		}
-		return "", err
+		return "", WrapOpenAIError(err, prefix)
 	}
 	if result.UsageReported {
 		tool := config.Tool

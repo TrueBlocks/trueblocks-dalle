@@ -1,6 +1,11 @@
 package prompt
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/TrueBlocks/trueblocks-art/packages/ai"
+)
 
 func indexOf(s, substr string) int {
 	for i := 0; i <= len(s)-len(substr); i++ {
@@ -58,6 +63,21 @@ type OpenAIAPIError struct {
 }
 
 func (e *OpenAIAPIError) Unwrap() error { return e.Err }
+
+func WrapOpenAIError(err error, prefix string) error {
+	var apiErr *ai.APIError
+	if !errors.As(err, &apiErr) || apiErr.StatusCode < 400 {
+		return err
+	}
+	code := apiErr.Code
+	if code == "" {
+		code = "OPENAI_ERROR"
+	}
+	return &OpenAIAPIError{
+		Message: prefix + apiErr.Message, StatusCode: apiErr.StatusCode,
+		RequestID: apiErr.RequestID, Code: code, Err: err,
+	}
+}
 
 func (e *OpenAIAPIError) Error() string {
 	return fmt.Sprintf("[%s] OpenAI API error (status %d): %s", e.RequestID, e.StatusCode, e.Message)
