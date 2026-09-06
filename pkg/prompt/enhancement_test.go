@@ -173,7 +173,7 @@ func TestEnhancementBypassesAndUnsupportedModels(t *testing.T) {
 		if err != nil || result != "original" {
 			t.Fatalf("%s %v", result, err)
 		}
-		for _, model := range []string{"gpt-4", "unknown", "gpt-image-2", "gemini-3.8-flash"} {
+		for _, model := range []string{"gpt-4-turbo", "unknown", "gpt-image-2", "gemini-3.8-flash"} {
 			config := DefaultAiConfiguration()
 			config.EnhancementModel = model
 			if _, err := enhanceWithClient("original", "author", literary, client, "fake", config); err == nil || !strings.Contains(err.Error(), "unsupported enhancement model") {

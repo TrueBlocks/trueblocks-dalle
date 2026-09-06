@@ -24,7 +24,7 @@ Cancellation and deadline errors remain accessible with errors.Is.
 
 The enhancement model must resolve through ai.LookupModel to an OpenAI writing
 model. The per-tool default remains gpt-5.5. Registered dated variants are sent
-unchanged. Unregistered legacy models (including gpt-4, gpt-3.5-turbo, and gpt-5
+unchanged. Unregistered legacy models (including gpt-4-turbo, gpt-3.5-turbo, and gpt-5
 without a matching registry entry), image models, and other providers now fail
 explicitly before an API call; no replacement model or guessed pricing is used.
 
