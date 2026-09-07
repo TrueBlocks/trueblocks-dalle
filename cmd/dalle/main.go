@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	cooking "github.com/TrueBlocks/trueblocks-art/packages/prompt"
 	dalle "github.com/TrueBlocks/trueblocks-dalle/v6"
 )
 
@@ -35,6 +36,12 @@ func run(args []string, config cliConfig) int {
 	}
 	if config.stderr == nil {
 		config.stderr = os.Stderr
+	}
+	if changed, err := cooking.SyncMirror(); err != nil {
+		fmt.Fprintf(config.stderr, "syncing prompts: %v\n", err)
+		return 1
+	} else if len(changed) > 0 {
+		fmt.Fprintf(config.stderr, "Refreshed %d prompt(s) from changed source.\n", len(changed))
 	}
 	global, remaining, err := parseGlobalFlags(args)
 	if err != nil {
