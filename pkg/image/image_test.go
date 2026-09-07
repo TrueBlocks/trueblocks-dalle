@@ -32,11 +32,23 @@ func imageResponse(status int, body string) *http.Response {
 	return &http.Response{StatusCode: status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body))}
 }
 
+func seedImageModelCatalog(t *testing.T) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "models.json"))
+	if err != nil {
+		t.Fatalf("reading the test model catalog: %v", err)
+	}
+	if err := os.WriteFile(ai.ModelsPath(), data, 0644); err != nil {
+		t.Fatalf("seeding the test model catalog: %v", err)
+	}
+}
+
 func imageFixture(t *testing.T) (string, *ImageData, prompt.AiConfiguration) {
 	t.Helper()
 	root := t.TempDir()
 	t.Setenv("TRUEBLOCKS_DATA_DIR", root)
 	t.Setenv("TB_CMD_LINE", "false")
+	seedImageModelCatalog(t)
 	storage.UseDataDir(filepath.Join(root, "storage"))
 	config := prompt.DefaultAiConfiguration()
 	config.ImageURL = "https://fixture.invalid/generate"

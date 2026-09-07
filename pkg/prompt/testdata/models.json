@@ -1,0 +1,167 @@
+{
+  "models": [
+    {
+      "ID": "claude-fable-5-1",
+      "Match": "fable-5-1",
+      "Provider": "anthropic",
+      "Writes": true,
+      "InputPer1M": 10,
+      "OutputPer1M": 50
+    },
+    {
+      "ID": "claude-fable-5",
+      "Match": "fable-5",
+      "Provider": "anthropic",
+      "Writes": true,
+      "InputPer1M": 10,
+      "OutputPer1M": 50
+    },
+    {
+      "ID": "claude-opus-5",
+      "Match": "opus-5",
+      "Provider": "anthropic",
+      "Writes": true,
+      "InputPer1M": 5,
+      "OutputPer1M": 25
+    },
+    {
+      "ID": "claude-opus-4-8",
+      "Match": "opus-4-8",
+      "Provider": "anthropic",
+      "Writes": true,
+      "InputPer1M": 5,
+      "OutputPer1M": 25
+    },
+    {
+      "ID": "claude-sonnet-5",
+      "Match": "sonnet-5",
+      "Provider": "anthropic",
+      "Writes": true,
+      "InputPer1M": 3,
+      "OutputPer1M": 15
+    },
+    {
+      "ID": "claude-haiku-4-5-20251001",
+      "Match": "haiku-4-5",
+      "Provider": "anthropic",
+      "Writes": true,
+      "InputPer1M": 1,
+      "OutputPer1M": 5
+    },
+    {
+      "ID": "gpt-5.5",
+      "Match": "gpt-5.5",
+      "Provider": "openai",
+      "Writes": true,
+      "InputPer1M": 5,
+      "OutputPer1M": 30
+    },
+    {
+      "ID": "gpt-4o",
+      "Match": "gpt-4o",
+      "Provider": "openai",
+      "Writes": true,
+      "InputPer1M": 2.5,
+      "OutputPer1M": 10
+    },
+    {
+      "ID": "gpt-4o-mini",
+      "Match": "gpt-4o-mini",
+      "Provider": "openai",
+      "Writes": true,
+      "InputPer1M": 0.15,
+      "OutputPer1M": 0.6
+    },
+    {
+      "ID": "gpt-4",
+      "Match": "gpt-4-0613",
+      "Provider": "openai",
+      "Writes": true,
+      "InputPer1M": 30,
+      "OutputPer1M": 60
+    },
+    {
+      "ID": "gemini-3.8-flash",
+      "Match": "gemini-3.8-flash",
+      "Provider": "gemini",
+      "Writes": true,
+      "InputPer1M": 0.75,
+      "OutputPer1M": 3.75
+    },
+    {
+      "ID": "gemini-3.1-pro-preview",
+      "Match": "gemini-3.1-pro",
+      "Provider": "gemini",
+      "Writes": true,
+      "InputPer1M": 2,
+      "OutputPer1M": 12
+    },
+    {
+      "ID": "gemini-2.5-flash",
+      "Match": "gemini-2.5-flash",
+      "Provider": "gemini",
+      "Writes": true,
+      "InputPer1M": 0.15,
+      "OutputPer1M": 0.6
+    },
+    {
+      "ID": "gemini-2.0-flash",
+      "Match": "gemini-2.0-flash",
+      "Provider": "gemini",
+      "Writes": true,
+      "InputPer1M": 0.1,
+      "OutputPer1M": 0.4
+    },
+    {
+      "ID": "gemini-3-pro-image",
+      "Match": "gemini-3-pro-image",
+      "Provider": "gemini",
+      "Draws": true,
+      "ImageSize": "2:3",
+      "ImageResolution": "2K",
+      "ImageInPer1M": 2,
+      "ImageOutPer1M": 120,
+      "ImageTextOutPer1M": 12,
+      "ImageOutTokens": 1120
+    },
+    {
+      "ID": "gemini-3.1-flash-image",
+      "Match": "gemini-3.1-flash-image",
+      "Provider": "gemini",
+      "Draws": true,
+      "ImageSize": "2:3",
+      "ImageResolution": "2K",
+      "ImageInPer1M": 0.5,
+      "ImageOutPer1M": 30,
+      "ImageTextOutPer1M": 1.5,
+      "ImageOutTokens": 1120
+    },
+    {
+      "ID": "gpt-image-1",
+      "Match": "gpt-image-1",
+      "Provider": "openai",
+      "Draws": true,
+      "ImageSize": "1024x1536",
+      "ImageQuality": "high",
+      "ImageInPer1M": 5,
+      "ImageOutPer1M": 40,
+      "ImageOutTokens": 6240
+    },
+    {
+      "ID": "gpt-image-2",
+      "Match": "gpt-image-2",
+      "Provider": "openai",
+      "Draws": true,
+      "ImageSize": "auto",
+      "ImageQuality": "high",
+      "ImageInPer1M": 5,
+      "ImageOutPer1M": 30,
+      "ImageOutTokens": 6240
+    }
+  ],
+  "default_writers": {
+    "anthropic": "claude-sonnet-5",
+    "openai": "gpt-4o",
+    "gemini": "gemini-3.8-flash"
+  }
+}

@@ -17,6 +17,17 @@ import (
 	"github.com/TrueBlocks/trueblocks-art/packages/ai"
 )
 
+func seedModelCatalog(t *testing.T) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "models.json"))
+	if err != nil {
+		t.Fatalf("reading the test model catalog: %v", err)
+	}
+	if err := os.WriteFile(ai.ModelsPath(), data, 0644); err != nil {
+		t.Fatalf("seeding the test model catalog: %v", err)
+	}
+}
+
 type enhancementTransport func(*http.Request) (*http.Response, error)
 
 func (f enhancementTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
@@ -30,6 +41,7 @@ func TestEnhancementRequestAndAccounting(t *testing.T) {
 		for _, model := range []string{"gpt-5.5", "gpt-4o-mini-2024-07-18"} {
 			t.Run(fmt.Sprintf("%t/%s", literary, model), func(t *testing.T) {
 				t.Setenv("TRUEBLOCKS_DATA_DIR", t.TempDir())
+				seedModelCatalog(t)
 				config := DefaultAiConfiguration()
 				config.EnhancementModel = model
 				config.EnhancementURL = "https://fixture.invalid/custom"
@@ -109,6 +121,7 @@ func TestEnhancementFallbacks(t *testing.T) {
 		for _, choices := range []string{`[]`, `[{"message":{"content":""}}]`} {
 			t.Run(fmt.Sprintf("%t/%s", literary, choices), func(t *testing.T) {
 				t.Setenv("TRUEBLOCKS_DATA_DIR", t.TempDir())
+				seedModelCatalog(t)
 				config := DefaultAiConfiguration()
 				config.EnhancementSeed, config.EnhancementTemperature = 0, 0
 				client := &http.Client{Transport: enhancementTransport(func(r *http.Request) (*http.Response, error) {
@@ -139,6 +152,7 @@ func TestEnhancementErrors(t *testing.T) {
 	for _, literary := range []bool{false, true} {
 		t.Run(fmt.Sprint(literary), func(t *testing.T) {
 			t.Setenv("TRUEBLOCKS_DATA_DIR", t.TempDir())
+			seedModelCatalog(t)
 			calls := 0
 			client := &http.Client{Transport: enhancementTransport(func(*http.Request) (*http.Response, error) {
 				calls++
@@ -164,6 +178,7 @@ func TestEnhancementErrors(t *testing.T) {
 
 func TestEnhancementBypassesAndUnsupportedModels(t *testing.T) {
 	t.Setenv("TRUEBLOCKS_DATA_DIR", t.TempDir())
+	seedModelCatalog(t)
 	client := &http.Client{Transport: enhancementTransport(func(*http.Request) (*http.Response, error) {
 		t.Fatal("unexpected API call")
 		return nil, errors.New("unexpected API call")
