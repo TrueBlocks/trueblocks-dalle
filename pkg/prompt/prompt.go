@@ -2,6 +2,7 @@ package prompt
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/TrueBlocks/trueblocks-art/packages/ai"
 	"github.com/TrueBlocks/trueblocks-art/packages/creds"
+	cooking "github.com/TrueBlocks/trueblocks-art/packages/prompt"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/logging"
 	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/utils"
 )
@@ -55,30 +57,6 @@ func DefaultAiConfiguration() AiConfiguration {
 	}
 }
 
-// Template strings and compiled templates
-const promptTemplateStr = `Draw a {{.Adverb false}} {{.Adjective false}} {{.Noun true}} with human-like
-characteristics feeling {{.Emotion false}}{{.Occupation false}}.
-
-Noun: {{.Noun false}} with human-like characteristics.
-Emotion: {{.Emotion false}}.
-Occupation: {{.Occupation false}}.
-Action: {{.Action false}}.
-{{.StyleDirective}}.
-{{if .HasLitStyle}}Literary Style: {{.LitStyle false}}.
-{{end}}{{.ColorDirective}}
-Camera/viewpoint: Render this as a {{.Viewpoint true}}.
-Composition: Use {{.Composition true}}.
-Gaze: Make sure the {{.Noun true}} is facing {{.Gaze true}}.
-{{.BackgroundTreatment}}.
-Setting: Place the scene at {{.Place false}}. Include recognizable visual cues of this location.
-Narrative undertone: {{.Trope false}}.
-
-Emphasize the emotional aspect of the image. Look deeply into and expand upon the
-many connotative meanings of "{{.Noun true}}," "{{.Emotion true}}," "{{.Adjective true}}",
-and "{{.Adverb true}}." Find the representation that most closely matches all the data.
-
-Focus on the emotion, the noun, and the styles.`
-
 const dataTemplateStr = `
 Adverb:             {{.Adverb true}}
 Adjective:          {{.Adjective true}}
@@ -116,38 +94,40 @@ Gaze (full):        {{.Gaze false}}
 BackStyle:          {{.BackStyle false}}
 Composition (full): {{.Composition false}}`
 
-const terseTemplateStr = `{{.Adverb false}} {{.Adjective false}} {{.Noun true}} with human-like characteristics feeling {{.Emotion false}}{{.Occupation false}} in the style of {{.ArtStyle true 1}}`
-
 const titleTemplateStr = `{{.Emotion true}} {{.Adverb true}} {{.Adjective true}} {{.Occupation true}} {{.Noun true}}`
 
-const authorTemplateStr = `{{if .HasLitStyle}}You are an award winning author who writes in the literary
-style called {{.LitStyle true}}. Take on the persona of such an author.
-{{.LitStyle true}} is a genre or literary style that {{.LitStyleDescr}}.
-The emotional register of this piece is {{.EmotionPolarity}}, rooted in {{.EmotionGroup}}. Let that shape your tone and imagery.{{end}}`
+//go:embed prompts/image.md
+var imagePromptText string
 
-const technicalTemplateStr = `Technical Specifications:
-- Artistic style: {{.StyleDirective}}
-- Color palette: {{.ColorDirective}}
-- Composition style: {{.Composition false}}
-- Background treatment: {{.BackgroundTreatment}}
-- Camera/viewpoint: {{.Viewpoint false}}
-- Subject gaze direction: {{.Gaze false}}
+//go:embed prompts/terse.md
+var tersePromptText string
 
-Quality Standards:
-- Give the central figure distinct human-like characteristics
-- Maintain emotional authenticity and depth, particularly focusing on {{.Emotion false}}
-- Focus on connotative meanings and cultural associations
-- Create compelling visual narrative
+//go:embed prompts/author.md
+var authorPromptText string
 
-DO NOT PUT TEXT IN THE IMAGE.`
+//go:embed prompts/technical.md
+var technicalPromptText string
 
+//go:embed prompts/enhance.md
+var enhanceInstructionText string
+
+// The five prompts dalle sends to a model, served from files through the shared
+// cooking: registered under their repo-relative source paths, stamped to the
+// mirror, and filled fresh from it on every call.
 var (
-	PromptTemplate    = template.Must(template.New("prompt").Parse(promptTemplateStr))
-	DataTemplate      = template.Must(template.New("data").Parse(dataTemplateStr))
-	TerseTemplate     = template.Must(template.New("terse").Parse(terseTemplateStr))
-	TitleTemplate     = template.Must(template.New("title").Parse(titleTemplateStr))
-	AuthorTemplate    = template.Must(template.New("author").Parse(authorTemplateStr))
-	TechnicalTemplate = template.Must(template.New("technical").Parse(technicalTemplateStr))
+	ImagePrompt        = cooking.MustRegister("dalle/pkg/prompt/prompts/image.md", imagePromptText)
+	TersePrompt        = cooking.MustRegister("dalle/pkg/prompt/prompts/terse.md", tersePromptText)
+	AuthorPrompt       = cooking.MustRegister("dalle/pkg/prompt/prompts/author.md", authorPromptText)
+	TechnicalPrompt    = cooking.MustRegister("dalle/pkg/prompt/prompts/technical.md", technicalPromptText)
+	EnhanceInstruction = cooking.MustRegister("dalle/pkg/prompt/prompts/enhance.md", enhanceInstructionText)
+)
+
+// DataTemplate and TitleTemplate stay in Go: neither is sent to a model. The
+// data block is a human-readable sidecar of every attribute; the title is a
+// short label. Both are formatting, not instructions.
+var (
+	DataTemplate  = template.Must(template.New("data").Parse(dataTemplateStr))
+	TitleTemplate = template.Must(template.New("title").Parse(titleTemplateStr))
 )
 
 func EnhancePrompt(prompt, authorType string) (string, error) {
@@ -188,7 +168,11 @@ func enhanceWithClient(prompt, authorContext string, literary bool, client *http
 		opts.Temperature = &config.EnhancementTemperature
 	}
 	if literary {
-		opts.System += "\n\nEnhance the following art generation prompt while maintaining this literary perspective. Make it more vivid and evocative while preserving all key attributes. Focus on emotional depth and narrative richness."
+		instruction, err := EnhanceInstruction.Fill(nil)
+		if err != nil {
+			return "", err
+		}
+		opts.System += "\n\n" + instruction
 	}
 	provider := &ai.OpenAI{
 		APIKey: apiKey, HTTPClient: client, ChatURL: config.EnhancementURL,

@@ -35,8 +35,9 @@ func sampleDress() *DalleDress {
 }
 
 func TestImagePromptTemplateCarriesSubjectAndFraming(t *testing.T) {
+	t.Setenv("TRUEBLOCKS_DATA_DIR", t.TempDir())
 	dd := sampleDress()
-	out, err := dd.ExecuteTemplate(prompt.PromptTemplate, nil)
+	out, err := prompt.ImagePrompt.Fill(dd)
 	if err != nil {
 		t.Fatalf("rendering the image prompt: %v", err)
 	}
@@ -48,8 +49,9 @@ func TestImagePromptTemplateCarriesSubjectAndFraming(t *testing.T) {
 }
 
 func TestTerseTemplateNamesTheArtStyle(t *testing.T) {
+	t.Setenv("TRUEBLOCKS_DATA_DIR", t.TempDir())
 	dd := sampleDress()
-	out, err := dd.ExecuteTemplate(prompt.TerseTemplate, nil)
+	out, err := prompt.TersePrompt.Fill(dd)
 	if err != nil {
 		t.Fatalf("rendering the terse descriptor: %v", err)
 	}
@@ -61,8 +63,9 @@ func TestTerseTemplateNamesTheArtStyle(t *testing.T) {
 }
 
 func TestTechnicalTemplateForbidsTextInTheImage(t *testing.T) {
+	t.Setenv("TRUEBLOCKS_DATA_DIR", t.TempDir())
 	dd := sampleDress()
-	out, err := dd.ExecuteTemplate(prompt.TechnicalTemplate, nil)
+	out, err := prompt.TechnicalPrompt.Fill(dd)
 	if err != nil {
 		t.Fatalf("rendering the technical block: %v", err)
 	}
@@ -71,5 +74,29 @@ func TestTechnicalTemplateForbidsTextInTheImage(t *testing.T) {
 	}
 	if !strings.Contains(out, "DO NOT PUT TEXT IN THE IMAGE.") {
 		t.Error("technical block must forbid text in the image")
+	}
+}
+
+func TestAuthorPromptTakesOnThePersona(t *testing.T) {
+	t.Setenv("TRUEBLOCKS_DATA_DIR", t.TempDir())
+	dd := sampleDress()
+	dd.AttribMap["litStyle"] = prompt.Attribute{Value: "gothic,dwells on decay and dread"}
+	out, err := prompt.AuthorPrompt.Fill(dd)
+	if err != nil {
+		t.Fatalf("rendering the author persona: %v", err)
+	}
+	for _, want := range []string{"award winning author", "gothic", "persona"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("author persona is missing %q", want)
+		}
+	}
+
+	dd.AttribMap["litStyle"] = prompt.Attribute{Value: "none"}
+	blank, err := prompt.AuthorPrompt.Fill(dd)
+	if err != nil {
+		t.Fatalf("rendering the author persona without a literary style: %v", err)
+	}
+	if strings.TrimSpace(blank) != "" {
+		t.Errorf("author persona should be empty without a literary style, got %q", blank)
 	}
 }

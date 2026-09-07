@@ -13,6 +13,10 @@ require (
 
 replace github.com/TrueBlocks/trueblocks-art/packages/creds => ../packages/creds
 
+require github.com/TrueBlocks/trueblocks-art/packages/prompt v0.0.0
+
+replace github.com/TrueBlocks/trueblocks-art/packages/prompt => ../packages/prompt
+
 require (
 	github.com/TrueBlocks/trueblocks-art/packages/ai v0.0.0
 	github.com/davecgh/go-spew v1.1.1 // indirect

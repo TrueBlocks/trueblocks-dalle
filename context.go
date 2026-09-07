@@ -18,15 +18,12 @@ import (
 
 // Context holds templates, series, dbs, and cache for prompt generation.
 type Context struct {
-	Series         Series
-	Databases      map[string][]string
-	DalleCache     map[string]*model.DalleDress
-	CacheMutex     sync.Mutex
-	promptTemplate *template.Template
-	dataTemplate   *template.Template
-	titleTemplate  *template.Template
-	terseTemplate  *template.Template
-	authorTemplate *template.Template
+	Series        Series
+	Databases     map[string][]string
+	DalleCache    map[string]*model.DalleDress
+	CacheMutex    sync.Mutex
+	dataTemplate  *template.Template
+	titleTemplate *template.Template
 }
 
 func NewContext() *Context {
@@ -38,14 +35,11 @@ func NewContext() *Context {
 	}
 
 	ctx := Context{
-		promptTemplate: prompt.PromptTemplate,
-		dataTemplate:   prompt.DataTemplate,
-		titleTemplate:  prompt.TitleTemplate,
-		terseTemplate:  prompt.TerseTemplate,
-		authorTemplate: prompt.AuthorTemplate,
-		Series:         Series{},
-		Databases:      make(map[string][]string),
-		DalleCache:     make(map[string]*model.DalleDress),
+		dataTemplate:  prompt.DataTemplate,
+		titleTemplate: prompt.TitleTemplate,
+		Series:        Series{},
+		Databases:     make(map[string][]string),
+		DalleCache:    make(map[string]*model.DalleDress),
 	}
 
 	if err := ctx.ReloadDatabases("empty"); err != nil {
@@ -166,8 +160,8 @@ func (ctx *Context) makeDalleDress(addressIn, backstyle string, writeReports boo
 
 	dd.DataPrompt, _ = dd.ExecuteTemplate(ctx.dataTemplate, nil)
 	dd.TitlePrompt, _ = dd.ExecuteTemplate(ctx.titleTemplate, nil)
-	dd.TersePrompt, _ = dd.ExecuteTemplate(ctx.terseTemplate, nil)
-	dd.Prompt, _ = dd.ExecuteTemplate(ctx.promptTemplate, nil)
+	dd.TersePrompt, _ = prompt.TersePrompt.Fill(&dd)
+	dd.Prompt, _ = prompt.ImagePrompt.Fill(&dd)
 	fnPath := filepath.Join(storage.OutputDir(), ctx.Series.Suffix, "enhanced", dd.FileName+".txt")
 	if !fileExists(fnPath) {
 		fnPath = filepath.Join(storage.OutputDir(), ctx.Series.Suffix, "enhanced", dd.FileName+".txt")
@@ -230,7 +224,7 @@ func (ctx *Context) GenerateEnhanced(addr string) (string, error) {
 		return err.Error(), err
 	} else {
 		// Stage 1: Literary Enhancement
-		authorType, _ := dd.ExecuteTemplate(ctx.authorTemplate, nil)
+		authorType, _ := prompt.AuthorPrompt.Fill(dd)
 		basePrompt := ctx.GetPrompt(addr)
 		if dd.EnhancedPrompt, err = prompt.EnhanceLiteraryContent(basePrompt, authorType); err != nil {
 			logger.Error("EnhanceLiteraryContent error:", err)
@@ -260,7 +254,7 @@ func (ctx *Context) GenerateImageWithBaseURL(address, baseURL string) (string, e
 	}
 
 	// Stage 2: Generate technical specifications (keep separate from enhanced prompt)
-	technicalContext, _ := dd.ExecuteTemplate(prompt.TechnicalTemplate, nil)
+	technicalContext, _ := prompt.TechnicalPrompt.Fill(dd)
 	finalCombinedPrompt := technicalContext + "\n\n" + dd.EnhancedPrompt
 
 	suff := ctx.Series.Suffix

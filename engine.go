@@ -592,11 +592,11 @@ func (engine *Engine) buildPromptMetadata(request GenerateRequest) (promptBuild,
 	if err != nil {
 		return promptBuild{}, WrapError(ErrInvalidInput, "build preview prompt", err)
 	}
-	authorContext, err := dress.ExecuteTemplate(ctx.authorTemplate, nil)
+	authorContext, err := prompt.AuthorPrompt.Fill(dress)
 	if err != nil {
 		return promptBuild{}, WrapError(ErrInvalidInput, "build author context", err)
 	}
-	technicalPrompt, err := dress.ExecuteTemplate(prompt.TechnicalTemplate, nil)
+	technicalPrompt, err := prompt.TechnicalPrompt.Fill(dress)
 	if err != nil {
 		return promptBuild{}, WrapError(ErrInvalidInput, "build technical prompt", err)
 	}

@@ -15,14 +15,12 @@ import (
 // --- Test helpers ---
 func minimalContext(t *testing.T) *Context {
 	t.Helper()
+	t.Setenv("TRUEBLOCKS_DATA_DIR", t.TempDir())
 	tmpl := template.Must(template.New("x").Parse("ok"))
 	return &Context{
-		promptTemplate: tmpl,
-		dataTemplate:   tmpl,
-		titleTemplate:  tmpl,
-		terseTemplate:  tmpl,
-		authorTemplate: tmpl,
-		Series:         Series{Suffix: "test"},
+		dataTemplate:  tmpl,
+		titleTemplate: tmpl,
+		Series:        Series{Suffix: "test"},
 		Databases: map[string][]string{
 			"adverbs":      {"quickly", "quick", "fast"},
 			"adjectives":   {"red", "bright", "vivid"},
