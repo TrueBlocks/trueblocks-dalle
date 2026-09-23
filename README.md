@@ -245,4 +245,4 @@ ETA visibility: `etaSeconds` is 0 until sufficient historical averages exist to 
 
 ---
 
-![README infographic](README-infographic.png)
+![README infographic](README-infographic.jpg)

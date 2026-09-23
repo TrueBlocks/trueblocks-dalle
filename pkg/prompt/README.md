@@ -46,4 +46,4 @@ A ledger write failure is logged and does not discard a successful enhancement.
 Image generation and the server's separate enhancement client are subsequent
 migrations. No build configuration changes are required by this change.
 
-![README infographic](README-infographic.png)
+![README infographic](README-infographic.jpg)

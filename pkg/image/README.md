@@ -40,4 +40,4 @@ not create ledger rows. Ledger failures are logged without discarding an image.
 Tests inject the shared HTTP transport, use temporary output/ledger folders, and
 exercise real file writes without paid API calls. Build configuration is unchanged.
 
-![README infographic](README-infographic.png)
+![README infographic](README-infographic.jpg)
