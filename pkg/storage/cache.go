@@ -61,6 +61,11 @@ var nounColumnNames = []string{
 // incompatibly (e.g., adding Columns). Bumping forces a one-time rebuild.
 const currentCacheVersion = 2
 
+const (
+	defaultDataVersion = "v0.1.0"
+	nounsDBName        = "nouns"
+)
+
 // DatabaseCache holds all processed database indexes
 type DatabaseCache struct {
 	Version      string                   `json:"version"`      // Overall version
@@ -189,7 +194,7 @@ func (cm *CacheManager) extractVersionFromEmbedded() (string, error) {
 		}
 	}
 
-	return "v0.1.0", nil // default version
+	return defaultDataVersion, nil
 }
 
 // loadOrBuildDatabaseCache loads existing cache or builds new one
@@ -202,7 +207,7 @@ func (cm *CacheManager) loadOrBuildDatabaseCache() error {
 	version, err := cm.extractVersionFromEmbedded()
 	if err != nil {
 		logger.Error("Failed to extract version, using default:", err)
-		version = "v0.1.0"
+		version = defaultDataVersion
 	}
 	logger.InfoG(fmt.Sprintf("DEBUG: Extracted version: %s", version))
 
@@ -366,7 +371,7 @@ func (cm *CacheManager) loadOrBuildSeriesCache() error {
 
 func (cm *CacheManager) extractSeriesVersionFromEmbedded() (string, error) {
 	var version string
-	err := WalkSeriesArchive(func(path string, body []byte) error {
+	err := WalkSeriesArchive(func(_ string, body []byte) error {
 		var v struct {
 			Version string `json:"version"`
 		}
@@ -532,7 +537,7 @@ func (cm *CacheManager) buildDatabaseIndex(dbName string) (DatabaseIndex, error)
 	}
 
 	if version == "" {
-		version = "v0.1.0" // Default version
+		version = defaultDataVersion
 	}
 
 	idx := DatabaseIndex{
@@ -542,7 +547,7 @@ func (cm *CacheManager) buildDatabaseIndex(dbName string) (DatabaseIndex, error)
 		Lookup:  lookup,
 	}
 
-	if dbName == "nouns" {
+	if dbName == nounsDBName {
 		if err := enrichNounsWithHierarchy(&idx); err != nil {
 			logger.Warn("failed to enrich nouns with hierarchy: " + err.Error())
 		} else {

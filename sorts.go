@@ -26,7 +26,7 @@ func SortDalleDress(items []model.DalleDress, sortSpec SortSpec) error {
 	}
 	field := sortSpec.Fields[0]
 	asc := sortSpec.Order[0] == Asc
-	cmp := func(i, j int) bool { return true }
+	cmp := func(_, _ int) bool { return true }
 	switch strings.ToLower(field) {
 	case "original":
 		cmp = func(i, j int) bool { return items[i].Original < items[j].Original }
@@ -63,9 +63,9 @@ func SortDalleDress(items []model.DalleDress, sortSpec SortSpec) error {
 	case "ipfshash":
 		cmp = func(i, j int) bool { return items[i].IPFSHash < items[j].IPFSHash }
 	case "cachehit":
-		cmp = func(i, j int) bool { return items[i].CacheHit }
+		cmp = func(i, _ int) bool { return items[i].CacheHit }
 	case "completed":
-		cmp = func(i, j int) bool { return items[i].Completed }
+		cmp = func(i, _ int) bool { return items[i].Completed }
 	case "series":
 		cmp = func(i, j int) bool { return items[i].Series < items[j].Series }
 	default:
@@ -90,7 +90,7 @@ func SortSeries(items []Series, sortSpec SortSpec) error {
 	}
 	field := sortSpec.Fields[0]
 	asc := sortSpec.Order[0] == Asc
-	cmp := func(i, j int) bool { return true }
+	cmp := func(_, _ int) bool { return true }
 	switch strings.ToLower(field) {
 	case "suffix":
 		cmp = func(i, j int) bool { return strings.Compare(items[i].Suffix, items[j].Suffix) < 0 }
@@ -120,7 +120,7 @@ func SortDatabases(items []model.Database, sortSpec SortSpec) error {
 	}
 	field := sortSpec.Fields[0]
 	asc := sortSpec.Order[0] == Asc
-	cmp := func(i, j int) bool { return true }
+	cmp := func(_, _ int) bool { return true }
 	switch strings.ToLower(field) {
 	case "id":
 		cmp = func(i, j int) bool { return items[i].ID < items[j].ID }

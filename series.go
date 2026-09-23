@@ -49,7 +49,7 @@ type Series struct {
 	Source       SeriesSource `json:"source,omitempty"`
 }
 
-func (s *Series) Model(chain, format string, verbose bool, extraOpts map[string]any) SeriesModel {
+func (s *Series) Model(_, _ string, _ bool, _ map[string]any) SeriesModel {
 	return SeriesModel{
 		Data: map[string]any{
 			"suffix":       s.Suffix,

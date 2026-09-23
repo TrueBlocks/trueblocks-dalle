@@ -39,6 +39,8 @@ type DalleDress struct {
 	ColorLimit      string                      `json:"colorLimit"`
 }
 
+const noneValue = "none"
+
 func (d *DalleDress) String() string {
 	jsonData, _ := json.MarshalIndent(d, "", "  ")
 	return string(jsonData)
@@ -130,7 +132,7 @@ func (dd *DalleDress) EmotionPolarity() string {
 
 func (dd *DalleDress) Occupation(short bool) string {
 	val := dd.AttribMap["occupation"].Value
-	if val == "none" {
+	if val == noneValue {
 		return ""
 	}
 	parts := strings.Split(val, ",")
@@ -160,12 +162,12 @@ func (dd *DalleDress) ArtStyle(short bool, which int) string {
 
 func (dd *DalleDress) HasLitStyle() bool {
 	ret := dd.AttribMap["litStyle"].Value
-	return ret != "none" && ret != ""
+	return ret != noneValue && ret != ""
 }
 
 func (dd *DalleDress) LitStyle(short bool) string {
 	val := dd.AttribMap["litStyle"].Value
-	if val == "none" {
+	if val == noneValue {
 		return ""
 	}
 	parts := strings.Split(val, ",")
@@ -177,7 +179,7 @@ func (dd *DalleDress) LitStyle(short bool) string {
 
 func (dd *DalleDress) LitStyleDescr() string {
 	val := dd.AttribMap["litStyle"].Value
-	if val == "none" {
+	if val == noneValue {
 		return ""
 	}
 	parts := strings.Split(val, ",")
@@ -205,7 +207,7 @@ func (dd *DalleDress) Color(short bool, which int) string {
 func (dd *DalleDress) ColorDirective() string {
 	c1 := dd.Color(true, 1)
 	c2 := dd.Color(true, 2)
-	if c1 == "none" || c2 == "none" {
+	if c1 == noneValue || c2 == noneValue {
 		return "Use whatever color palette best serves the artistic style and subject."
 	}
 	limit := strings.TrimSpace(dd.ColorLimit)
@@ -249,7 +251,7 @@ func (dd *DalleDress) Gaze(short bool) string {
 	return strings.ReplaceAll(val, ",", ", ")
 }
 
-func (dd *DalleDress) BackStyle(short bool) string {
+func (dd *DalleDress) BackStyle(_ bool) string {
 	val := dd.AttribMap["backStyle"].Value
 	val = strings.ReplaceAll(val, "[{Color3}]", dd.Color(true, 3))
 	val = strings.ReplaceAll(val, "[{ArtStyle2}]", dd.ArtStyle(false, 2))
@@ -311,7 +313,7 @@ func (dd *DalleDress) StyleDirective() string {
 
 func (dd *DalleDress) LitPrompt(short bool) string {
 	val := dd.AttribMap["litStyle"].Value
-	if val == "none" {
+	if val == noneValue {
 		return ""
 	}
 	text := `Please give me a detailed rewrite of the following

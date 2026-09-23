@@ -23,6 +23,11 @@ type cliConfig struct {
 	stderr          io.Writer
 }
 
+const (
+	cmdList = "list"
+	cmdShow = "show"
+)
+
 func main() {
 	os.Exit(run(os.Args[1:], cliConfig{stdin: os.Stdin, stdout: os.Stdout, stderr: os.Stderr}))
 }
@@ -235,7 +240,7 @@ func runImages(engine *dalle.Engine, args []string, stdout io.Writer) error {
 		return fmt.Errorf("images subcommand is required")
 	}
 	switch args[0] {
-	case "list":
+	case cmdList:
 		flags := flag.NewFlagSet("images list", flag.ContinueOnError)
 		flags.SetOutput(io.Discard)
 		filter := dalle.ImageFilter{}
@@ -252,7 +257,7 @@ func runImages(engine *dalle.Engine, args []string, stdout io.Writer) error {
 			return err
 		}
 		return writeJSON(stdout, records)
-	case "show":
+	case cmdShow:
 		id, err := requiredArg("images show", args[1:], "image ID")
 		if err != nil {
 			return err
@@ -330,7 +335,7 @@ func runSeries(engine *dalle.Engine, args []string, config cliConfig) error {
 		return fmt.Errorf("series subcommand is required")
 	}
 	switch args[0] {
-	case "list":
+	case cmdList:
 		flags := flag.NewFlagSet("series list", flag.ContinueOnError)
 		flags.SetOutput(io.Discard)
 		filter := dalle.SeriesFilter{}
@@ -348,7 +353,7 @@ func runSeries(engine *dalle.Engine, args []string, config cliConfig) error {
 			return err
 		}
 		return writeJSON(config.stdout, series)
-	case "show":
+	case cmdShow:
 		name, err := requiredArg("series show", args[1:], "series name")
 		if err != nil {
 			return err
@@ -455,13 +460,13 @@ func runDatabases(engine *dalle.Engine, args []string, stdout io.Writer) error {
 		return fmt.Errorf("databases subcommand is required")
 	}
 	switch args[0] {
-	case "list":
+	case cmdList:
 		archives, err := engine.ListDatabaseArchives()
 		if err != nil {
 			return err
 		}
 		return writeJSON(stdout, archives)
-	case "show":
+	case cmdShow:
 		version, err := requiredArg("databases show", args[1:], "database version")
 		if err != nil {
 			return err

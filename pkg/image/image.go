@@ -52,6 +52,11 @@ func buildImagePrompt(imageData *ImageData, modelName string) string {
 	return strings.TrimSpace(finalPrompt) + "\n\n" + strings.TrimSpace(gptImageDalleDressDirective)
 }
 
+const (
+	sizeSquare    = "1024x1024"
+	modelGPTImage = "gpt-image-2"
+)
+
 const gptImageDalleDressDirective = `DalleDress visual directive:
 Make the image vivid, saturated, uncanny, emotionally intense, and deliberately strange.
 Favor bold contrast, theatrical color relationships, eccentric character details, and surreal visual specificity over tasteful realism or muted editorial illustration.
@@ -93,24 +98,24 @@ func requestImageWithClient(outputPath string, imageData *ImageData, config prom
 		} else if isPortrait {
 			payload.Size = "1024x1792"
 		} else {
-			payload.Size = "1024x1024"
+			payload.Size = sizeSquare
 		}
 		payload.Quality = config.ImageQuality
 		payload.Style = config.ImageStyle
-	case "gpt-image-2", "gpt-image-1", "gpt-image-1.5":
+	case modelGPTImage, "gpt-image-1", "gpt-image-1.5":
 		if isLandscape {
 			payload.Size = "1536x1024"
 		} else if isPortrait {
 			payload.Size = "1024x1536"
 		} else {
-			payload.Size = "1024x1024"
+			payload.Size = sizeSquare
 		}
 		payload.Quality = "high"
 	case "gpt-image-1-mini":
-		payload.Size = "1024x1024"
+		payload.Size = sizeSquare
 		payload.Quality = "low"
 	case "dall-e-2":
-		payload.Size = "1024x1024"
+		payload.Size = sizeSquare
 	default:
 		logger.InfoR("image.request.unknown_model", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "model", modelName)
 	}

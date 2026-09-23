@@ -17,6 +17,11 @@ import (
 
 const DefaultSeriesName = "empty"
 
+const (
+	stageComplete = "complete"
+	stageSkipped  = "skipped"
+)
+
 type ProviderConfig struct {
 	BaseURL string `json:"baseUrl,omitempty"`
 }
@@ -610,11 +615,11 @@ func (engine *Engine) buildPromptMetadata(request GenerateRequest) (promptBuild,
 		TitlePrompt: dress.TitlePrompt,
 		TersePrompt: dress.TersePrompt,
 	}
-	metadata.Stages.Selected.Status = "complete"
-	metadata.Stages.Prompted.Status = "complete"
-	metadata.Stages.Enhanced.Status = "skipped"
-	metadata.Stages.Generated.Status = "skipped"
-	metadata.Stages.Annotated.Status = "skipped"
+	metadata.Stages.Selected.Status = stageComplete
+	metadata.Stages.Prompted.Status = stageComplete
+	metadata.Stages.Enhanced.Status = stageSkipped
+	metadata.Stages.Generated.Status = stageSkipped
+	metadata.Stages.Annotated.Status = stageSkipped
 	metadata.Status.Completed = true
 	metadata.ImageID = ComputeImageID(metadata)
 	return promptBuild{metadata: metadata, authorContext: authorContext, technicalPrompt: technicalPrompt, filename: dress.FileName, dress: dress}, nil
@@ -643,7 +648,7 @@ func (engine *Engine) Generate(request GenerateRequest) (GenerateResult, error) 
 	if cached, ok, _ := engine.cachedMetadata(request); ok {
 		if request.Enhance && strings.TrimSpace(cached.Metadata.Prompts.EnhancedPrompt) != "" {
 			metadata.Prompts.EnhancedPrompt = cached.Metadata.Prompts.EnhancedPrompt
-			metadata.Stages.Enhanced.Status = "complete"
+			metadata.Stages.Enhanced.Status = stageComplete
 			metadata.ImageID = ComputeImageID(metadata)
 		}
 	}
@@ -667,7 +672,7 @@ func (engine *Engine) Generate(request GenerateRequest) (GenerateResult, error) 
 				return GenerateResult{}, wrapped
 			}
 			metadata.Prompts.EnhancedPrompt = enhancedPrompt
-			metadata.Stages.Enhanced.Status = "complete"
+			metadata.Stages.Enhanced.Status = stageComplete
 			metadata.ImageID = ComputeImageID(metadata)
 		}
 	} else {
@@ -710,10 +715,10 @@ func (engine *Engine) Generate(request GenerateRequest) (GenerateResult, error) 
 			return GenerateResult{}, wrapped
 		}
 		metadata.Artifacts.Generated = result.generatedPath
-		metadata.Stages.Generated.Status = "complete"
+		metadata.Stages.Generated.Status = stageComplete
 		if request.Annotate {
 			metadata.Artifacts.Annotated = result.annotatedPath
-			metadata.Stages.Annotated.Status = "complete"
+			metadata.Stages.Annotated.Status = stageComplete
 		} else {
 			progressMgr.Skip(metadata.Series.Name, metadata.Seed, progress.PhaseAnnotate)
 		}

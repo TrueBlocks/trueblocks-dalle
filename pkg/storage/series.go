@@ -32,7 +32,7 @@ func WalkSeriesArchive(visit func(path string, body []byte) error) error {
 // ListEmbeddedSeriesSuffixes returns the suffixes of all built-in series.
 func ListEmbeddedSeriesSuffixes() ([]string, error) {
 	var suffixes []string
-	err := WalkSeriesArchive(func(path string, body []byte) error {
+	err := WalkSeriesArchive(func(path string, _ []byte) error {
 		suffixes = append(suffixes, seriesSuffixFromPath(path))
 		return nil
 	})

@@ -50,7 +50,7 @@ func GetDatabaseDescription(dbName string) string {
 	descriptions := map[string]string{
 		"adverbs":      "Manner modifiers for actions",
 		"adjectives":   "Descriptive attributes",
-		"nouns":        "Core subjects and entities",
+		nounsDBName:    "Core subjects and entities",
 		"emotions":     "Emotional states and expressions",
 		"occupations":  "Professional roles and vocations",
 		"actions":      "Physical activities and poses",
