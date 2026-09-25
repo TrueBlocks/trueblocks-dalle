@@ -109,7 +109,7 @@ fmt.Println(result)
 ```go
 import "github.com/TrueBlocks/trueblocks-dalle/v6/pkg/annotate"
 
-outputPath, err := annotate.Annotate("Hello World", "generated/input.png", "bottom", 0.1)
+outputPath, err := annotate.Annotate("Hello World", "output/demo/generated/input.png", "bottom", 0.1)
 fmt.Println("Annotated image saved to:", outputPath)
 ```
 
