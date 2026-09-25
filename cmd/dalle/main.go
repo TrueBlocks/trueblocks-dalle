@@ -12,6 +12,7 @@ import (
 
 	cooking "github.com/TrueBlocks/trueblocks-art/packages/prompt"
 	dalle "github.com/TrueBlocks/trueblocks-dalle/v6"
+	"github.com/TrueBlocks/trueblocks-dalle/v6/pkg/prompt"
 )
 
 type cliConfig struct {
@@ -64,6 +65,29 @@ func run(args []string, config cliConfig) int {
 		writeError(config.stderr, fmt.Errorf("command is required (try dalle --help)"))
 		return 2
 	}
+	// --spend and --text-model reach the library through the same variables a
+	// server sets: the tier whose registry rows pick the models, and the
+	// enhancement model named outright.
+	if global.spend != "" {
+		if global.spend != "cheap" && global.spend != "pro" {
+			writeError(config.stderr, fmt.Errorf("--spend takes cheap or pro, not %q", global.spend))
+			return 2
+		}
+		_ = os.Setenv("TB_DALLE_SPEND", global.spend)
+	}
+	if global.textModel != "" {
+		_ = os.Setenv("TB_DALLE_ENHANCEMENT_MODEL", global.textModel)
+	}
+	// Confirm the models before any work starts, so a mistyped --model or
+	// --text-model stops here with the valid choices rather than after a run.
+	models := prompt.DefaultAiConfiguration()
+	if global.imageModel != "" {
+		models.ImageModel = global.imageModel
+	}
+	if err := models.CheckModels(); err != nil {
+		writeError(config.stderr, err)
+		return 2
+	}
 	engine, err := dalle.New(dalle.Config{
 		DataDir:    config.dataDir,
 		ImageModel: config.imageModel,
@@ -86,6 +110,8 @@ type globalFlags struct {
 	dataDir         string
 	providerBaseURL string
 	imageModel      string
+	spend           string
+	textModel       string
 	help            bool
 }
 
@@ -119,6 +145,20 @@ func parseGlobalFlags(args []string) (globalFlags, []string, error) {
 			global.imageModel = args[index]
 		case strings.HasPrefix(arg, "--model="):
 			global.imageModel = strings.TrimPrefix(arg, "--model=")
+		case arg == "--spend" || arg == "--text-model":
+			index++
+			if index >= len(args) {
+				return globalFlags{}, nil, fmt.Errorf("%s requires a value", arg)
+			}
+			if arg == "--spend" {
+				global.spend = args[index]
+			} else {
+				global.textModel = args[index]
+			}
+		case strings.HasPrefix(arg, "--spend="):
+			global.spend = strings.TrimPrefix(arg, "--spend=")
+		case strings.HasPrefix(arg, "--text-model="):
+			global.textModel = strings.TrimPrefix(arg, "--text-model=")
 		case arg == "--help" || arg == "-h":
 			global.help = true
 		default:
@@ -597,7 +637,9 @@ Series save flags:
 Global options:
   --data-dir <path>          data directory
   --provider-base-url <url>  image provider base URL
-  --model <name>             image model
+  --model <name>             image model (default: the registry's image model at --spend)
+  --spend <cheap|pro>        model tier (default: pro)
+  --text-model <name>        prompt-enhancement model (default: the registry's writing model at --spend)
   --help, -h                 show this help screen
 
 Results are written to stdout as indented JSON. Errors are written to stderr;

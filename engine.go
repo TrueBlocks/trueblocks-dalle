@@ -869,7 +869,7 @@ func (engine *Engine) ImageModel() string {
 	if engine.imageModel != "" {
 		return engine.imageModel
 	}
-	return "gpt-image-1"
+	return prompt.DefaultAiConfiguration().ImageModel
 }
 
 func (engine *Engine) SetImageModel(model string) {

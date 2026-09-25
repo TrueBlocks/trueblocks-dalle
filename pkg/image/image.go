@@ -64,9 +64,13 @@ The subject should feel odd, memorable, and slightly excessive, with the peculia
 Honor any explicit color-palette or monochrome constraint in the prompt, but push that constraint as far as possible through contrast, composition, texture, and weirdness.`
 
 func RequestImageWithOptions(outputPath string, imageData *ImageData, config prompt.AiConfiguration, options ImageOptions) error {
-	apiKey, err := creds.Get("OPENAI_API_KEY")
-	if err != nil {
-		apiKey = ""
+	// The key is the image model's company's; an absent key leaves apiKey
+	// empty, which writes the placeholder as before.
+	apiKey := ""
+	if spec, ok := ai.LookupModel(config.ImageModel); ok {
+		if keyName, err := ai.KeyNameForProvider(spec.Provider); err == nil {
+			apiKey, _ = creds.Get(keyName)
+		}
 	}
 	return requestImageWithClient(outputPath, imageData, config, options, nil, apiKey)
 }
@@ -117,7 +121,20 @@ func requestImageWithClient(outputPath string, imageData *ImageData, config prom
 	case "dall-e-2":
 		payload.Size = sizeSquare
 	default:
-		logger.InfoR("image.request.unknown_model", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "model", modelName)
+		// Gemini takes an aspect ratio where OpenAI takes pixels.
+		if spec, ok := ai.LookupModel(modelName); ok && spec.Provider == ai.ProviderGemini {
+			switch {
+			case isLandscape:
+				payload.Size = "3:2"
+			case isPortrait:
+				payload.Size = "2:3"
+			default:
+				payload.Size = "1:1"
+			}
+			payload.Resolution = spec.ImageResolution
+		} else {
+			logger.InfoR("image.request.unknown_model", "series", imageData.Series, "addr", imageData.Address, "file", imageData.Filename, "model", modelName)
+		}
 	}
 
 	logger.Info(
@@ -139,8 +156,8 @@ func requestImageWithClient(outputPath string, imageData *ImageData, config prom
 		return os.WriteFile(filepath.Join(placeholderDir, imageData.Filename+".png"), nil, 0o600)
 	}
 	spec, ok := ai.LookupModel(modelName)
-	if !ok || spec.Provider != ai.ProviderOpenAI || !spec.Draws || spec.ID != modelName {
-		return fmt.Errorf("unsupported image model %q: requires a canonical OpenAI image model in the shared registry", modelName)
+	if !ok || !spec.Draws || spec.ID != modelName || (spec.Provider != ai.ProviderOpenAI && spec.Provider != ai.ProviderGemini) {
+		return fmt.Errorf("unsupported image model %q: requires a canonical OpenAI or Gemini image model in the shared registry", modelName)
 	}
 	ctx := options.Context
 	if ctx == nil {
@@ -166,13 +183,42 @@ func requestImageWithClient(outputPath string, imageData *ImageData, config prom
 			progressMgr.Transition(imageData.Series, imageData.Address, progress.PhaseImageDownload)
 		}
 	}
-	provider := &ai.DallE{APIKey: apiKey, HTTPClient: client, GenerationURL: config.ImageURL}
-	result, err := provider.GenerateImageResult(ctx, finalPrompt, payload)
-	if err != nil {
-		return prompt.WrapOpenAIError(err, "image generation: ")
+	var data []byte
+	if spec.Provider == ai.ProviderGemini {
+		gemini := &ai.Gemini{APIKey: apiKey}
+		gData, gErr := gemini.GenerateImage(ctx, finalPrompt, payload)
+		if gemini.LastUsage != nil {
+			tool := config.Tool
+			if tool == "" {
+				tool = filepath.Base(os.Args[0])
+			}
+			if err := ai.RecordImageCall(tool, modelName, gemini.LastUsage, time.Since(start).Seconds()); err != nil {
+				logger.Error("record image usage:", err)
+			}
+		}
+		if gErr != nil {
+			return fmt.Errorf("image generation: %w", gErr)
+		}
+		data = gData
+	} else {
+		provider := &ai.DallE{APIKey: apiKey, HTTPClient: client, GenerationURL: config.ImageURL}
+		result, err := provider.GenerateImageResult(ctx, finalPrompt, payload)
+		if err != nil {
+			return prompt.WrapOpenAIError(err, "image generation: ")
+		}
+		data = result.Data
+	}
+	// Every DalleDress is stored, annotated, and served as .png; Gemini's
+	// JPEG is re-encoded rather than stored mislabeled.
+	if ai.SniffImageFormat(data) == ai.ImageFormatJPEG {
+		pngData, err := ai.EnsurePNG(data)
+		if err != nil {
+			return err
+		}
+		data = pngData
 	}
 	fn := filepath.Join(generated, imageData.Filename+".png")
-	if err := os.WriteFile(fn, result.Data, 0o600); err != nil {
+	if err := os.WriteFile(fn, data, 0o600); err != nil {
 		return fmt.Errorf("write image: %w", err)
 	}
 	progressMgr.UpdateDress(imageData.Series, imageData.Address, func(dd *model.DalleDress) { dd.GeneratedPath = fn })
