@@ -43,15 +43,15 @@ type AiConfiguration struct {
 }
 
 // DefaultAiConfiguration returns the default AI configuration. The models come
-// from the shared registry's role table at TB_DALLE_SPEND (pro by default): the
-// compose row, at its effort, enhances prompts and the image row draws.
-// TB_DALLE_ENHANCEMENT_MODEL and TB_DALLE_IMAGE_MODEL name either outright —
-// gpt-5.5 and gpt-image-2 restore the OpenAI path. An unknown tier leaves the
-// model empty, which the first call refuses by name.
+// from the shared registry at TB_DALLE_SPEND (pro by default): dalle's own row
+// in tool_defaults where it sets one, otherwise the shared role table. The
+// compose model, at its effort, enhances prompts and the image model draws.
+// TB_DALLE_ENHANCEMENT_MODEL and TB_DALLE_IMAGE_MODEL name either outright. An
+// unknown tier leaves the model empty, which the first call refuses by name.
 func DefaultAiConfiguration() AiConfiguration {
 	spend := utils.GetEnvString("TB_DALLE_SPEND", ai.TierPro)
-	tierText, tierEffort, _ := ai.TierCompose(spend)
-	tierImage, _ := ai.RoleModel(spend, ai.RoleImage)
+	tierText, tierEffort, _ := ai.ToolTierCompose("dalle", spend)
+	tierImage, _ := ai.ToolRoleModel("dalle", spend, ai.RoleImage)
 	enhancementModel := utils.GetEnvString("TB_DALLE_ENHANCEMENT_MODEL", tierText)
 	enhancementEffort := ""
 	if enhancementModel == tierText {

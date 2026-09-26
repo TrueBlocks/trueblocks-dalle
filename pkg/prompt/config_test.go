@@ -1,28 +1,59 @@
 package prompt
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/TrueBlocks/trueblocks-art/packages/ai"
 )
 
+// installRoleTables writes the test catalog with a shared role table and
+// dalle's own tool_defaults row, so the test never reads the installed one.
+func installRoleTables(t *testing.T) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "models.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := ai.DecodeModelCatalog(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog.RoleDefaults = ai.RoleDefaults{
+		Cheap: ai.RoleTier{Research: "claude-haiku-4-5-20251001", Compose: "claude-haiku-4-5-20251001", Image: "gemini-3.1-flash-image"},
+		Pro:   ai.RoleTier{Research: "claude-opus-5", Compose: "claude-opus-5", ComposeEffort: "high", Image: "gemini-3-pro-image"},
+	}
+	// dalle overrides both pro slots but only the cheap image slot.
+	catalog.ToolDefaults = map[string]ai.RoleDefaults{"dalle": {
+		Cheap: ai.RoleTier{Image: "gpt-image-2"},
+		Pro:   ai.RoleTier{Compose: "gpt-5.5", Image: "gpt-image-2"},
+	}}
+	if data, err = json.Marshal(catalog); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRUEBLOCKS_DATA_DIR", t.TempDir())
+	if err := os.WriteFile(ai.ModelsPath(), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestDefaultConfigurationFollowsTheRegistry(t *testing.T) {
+	installRoleTables(t)
 	t.Setenv("TB_DALLE_ENHANCEMENT_MODEL", "")
 	t.Setenv("TB_DALLE_IMAGE_MODEL", "")
-	for _, spend := range []string{ai.TierPro, ai.TierCheap} {
-		t.Setenv("TB_DALLE_SPEND", spend)
-		wantText, wantEffort, err := ai.TierCompose(spend)
-		if err != nil {
-			t.Fatal(err)
-		}
-		wantImage, err := ai.RoleModel(spend, ai.RoleImage)
-		if err != nil {
-			t.Fatal(err)
-		}
+	for _, test := range []struct {
+		spend, text, effort, image string
+	}{
+		{ai.TierPro, "gpt-5.5", "", "gpt-image-2"},
+		{ai.TierCheap, "claude-haiku-4-5-20251001", "", "gpt-image-2"},
+	} {
+		t.Setenv("TB_DALLE_SPEND", test.spend)
 		c := DefaultAiConfiguration()
-		if c.EnhancementModel != wantText || c.EnhancementEffort != wantEffort || c.ImageModel != wantImage {
-			t.Errorf("%s: got %q %q %q, want %q %q %q", spend, c.EnhancementModel, c.EnhancementEffort, c.ImageModel, wantText, wantEffort, wantImage)
+		if c.EnhancementModel != test.text || c.EnhancementEffort != test.effort || c.ImageModel != test.image {
+			t.Errorf("%s: got %q %q %q, want %q %q %q", test.spend, c.EnhancementModel, c.EnhancementEffort, c.ImageModel, test.text, test.effort, test.image)
 		}
 	}
 	t.Setenv("TB_DALLE_SPEND", ai.TierPro)

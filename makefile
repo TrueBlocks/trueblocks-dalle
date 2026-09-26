@@ -1,6 +1,12 @@
-.PHONY: app
+.PHONY: app cmds
 
+INSTALL_DIR = $(HOME)/source
 MSG ?= update
+
+cmds:
+	@mkdir -p $(INSTALL_DIR)
+	@echo "Building dalle tools: dalle"
+	@go build -o $(INSTALL_DIR)/ ./cmd/dalle
 
 test:
 	@export $(grep -v '^#' ../.env | xargs) >/dev/null && go test ./...
